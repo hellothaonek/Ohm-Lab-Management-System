@@ -33,8 +33,8 @@ export default function SchedulePage() {
 
         <Tabs defaultValue="calendar" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="calendar">Calendar View</TabsTrigger>
-            <TabsTrigger value="list">List View</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
+            <TabsTrigger value="all-sessions">All Sessions</TabsTrigger>
             <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>
           </TabsList>
 
@@ -96,7 +96,7 @@ export default function SchedulePage() {
                       {
                         id: 1,
                         course: "Electronics 101",
-                        time: "08:00 - 10:00",
+                        time: "07:00 - 9:15",
                         lecturer: "Dr. Smith",
                         room: "Lab 1",
                         students: 25,
@@ -105,7 +105,7 @@ export default function SchedulePage() {
                       {
                         id: 2,
                         course: "Digital Systems",
-                        time: "13:00 - 15:00",
+                        time: "9:30 - 11:45",
                         lecturer: "Dr. Johnson",
                         room: "Lab 2",
                         students: 22,
@@ -114,7 +114,7 @@ export default function SchedulePage() {
                       {
                         id: 3,
                         course: "Microcontrollers",
-                        time: "15:30 - 17:30",
+                        time: "12:30 - 14:45",
                         lecturer: "Dr. Williams",
                         room: "Lab 1",
                         students: 18,
@@ -167,7 +167,7 @@ export default function SchedulePage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="list">
+          <TabsContent value="all-sessions">
             <Card>
               <CardHeader>
                 <CardTitle>All Scheduled Sessions</CardTitle>
@@ -180,7 +180,7 @@ export default function SchedulePage() {
                       id: 1,
                       course: "Electronics 101",
                       date: "May 16, 2025",
-                      time: "08:00 - 10:00",
+                      time: "07:00 - 09:15",
                       lecturer: "Dr. Smith",
                       room: "Lab 1",
                       students: 25,
@@ -190,7 +190,7 @@ export default function SchedulePage() {
                       id: 2,
                       course: "Digital Systems",
                       date: "May 16, 2025",
-                      time: "13:00 - 15:00",
+                      time: "9:30 - 11:45",
                       lecturer: "Dr. Johnson",
                       room: "Lab 2",
                       students: 22,
@@ -200,7 +200,7 @@ export default function SchedulePage() {
                       id: 3,
                       course: "Microcontrollers",
                       date: "May 16, 2025",
-                      time: "15:30 - 17:30",
+                      time: "12:30 - 14:45",
                       lecturer: "Dr. Williams",
                       room: "Lab 1",
                       students: 18,
@@ -210,7 +210,7 @@ export default function SchedulePage() {
                       id: 4,
                       course: "Circuit Design",
                       date: "May 17, 2025",
-                      time: "08:00 - 10:00",
+                      time: "15:00 - 17:15",
                       lecturer: "Dr. Brown",
                       room: "Lab 1",
                       students: 20,
@@ -220,7 +220,7 @@ export default function SchedulePage() {
                       id: 5,
                       course: "Embedded Systems",
                       date: "May 17, 2025",
-                      time: "13:00 - 15:00",
+                      time: "12:30 - 14:45",
                       lecturer: "Dr. Davis",
                       room: "Lab 2",
                       students: 15,
@@ -286,7 +286,7 @@ export default function SchedulePage() {
                       id: 3,
                       course: "Microcontrollers",
                       date: "May 16, 2025",
-                      time: "15:30 - 17:30",
+                      time: "12:30 - 14:45",
                       lecturer: "Dr. Williams",
                       room: "Lab 1",
                       students: 18,
@@ -296,7 +296,7 @@ export default function SchedulePage() {
                       id: 5,
                       course: "Embedded Systems",
                       date: "May 17, 2025",
-                      time: "13:00 - 15:00",
+                      time: "09:00 - 11:45",
                       lecturer: "Dr. Davis",
                       room: "Lab 2",
                       students: 15,
@@ -306,7 +306,7 @@ export default function SchedulePage() {
                       id: 7,
                       course: "Electronics 101",
                       date: "May 20, 2025",
-                      time: "10:00 - 12:00",
+                      time: "07:00 - 09:15",
                       lecturer: "Dr. Smith",
                       room: "Lab 1",
                       students: 25,
@@ -407,10 +407,10 @@ export default function SchedulePage() {
                     <SelectValue placeholder="Select time slot" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="8-10">08:00 - 10:00</SelectItem>
-                    <SelectItem value="10-12">10:00 - 12:00</SelectItem>
-                    <SelectItem value="13-15">13:00 - 15:00</SelectItem>
-                    <SelectItem value="15-17">15:00 - 17:00</SelectItem>
+                    <SelectItem value="slot1">07:00 - 09:15</SelectItem>
+                    <SelectItem value="slot2">09:30 - 11:45</SelectItem>
+                    <SelectItem value="slot3">12:30 - 14:45</SelectItem>
+                    <SelectItem value="slot4">15:00 - 17:15</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

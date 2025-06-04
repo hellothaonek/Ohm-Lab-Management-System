@@ -25,11 +25,11 @@ export default function LoginPage() {
     // In a real app, you would authenticate with your backend here
     // For now, we'll just redirect based on the selected role
     if (role === "head") {
-      router.push("/dashboard/head")
+      router.push("/head/dashboard")
     } else if (role === "lecturer") {
-      router.push("/dashboard/lecturer")
+      router.push("/lecturer/dashboard")
     } else if (role === "admin") {
-      router.push("/dashboard/admin")
+      router.push("/admin/dashboard")
     }
   }
 

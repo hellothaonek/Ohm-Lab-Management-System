@@ -114,7 +114,7 @@ export default function EquipmentPage() {
     return matchesSearch && matchesStatus && matchesCategory
   })
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status:string) => {
     switch (status) {
       case "available":
         return <Badge className="bg-green-500 hover:bg-green-600">Available</Badge>

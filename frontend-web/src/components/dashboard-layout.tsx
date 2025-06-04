@@ -7,6 +7,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   CircuitBoard,
+  Plug,
   Calendar,
   Users,
   Database,
@@ -39,58 +40,52 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
   const navItems = [
     {
       title: "Dashboard",
-      href: `/dashboard/${role}`,
+      href: `/${role}/dashboard`,
       icon: <BarChart3 className="h-5 w-5" />,
       roles: ["head", "lecturer", "admin"],
     },
     {
       title: "Schedule",
-      href: `/dashboard/${role}/schedule`,
+      href: `/${role}/dashboard/schedule`,
       icon: <Calendar className="h-5 w-5" />,
       roles: ["head", "lecturer"],
     },
     {
       title: "Classes",
-      href: `/dashboard/${role}/classes`,
+      href: `/${role}/dashboard/classes`,
       icon: <Users className="h-5 w-5" />,
       roles: ["head", "lecturer"],
     },
     {
       title: "Equipment",
-      href: `/dashboard/${role}/equipment`,
+      href: `/${role}/dashboard/equipment`,
       icon: <Database className="h-5 w-5" />,
       roles: ["head", "lecturer"],
     },
     {
       title: "Assignments",
-      href: `/dashboard/${role}/assignments`,
+      href: `/${role}/dashboard/assignments`,
       icon: <ClipboardList className="h-5 w-5" />,
       roles: ["lecturer"],
     },
     {
-      title: "Incidents",
-      href: `/dashboard/${role}/incidents`,
-      icon: <AlertTriangle className="h-5 w-5" />,
+      title: "Accessory",
+      href: `/${role}/dashboard/accessory`,
+      icon: <Plug className="h-5 w-5" />,
       roles: ["head", "lecturer"],
     },
     {
       title: "Reports",
-      href: `/dashboard/${role}/reports`,
+      href: `/${role}/dashboard/reports`,
       icon: <BarChart3 className="h-5 w-5" />,
       roles: ["head", "lecturer", "admin"],
     },
     {
       title: "User Management",
-      href: `/dashboard/${role}/users`,
+      href: `/${role}/dashboard/users`,
       icon: <Users className="h-5 w-5" />,
       roles: ["admin"],
-    },
-    {
-      title: "Settings",
-      href: `/dashboard/${role}/settings`,
-      icon: <Settings className="h-5 w-5" />,
-      roles: ["head", "lecturer", "admin"],
-    },
+    }
   ]
 
   const filteredNavItems = navItems.filter((item) => item.roles.includes(role))
@@ -136,7 +131,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
           </Sheet>
 
           <nav className="hidden md:flex md:gap-4 md:ml-4">
-            {filteredNavItems.slice(0, 5).map((item) => (
+            {filteredNavItems.slice(0, 8).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -149,26 +144,6 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
                 <span className="hidden lg:inline">{item.title}</span>
               </Link>
             ))}
-            {filteredNavItems.length > 5 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-1">
-                    More
-                    <span className="sr-only">More pages</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {filteredNavItems.slice(5).map((item) => (
-                    <DropdownMenuItem key={item.href} asChild>
-                      <Link href={item.href} className="flex items-center gap-2">
-                        {item.icon}
-                        {item.title}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
@@ -194,13 +169,13 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href={`/dashboard/${role}/profile`} className="flex items-center gap-2">
+                  <Link href={`/${role}/profile`} className="flex items-center gap-2">
                     <User className="h-4 w-4" />
                     Profile
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={`/dashboard/${role}/settings`} className="flex items-center gap-2">
+                  <Link href={`/${role}/settings`} className="flex items-center gap-2">
                     <Settings className="h-4 w-4" />
                     Settings
                   </Link>

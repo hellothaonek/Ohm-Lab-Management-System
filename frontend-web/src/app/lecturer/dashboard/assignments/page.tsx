@@ -178,7 +178,7 @@ export default function AssignmentsPage() {
     return matchesSearch && matchesStatus && matchesCourse
   })
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status:string) => {
     switch (status) {
       case "active":
         return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
@@ -191,7 +191,7 @@ export default function AssignmentsPage() {
     }
   }
 
-  const getSubmissionStatusBadge = (status) => {
+  const getSubmissionStatusBadge = (status:string) => {
     switch (status) {
       case "submitted":
         return <Badge className="bg-amber-500 hover:bg-amber-600">Needs Grading</Badge>
