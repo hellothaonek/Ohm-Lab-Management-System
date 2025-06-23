@@ -1,127 +1,107 @@
-import Link from "next/link"
-import { CircuitBoard, Calendar, Users, Database, ClipboardList, AlertTriangle, BarChart3 } from "lucide-react"
-import { Button } from "../components/ui/button"
+"use client"
 
-export default function Home() {
+import type React from "react"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { CircuitBoard } from "lucide-react"
+import google from "@/public/google.png"
+import Image from "next/image"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/src/components/ui/card"
+import { Label } from "@/src/components/ui/label"
+import { Input } from "@/src/components/ui/input"
+import { Button } from "@/src/components/ui/button"
+
+export default function LoginPage() {
+  const router = useRouter()
+  const [role, setRole] = useState("lecturer")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // In a real app, you would authenticate with your backend here
+    // For now, we'll just redirect based on the selected role
+    if (role === "head") {
+      router.push("/head/dashboard")
+    } else if (role === "lecturer") {
+      router.push("/lecturer/dashboard")
+    } else if (role === "admin") {
+      router.push("/admin/dashboard")
+    }
+  }
+
+  const handleGoogleLogin = () => {
+    router.push("/auth/google")
+  }
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center">
-          <div className="flex items-center gap-2 font-bold">
-            <CircuitBoard className="h-6 w-6 text-orange-500" />
-            <span>Ohm Electronics Lab</span>
-          </div>
-          <nav className="ml-auto flex gap-4 sm:gap-6">
-            <Link href="/login" className="text-sm font-medium">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+      <Link href="/" className="absolute top-8 left-8 flex items-center gap-2 font-bold">
+        <CircuitBoard className="h-6 w-6 text-orange-500" />
+        <span>Ohm Electronics Lab</span>
+      </Link>
+
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Login</CardTitle>
+          <CardDescription>Enter your credentials to access the lab management system</CardDescription>
+        </CardHeader>
+        <form onSubmit={handleLogin}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="m.example@fpt.edu.vn"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link href="/forgot-password" className="text-sm text-orange-500 hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-2">
+            <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600">
               Login
-            </Link>
-            <Link href="/about" className="text-sm font-medium">
-              About
-            </Link>
-          </nav>
-        </div>
-      </header>
-      <main className="flex-1">
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-white to-gray-100 dark:from-gray-900 dark:to-gray-800">
-          <div className="container px-4 md:px-6">
-            <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
-              <div className="space-y-4">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                  Electronics Lab Activity Management System
-                </h1>
-                <p className="max-w-[600px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
-                  Streamline lab management, equipment tracking, and practical assignments for FPT University Ho Chi
-                  Minh City.
-                </p>
-                <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                  <Link href="/login">
-                    <Button size="lg" className="bg-orange-500 hover:bg-orange-600">
-                      Get Started
-                    </Button>
-                  </Link>
-                  <Link href="/about">
-                    <Button size="lg" variant="outline">
-                      Learn More
-                    </Button>
-                  </Link>
-                </div>
+            </Button>
+            <div className="relative w-full text-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300 dark:border-gray-700" />
               </div>
-              <div className="flex justify-center">
-                <img
-                  src="/placeholder.svg?height=400&width=500"
-                  alt="Electronics Lab"
-                  className="rounded-lg object-cover shadow-lg"
-                  width={500}
-                  height={400}
-                />
+              <div className="relative bg-white dark:bg-gray-900 px-2 text-sm text-gray-500 dark:text-gray-400">
+                OR
               </div>
             </div>
-          </div>
-        </section>
-        <section className="w-full py-12 md:py-24 lg:py-32">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Key Features</h2>
-                <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
-                  Our system provides comprehensive tools for managing all aspects of the electronics lab
-                </p>
-              </div>
-            </div>
-            <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 py-12 md:grid-cols-2 lg:grid-cols-3">
-              <div className="flex flex-col items-center space-y-2 rounded-lg border p-6 shadow-sm">
-                <Calendar className="h-12 w-12 text-orange-500" />
-                <h3 className="text-xl font-bold">Lab Schedule Management</h3>
-                <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                  Schedule and manage lab usage for courses, resolve conflicts, and notify users.
-                </p>
-              </div>
-              <div className="flex flex-col items-center space-y-2 rounded-lg border p-6 shadow-sm">
-                <Users className="h-12 w-12 text-orange-500" />
-                <h3 className="text-xl font-bold">Class Management</h3>
-                <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                  Update class lists, assign lecturers, and manage student information.
-                </p>
-              </div>
-              <div className="flex flex-col items-center space-y-2 rounded-lg border p-6 shadow-sm">
-                <Database className="h-12 w-12 text-orange-500" />
-                <h3 className="text-xl font-bold">Equipment Management</h3>
-                <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                  Track equipment status, usage history, and manage borrowing/returning.
-                </p>
-              </div>
-              <div className="flex flex-col items-center space-y-2 rounded-lg border p-6 shadow-sm">
-                <ClipboardList className="h-12 w-12 text-orange-500" />
-                <h3 className="text-xl font-bold">Assignment Management</h3>
-                <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                  Create assignments, grade submissions, and provide feedback to students.
-                </p>
-              </div>
-              <div className="flex flex-col items-center space-y-2 rounded-lg border p-6 shadow-sm">
-                <AlertTriangle className="h-12 w-12 text-orange-500" />
-                <h3 className="text-xl font-bold">Incident Management</h3>
-                <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                  Record and track incidents, manage the handling process, and notify relevant parties.
-                </p>
-              </div>
-              <div className="flex flex-col items-center space-y-2 rounded-lg border p-6 shadow-sm">
-                <BarChart3 className="h-12 w-12 text-orange-500" />
-                <h3 className="text-xl font-bold">Reporting & Statistics</h3>
-                <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                  Generate reports on lab usage, equipment status, and practical results.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-      <footer className="border-t py-6 md:py-0">
-        <div className="container flex flex-col items-center justify-between gap-4 md:h-16 md:flex-row">
-          <p className="text-center text-sm leading-loose text-gray-500 md:text-left">
-            © 2025 Ohm Electronics Lab - FPT University Ho Chi Minh City. All rights reserved.
-          </p>
-        </div>
-      </footer>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full flex items-center gap-2"
+              onClick={handleGoogleLogin}
+            >
+              <Image src={google} alt="Google" width={20} height={20} />
+              Login with @fpt.edu.vn
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
     </div>
   )
 }
