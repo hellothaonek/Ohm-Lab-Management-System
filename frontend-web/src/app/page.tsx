@@ -1,107 +1,97 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { CircuitBoard } from "lucide-react"
-import google from "@/public/google.png"
-import Image from "next/image"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { Label } from "@/src/components/ui/label"
-import { Input } from "@/src/components/ui/input"
-import { Button } from "@/src/components/ui/button"
+import type React from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { CircuitBoard } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
+import { toast } from "react-toastify";
+import { GoogleOAuthProvider, GoogleLogin, CredentialResponse } from "@react-oauth/google";
+import { loginGoogle } from "../services/userServices";
+import config from "../config/config";
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [role, setRole] = useState("lecturer")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // In a real app, you would authenticate with your backend here
-    // For now, we'll just redirect based on the selected role
-    if (role === "head") {
-      router.push("/head/dashboard")
-    } else if (role === "lecturer") {
-      router.push("/lecturer/dashboard")
-    } else if (role === "admin") {
-      router.push("/admin/dashboard")
+  const handleLogin = async (response: CredentialResponse) => {
+    if (!response.credential) {
+      console.error("Error: Google credential is undefined");
+      return;
     }
-  }
 
-  const handleGoogleLogin = () => {
-    router.push("/auth/google")
-  }
+    setIsLoading(true);
+    const googleId = response.credential;
+    console.log("Google ID:", googleId);
+    try {
+      const apiResponse = await loginGoogle({ googleId });
+
+      if (apiResponse) {
+        const userRole = apiResponse.user?.userRollNumber;
+        localStorage.setItem('googleId', googleId);
+
+        switch (userRole) {
+          case "adm":
+            router.push("/admin/dashboard");
+            break;
+          case "head":
+            router.push("/head/dashboard");
+            break;
+          case "lecturer":
+            router.push("/lecturer/dashboard");
+            break;
+          default:
+            toast.error("Unknown user role");
+            return;
+        }
+      } else {
+        throw new Error(apiResponse.message);
+      }
+    } catch (error: any) {
+      console.error("Google login error:", error);
+      toast.error(error.message || "Failed to login with Google");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <Link href="/" className="absolute top-8 left-8 flex items-center gap-2 font-bold">
-        <CircuitBoard className="h-6 w-6 text-orange-500" />
-        <span>Ohm Electronics Lab</span>
-      </Link>
+    <GoogleOAuthProvider clientId={config.GOOGLE_CLIENT_ID || ""}>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+        <Link href="/" className="absolute top-8 left-8 flex items-center gap-2 font-bold">
+          <CircuitBoard className="h-6 w-6 text-orange-500" />
+          <span>Ohm Electronics Lab</span>
+        </Link>
 
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Login</CardTitle>
-          <CardDescription>Enter your credentials to access the lab management system</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleLogin}>
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold">Login</CardTitle>
+            <CardDescription>Sign in with your @fpt.edu.vn account to access the lab management system</CardDescription>
+          </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m.example@fpt.edu.vn"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+            <div className="relative">
+              <GoogleLogin
+                onSuccess={handleLogin}
+                onError={() => {
+                  console.error("Login Failed");
+                  toast.error("Google login failed");
+                  setIsLoading(false);
+                }}
+                theme="outline"
+                size="large"
+                text="signin_with"
+                shape="rectangular"
+                logo_alignment="center"
+                width="100%"
               />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link href="/forgot-password" className="text-sm text-orange-500 hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              {isLoading && (
+                <span className="text-gray-700 dark:text-gray-300">Logging in...</span>
+              )}
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-2">
-            <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600">
-              Login
-            </Button>
-            <div className="relative w-full text-center">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-700" />
-              </div>
-              <div className="relative bg-white dark:bg-gray-900 px-2 text-sm text-gray-500 dark:text-gray-400">
-                OR
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full flex items-center gap-2"
-              onClick={handleGoogleLogin}
-            >
-              <Image src={google} alt="Google" width={20} height={20} />
-              Login with @fpt.edu.vn
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
-  )
+        </Card>
+      </div>
+    </GoogleOAuthProvider>
+  );
 }
