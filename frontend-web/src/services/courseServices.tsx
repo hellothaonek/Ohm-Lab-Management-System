@@ -12,7 +12,7 @@ export const createSubject = async (data: { subjectName: string; subjectCode: st
     return response.data;
 };
 
-export const getSubjectById = async (id: string) => {
+export const getSubjectById = async (id: number) => {
     const response = await axiosWithoutLoading.get(`/api/course/subjects/${id}`);
     return response.data;
 };
@@ -47,7 +47,7 @@ export const deleteLab = async (id: string) => {
     return response.data;
 };
 
-export const createLab = async (data: { labName: string; labRequest: string; labTarget: string }) => {
+export const createLab = async (data: { subjectId: number; labName: string; labRequest: string; labTarget: string, labStatus: string }) => {
     const response = await defaultAxiosInstance.post("/api/course/labs", data);
     toast.success("Lab created successfully");
     return response.data;

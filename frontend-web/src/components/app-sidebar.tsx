@@ -80,16 +80,22 @@ export function AppSidebar({ role, ...props }: AppSidebarProps) {
             roles: ["head"],
         },
         {
-            title: "Assignments",
-            href: `/${role}/dashboard/assignments`,
-            icon: ClipboardList,
+            title: "My Courses",
+            href: `/${role}/dashboard/courses`,
+            icon: Database,
             roles: ["lecturer"],
         },
+        //  {
+        //     title: "Lab",
+        //     href: `/${role}/dashboard/labs`,
+        //     icon: Database,
+        //     roles: ["lecturer"],
+        // },
         {
             title: "Accessory",
             href: `/${role}/dashboard/accessory`,
             icon: Plug,
-            roles: ["head", "lecturer"],
+            roles: ["head"],
         },
         {
             title: "Reports",
