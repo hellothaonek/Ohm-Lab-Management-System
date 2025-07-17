@@ -4,7 +4,7 @@ import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
 import { Card } from "@/src/components/ui/card"
 import { Input } from "@/src/components/ui/input"
-import { Search, EllipsisVertical } from "lucide-react"
+import { Search, EllipsisVertical, Eye } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import {
     DropdownMenu,
@@ -16,6 +16,8 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from 
 import { searchEquipment, getEquipmentById } from "@/src/services/equipmentServices"
 import CreateEquipment from "@/src/components/head/equipment/CreateEquipment"
 import { QRCodeCanvas } from "qrcode.react"
+import DeleteEquipment from "@/src/components/head/equipment/DeleteEquipment"
+import EditEquipment from "@/src/components/head/equipment/EditEquipment"
 
 interface Equipment {
     equipmentId: number;
@@ -23,7 +25,7 @@ interface Equipment {
     equipmentCode: string;
     equipmentNumberSerial: string;
     equipmentStatus: string;
-    qrCode?: string;
+    equipmentQr: string
 }
 
 export default function EquipmentPage() {
@@ -34,6 +36,9 @@ export default function EquipmentPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+    const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null)
     const [selectedQrCode, setSelectedQrCode] = useState<string | null>(null)
 
     const fetchEquipment = useCallback(async () => {
@@ -47,7 +52,6 @@ export default function EquipmentPage() {
                 status: "",
             })
             setEquipmentItems(response.pageData)
-            console.log(">>>>> ",response.pageData)
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || err.message || "Failed to fetch equipment"
             setError(errorMessage)
@@ -61,13 +65,6 @@ export default function EquipmentPage() {
     useEffect(() => {
         fetchEquipment()
     }, [fetchEquipment])
-
-    const generateQrCode = async (equipmentId: number) => {
-        const equipment = await getEquipmentById(equipmentId.toString())
-        console.log(">>>> eq: ",equipment)
-        console.log("Equipment ID:", equipment.equipmentId)
-
-    }
 
     const getStatusBadge = (status: string) => {
         switch (status?.toLowerCase()) {
@@ -163,11 +160,11 @@ export default function EquipmentPage() {
                                     <div className="text-sm">{item.equipmentNumberSerial}</div>
                                     <div>{getStatusBadge(item.equipmentStatus)}</div>
                                     <div>
-                                        {item.qrCode ? (
+                                        {item.equipmentQr ? (
                                             <Dialog>
                                                 <DialogTrigger asChild>
-                                                    <Button variant="link" onClick={() => setSelectedQrCode(item.qrCode!)}>
-                                                        View QR
+                                                    <Button variant="link" onClick={() => setSelectedQrCode(item.equipmentQr!)}>
+                                                        <Eye className="h-4 w-4" />
                                                     </Button>
                                                 </DialogTrigger>
                                                 <DialogContent>
@@ -191,17 +188,22 @@ export default function EquipmentPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent>
-                                                <DropdownMenuItem onClick={() => alert(`Edit ${item.equipmentName}`)}>
+                                                <DropdownMenuItem
+                                                    onClick={() => {
+                                                        setSelectedEquipment(item)
+                                                        setIsEditModalOpen(true)
+                                                    }}
+                                                >
                                                     Edit
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => alert(`Delete ${item.equipmentName}`)}>
+                                                <DropdownMenuItem
+                                                    onClick={() => {
+                                                        setSelectedEquipment(item)
+                                                        setIsDeleteModalOpen(true)
+                                                    }}
+                                                >
                                                     Delete
                                                 </DropdownMenuItem>
-                                                {!item.qrCode && (
-                                                    <DropdownMenuItem onClick={() => generateQrCode(item.equipmentId)}>
-                                                        Generate QR Codeee
-                                                    </DropdownMenuItem>
-                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
@@ -211,6 +213,29 @@ export default function EquipmentPage() {
                     </Card>
                 </div>
             </div>
+            {selectedEquipment && (
+                <>
+                    <EditEquipment
+                        open={isEditModalOpen}
+                        onClose={() => {
+                            setIsEditModalOpen(false)
+                            setSelectedEquipment(null)
+                        }}
+                        onEdit={fetchEquipment}
+                        equipmentId={selectedEquipment.equipmentId.toString()}
+                    />
+                    <DeleteEquipment
+                        open={isDeleteModalOpen}
+                        onClose={() => {
+                            setIsDeleteModalOpen(false)
+                            setSelectedEquipment(null)
+                        }}
+                        onDelete={fetchEquipment}
+                        equipmentName={selectedEquipment.equipmentName}
+                        equipmentId={selectedEquipment.equipmentId.toString()}
+                    />
+                </>
+            )}
         </DashboardLayout>
     )
 }

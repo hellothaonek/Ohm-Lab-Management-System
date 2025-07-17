@@ -15,7 +15,6 @@ interface CreateEquipmentProps {
         equipmentNumberSerial: string
         equipmentDescription: string
         equipmentTypeUrlImg: string
-        equipmentQr: string
     }) => void
 }
 
@@ -26,7 +25,6 @@ export default function CreateEquipment({ open, onClose, onCreate }: CreateEquip
         equipmentNumberSerial: "",
         equipmentDescription: "",
         equipmentTypeUrlImg: "",
-        equipmentQr: "",
     })
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,16 +96,6 @@ export default function CreateEquipment({ open, onClose, onCreate }: CreateEquip
                             id="equipmentTypeUrlImg"
                             name="equipmentTypeUrlImg"
                             value={equipmentData.equipmentTypeUrlImg}
-                            onChange={handleChange}
-                            className="col-span-3"
-                        />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="equipmentQr" className="text-right">QR Code</Label>
-                        <Input
-                            id="equipmentQr"
-                            name="equipmentQr"
-                            value={equipmentData.equipmentQr}
                             onChange={handleChange}
                             className="col-span-3"
                         />

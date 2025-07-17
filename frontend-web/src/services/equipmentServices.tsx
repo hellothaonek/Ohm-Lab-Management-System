@@ -6,7 +6,7 @@ export const getEquipmentById = async (id: string) => {
     return response.data;
 };
 
-export const createEquipment = async (data: { equipmentName: string; equipmentCode: string; equipmentNumberSerial: string; equipmentDescription: string; equipmentTypeUrlImg: string; equipmentQr: string }) => {
+export const createEquipment = async (data: { equipmentName: string; equipmentCode: string; equipmentNumberSerial: string; equipmentDescription: string; equipmentTypeUrlImg: string }) => {
     const response = await defaultAxiosInstance.post("/api/equipment/equipment", data);
     toast.success("Equipment created successfully");
     return response.data;
@@ -19,5 +19,17 @@ export const createEquipmentQr = async (data: { id: string, qr: string }) => {
 
 export const searchEquipment = async (data: { pageNum: number; pageSize: number; keyWord: string; status: string }) => {
     const response = await defaultAxiosInstance.post("/api/equipment/search", data);
+    return response.data;
+};
+
+export const updateEquipment = async (id: string, data: { equipmentName: string; equipmentCode: string; equipmentNumberSerial: string; equipmentDescription: string; equipmentTypeUrlImg: string }) => {
+    const response = await defaultAxiosInstance.put(`/api/equipment/${id}`, data);
+    toast.success("Equipment updated successfully");
+    return response.data;
+};
+
+export const deleteEquipment = async (id: string) => {
+    const response = await defaultAxiosInstance.post(`/api/equipment/delete/${id}`);
+    toast.success("Equipment deleted successfully");
     return response.data;
 };
