@@ -28,18 +28,21 @@ export default function LoginPage() {
       const apiResponse = await loginGoogle({ googleId });
 
       if (apiResponse) {
-        const userRole = apiResponse.user?.userRollNumber;
+        const userRole = apiResponse.user?.userRoleName;
         localStorage.setItem('googleId', googleId);
 
         switch (userRole) {
-          case "adm":
+          case "Admin":
             router.push("/admin/dashboard");
             break;
-          case "head":
+          case "HeadOfDepartment":
             router.push("/head/dashboard");
             break;
-          case "lecturer":
+          case "Lecturer":
             router.push("/lecturer/dashboard");
+            break;
+          case "Student":
+            router.push("/student/dashboard");
             break;
           default:
             toast.error("Unknown user role");
