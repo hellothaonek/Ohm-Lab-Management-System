@@ -1,13 +1,13 @@
 import { defaultAxiosInstance, axiosWithoutLoading } from "./axios.config";
 import { toast } from "react-toastify";
 
-export const createSchedules = async (data: any) => {
+export const createSchedules = async (data: { classId: number, weeksId: number, scheduleName: string, scheduleDate: string, scheduleDescription: string }) => {
     const response = await defaultAxiosInstance.post("/api/assignment/schedules", data);
     toast.success("Schedules created successfully");
     return response.data;
 };
 
-export const updateSchedule = async (id: string, data: any) => {
+export const updateSchedule = async (id: string, data: { classId: number, weeksId: number, scheduleName: string, scheduleDate: string, scheduleDescription: string }) => {
     const response = await defaultAxiosInstance.put(`/api/assignment/schedules/${id}`, data);
     toast.success("Schedule updated successfully");
     return response.data;
@@ -29,7 +29,7 @@ export const getSchedulesByLecturer = async (lecturerId: string) => {
     return response.data;
 };
 
-export const createReports = async (data: any) => {
+export const createReports = async (data: { userId: string, scheduleId: number, reportTitle: string, reportDescription: string }) => {
     const response = await defaultAxiosInstance.post("/api/assignment/reports", data);
     toast.success("Reports created successfully");
     return response.data;
@@ -55,13 +55,13 @@ export const getReportsByLab = async (labId: string) => {
     return response.data;
 };
 
-export const createGrades = async (data: any) => {
+export const createGrades = async (data: { userId: string, teamId: number, labId: number, gradeDescription: string }) => {
     const response = await defaultAxiosInstance.post("/api/assignment/grades", data);
     toast.success("Grades created successfully");
     return response.data;
 };
 
-export const updateGrade = async (id: string, data: any) => {
+export const updateGrade = async (id: string, data: { userId: string, teamId: number, labId: number, gradeDescription: string, gradeStatus: string }) => {
     const response = await defaultAxiosInstance.put(`/api/assignment/grades/${id}`, data);
     toast.success("Grade updated successfully");
     return response.data;
