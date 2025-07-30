@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { deleteEquipment, getEquipmentById, EquipmentItem } from '@/src/services/equipmentServices';
-import { Button } from '@/src/components/ui/button';
-import { Badge } from '@/src/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/src/components/ui/dialog';
-import { Card, CardContent } from '@/src/components/ui/card';
+import { deleteEquipment, getEquipmentById, EquipmentItem } from '@/services/equipmentServices';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangle, Trash2, Package } from 'lucide-react';
 import { toast } from 'react-toastify';
 

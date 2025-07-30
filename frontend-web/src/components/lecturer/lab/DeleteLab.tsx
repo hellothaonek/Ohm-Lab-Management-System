@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/src/components/ui/button"
+import { Button } from "@/components/ui/button"
 import {
     Dialog,
     DialogContent,
@@ -9,8 +9,8 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "@/src/components/ui/dialog"
-import { deleteLab } from "@/src/services/courseServices"
+} from "@/components/ui/dialog"
+import { deleteLab } from "@/services/courseServices"
 
 interface DeleteLabProps {
     labId?: string // Make labId optional to match Lab interface

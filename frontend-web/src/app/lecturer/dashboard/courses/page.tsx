@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import DashboardLayout from "@/src/components/dashboard-layout"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/src/components/ui/card"
-import { getSubjects } from "@/src/services/courseServices"
-import CourseLab from "@/src/components/lecturer/lab/CourseLab"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { getSubjects } from "@/services/courseServices"
+import CourseLab from "@/components/lecturer/lab/CourseLab"
 
 interface Subject {
     subjectId: number

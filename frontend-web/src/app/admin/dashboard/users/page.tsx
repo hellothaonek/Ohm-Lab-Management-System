@@ -163,7 +163,7 @@ export default function UserManagement() {
             user.id === userId ? { ...user, status: newStatus } : user
         ))
     }
-    
+
     const getRoleColor = (role: string) => {
         switch (role) {
             case "admin": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"

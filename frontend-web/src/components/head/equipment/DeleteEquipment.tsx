@@ -1,7 +1,7 @@
 "use client";
-import { Button } from "@/src/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/src/components/ui/dialog";
-import { deleteEquipment } from "@/src/services/equipmentServices";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { deleteEquipment } from "@/services/equipmentServices";
 
 interface DeleteEquipmentProps {
     open: boolean;

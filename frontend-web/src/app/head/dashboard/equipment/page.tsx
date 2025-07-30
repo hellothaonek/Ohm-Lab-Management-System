@@ -1,9 +1,9 @@
 "use client"
-import DashboardLayout from "@/src/components/dashboard-layout"
-import { Badge } from "@/src/components/ui/badge"
-import { Button } from "@/src/components/ui/button"
-import { Card } from "@/src/components/ui/card"
-import { Input } from "@/src/components/ui/input"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Search, EllipsisVertical, Eye } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import {
@@ -11,13 +11,13 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "@/src/components/ui/dropdown-menu"
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/src/components/ui/dialog"
-import { searchEquipment, getEquipmentById } from "@/src/services/equipmentServices"
-import CreateEquipment from "@/src/components/head/equipment/CreateEquipment"
+} from "@/components/ui/dropdown-menu"
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { searchEquipment, getEquipmentById } from "@/services/equipmentServices"
+import CreateEquipment from "@/components/head/equipment/CreateEquipment"
 import { QRCodeCanvas } from "qrcode.react"
-import DeleteEquipment from "@/src/components/head/equipment/DeleteEquipment"
-import EditEquipment from "@/src/components/head/equipment/EditEquipment"
+import DeleteEquipment from "@/components/head/equipment/DeleteEquipment"
+import EditEquipment from "@/components/head/equipment/EditEquipment"
 
 interface Equipment {
     equipmentId: number;

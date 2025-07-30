@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Edit, Trash2 } from "lucide-react"
-import { Badge } from "@/src/components/ui/badge"
-import DashboardLayout from "@/src/components/dashboard-layout"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card"
-import { getSubjects } from "@/src/services/courseServices"
-import CreateCourse from "@/src/components/head/courses/CreateCourse"
-import { Button } from "@/src/components/ui/button"
-import DeleteCourse from "@/src/components/head/courses/DeleteCourse"
-import EditCourse from "@/src/components/head/courses/EditCourse"
+import { Badge } from "@/components/ui/badge"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { getSubjects } from "@/services/courseServices"
+import CreateCourse from "@/components/head/courses/CreateCourse"
+import { Button } from "@/components/ui/button"
+import DeleteCourse from "@/components/head/courses/DeleteCourse"
+import EditCourse from "@/components/head/courses/EditCourse"
 
 interface Subject {
     subjectId: number

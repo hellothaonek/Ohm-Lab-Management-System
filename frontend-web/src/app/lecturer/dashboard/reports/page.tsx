@@ -3,15 +3,15 @@
 import { useState } from "react"
 import Link from "next/link"
 import { CircuitBoard, Search, Plus, AlertTriangle, CheckCircle, Clock, Eye, Edit, Trash2 } from "lucide-react"
-import { Card, CardContent } from "@/src/components/ui/card"
-import { Button } from "@/src/components/ui/button"
-import { Input } from "@/src/components/ui/input"
-import { Label } from "@/src/components/ui/label"
-import { Textarea } from "@/src/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select"
-import { Badge } from "@/src/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
     Dialog,
     DialogContent,
@@ -20,8 +20,8 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/src/components/ui/dialog"
-import DashboardLayout from "@/src/components/dashboard-layout"
+} from "@/components/ui/dialog"
+import DashboardLayout from "@/components/dashboard-layout"
 
 // Define status options for the Select dropdown
 const statusOptions = [

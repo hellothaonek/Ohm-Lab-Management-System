@@ -3,7 +3,7 @@
 import { Button } from "../../../components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog"
 import { Trash2 } from "lucide-react"
-import { deleteUser } from "@/src/services/userServices"
+import { deleteUser } from "@/services/userServices"
 import { useState } from "react"
 
 interface DeleteUserProps {
