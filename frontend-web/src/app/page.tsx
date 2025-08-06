@@ -5,56 +5,67 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CircuitBoard } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { toast } from "react-toastify";
-import { GoogleOAuthProvider, GoogleLogin, CredentialResponse } from "@react-oauth/google";
-import { loginGoogle } from "../services/userServices";
-import config from "../config/config";
+import {
+  GoogleOAuthProvider,
+  GoogleLogin,
+  CredentialResponse,
+} from "@react-oauth/google";
+import { loginGoogle } from "../services/userServices"; // ✅ gọi API
+import config from "../config/config"; // ✅ chứa GOOGLE_CLIENT_ID
 
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
+  // ✅ Xử lý login thành công từ Google
   const handleLogin = async (response: CredentialResponse) => {
     if (!response.credential) {
-      console.log("1")
-      console.error("Error: Google credential is undefined");
+      console.error("Google credential is undefined");
       return;
     }
 
-    setIsLoading(true);
     const googleId = response.credential;
-    console.log("Google ID:", googleId);
+    setIsLoading(true);
+
     try {
       const apiResponse = await loginGoogle({ googleId });
-      console.log("2", apiResponse)
-      if (apiResponse) {
-        const userRole = apiResponse.user?.userRoleName;
-        localStorage.setItem('googleId', googleId);
 
-        switch (userRole) {
-          case "Admin":
-            router.push("/admin/dashboard");
-            break;
-          case "HeadOfDepartment":
-            router.push("/head/dashboard");
-            break;
-          case "Lecturer":
-            router.push("/lecturer/dashboard");
-            break;
-          case "Student":
-            router.push("/student/dashboard");
-            break;
-          default:
-            toast.error("Unknown user role");
-            return;
-        }
-      } else {
-        throw new Error(apiResponse.message);
+      if (!apiResponse || !apiResponse.user) {
+        throw new Error("Invalid response from server");
+      }
+
+      const userRole = apiResponse.user.userRoleName;
+      localStorage.setItem("googleId", googleId);
+
+      // ✅ Điều hướng theo role
+      switch (userRole) {
+        case "Admin":
+          router.push("/admin/dashboard");
+          break;
+        case "HeadOfDepartment":
+          router.push("/head/dashboard");
+          break;
+        case "Lecturer":
+          router.push("/lecturer/dashboard");
+          break;
+        case "Student":
+          router.push("/student/dashboard");
+          break;
+        default:
+          toast.error("Unknown user role");
+          break;
       }
     } catch (error: any) {
       console.error("Google login error:", error);
-      toast.error(error.message || "Failed to login with Google");
+      toast.error(error?.message || "Failed to login with Google");
     } finally {
       setIsLoading(false);
     }
@@ -63,7 +74,10 @@ export default function LoginPage() {
   return (
     <GoogleOAuthProvider clientId={config.GOOGLE_CLIENT_ID || ""}>
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-        <Link href="/" className="absolute top-8 left-8 flex items-center gap-2 font-bold">
+        <Link
+          href="/"
+          className="absolute top-8 left-8 flex items-center gap-2 font-bold"
+        >
           <CircuitBoard className="h-6 w-6 text-orange-500" />
           <span>Ohm Electronics Lab</span>
         </Link>
@@ -71,14 +85,16 @@ export default function LoginPage() {
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold">Login</CardTitle>
-            <CardDescription>Sign in with your @fpt.edu.vn account to access the lab management system</CardDescription>
+            <CardDescription>
+              Sign in with your @fpt.edu.vn account to access the lab management
+              system
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="relative">
+            <div className="relative space-y-2">
               <GoogleLogin
                 onSuccess={handleLogin}
                 onError={() => {
-                  console.error("Login Failed");
                   toast.error("Google login failed");
                   setIsLoading(false);
                 }}
@@ -87,10 +103,11 @@ export default function LoginPage() {
                 text="signin_with"
                 shape="rectangular"
                 logo_alignment="center"
-                width="100%"
               />
               {isLoading && (
-                <span className="text-gray-700 dark:text-gray-300">Logging in...</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Logging in...
+                </span>
               )}
             </div>
           </CardContent>
