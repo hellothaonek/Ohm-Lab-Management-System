@@ -6,7 +6,7 @@ import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../../components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select"
-import { updateUser, getUserById } from "@/src/services/userServices"
+import { updateUser, getUserById } from "@/services/userServices"
 
 interface EditUserProps {
     userId: string | null

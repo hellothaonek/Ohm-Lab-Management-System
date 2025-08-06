@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Edit } from "lucide-react"
-import { Button } from "@/src/components/ui/button"
+import { Button } from "@/components/ui/button"
 import {
     Dialog,
     DialogContent,
@@ -10,17 +10,17 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "@/src/components/ui/dialog"
-import { Input } from "@/src/components/ui/input"
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/src/components/ui/select"
-import { Label } from "@/src/components/ui/label"
-import { updateSubject } from "@/src/services/courseServices"
+} from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { updateSubject } from "@/services/courseServices"
 
 interface EditCourseProps {
     subjectId: number

@@ -20,11 +20,11 @@ import {
     Phone,
     Filter
 } from "lucide-react"
-import { searchUsers } from "@/src/services/userServices"
 import { Pagination } from 'antd';
-import EditUser from "@/src/components/admin/users/EditUser"
-import BlockUser from "@/src/components/admin/users/BlockUser"
-import DeleteUser from "@/src/components/admin/users/DeleteUser"
+import { searchUsers } from "@/services/userServices"
+import EditUser from "@/components/admin/users/EditUser"
+import BlockUser from "@/components/admin/users/BlockUser"
+import DeleteUser from "@/components/admin/users/DeleteUser"
 
 interface User {
     id: string
@@ -163,7 +163,7 @@ export default function UserManagement() {
             user.id === userId ? { ...user, status: newStatus } : user
         ))
     }
-    
+
     const getRoleColor = (role: string) => {
         switch (role) {
             case "admin": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"

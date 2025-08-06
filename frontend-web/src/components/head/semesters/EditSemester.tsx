@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Edit } from "lucide-react"
-import { Button } from "@/src/components/ui/button"
+import { Button } from "@/components/ui/button"
 import {
     Dialog,
     DialogContent,
@@ -10,18 +10,18 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "@/src/components/ui/dialog"
-import { Input } from "@/src/components/ui/input"
-import { Textarea } from "@/src/components/ui/textarea"
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/src/components/ui/select"
-import { Label } from "@/src/components/ui/label"
-import { updateSemester, SemesterCreateUpdate } from "@/src/services/semesterServices"
+} from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { updateSemester, SemesterCreateUpdate } from "@/services/semesterServices"
 
 interface EditSemesterProps {
     semesterId: number

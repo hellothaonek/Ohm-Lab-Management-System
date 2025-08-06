@@ -1,15 +1,17 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Edit, Trash2 } from "lucide-react"
-import { Badge } from "@/src/components/ui/badge"
-import DashboardLayout from "@/src/components/dashboard-layout"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card"
-import { getSubjects } from "@/src/services/courseServices"
-import CreateCourse from "@/src/components/head/courses/CreateCourse"
-import { Button } from "@/src/components/ui/button"
-import DeleteCourse from "@/src/components/head/courses/DeleteCourse"
-import EditCourse from "@/src/components/head/courses/EditCourse"
+import { Edit, Trash2, Search as SearchIcon } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { getSubjects } from "@/services/courseServices"
+import CreateCourse from "@/components/head/courses/CreateCourse"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import DeleteCourse from "@/components/head/courses/DeleteCourse"
+import EditCourse from "@/components/head/courses/EditCourse"
+import { Pagination } from 'antd'
 
 interface Subject {
     subjectId: number
@@ -23,16 +25,21 @@ export default function CoursesPage() {
     const [subjects, setSubjects] = useState<Subject[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [pageNum, setPageNum] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
+    const [totalItems, setTotalItems] = useState(0)
+    const [searchTerm, setSearchTerm] = useState("")
 
     const fetchSubjects = useCallback(async () => {
         try {
             setIsLoading(true)
+            setError(null)
             const response = await getSubjects()
-            console.log("Full API response:", response.pageData)
+            console.log("Full API response:", response)
             if (response) {
-                setSubjects(response.pageData)
+                setSubjects(response.pageData || [])
+                setTotalItems(response.pageInfo?.totalItem || 0)
             }
-
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || err.message || "Failed to fetch subjects"
             setError(errorMessage)
@@ -41,7 +48,7 @@ export default function CoursesPage() {
         } finally {
             setIsLoading(false)
         }
-    }, [])
+    }, [pageNum, pageSize, searchTerm])
 
     useEffect(() => {
         fetchSubjects()
@@ -60,71 +67,103 @@ export default function CoursesPage() {
         }
     }
 
+    const handlePaginationChange = (page: number, pageSize: number | undefined) => {
+        setPageNum(page)
+        setPageSize(pageSize || 10)
+    }
+
     return (
         <DashboardLayout role="head">
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <CreateCourse onSubjectCreated={fetchSubjects} />
-                </div>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Subjects Management</CardTitle>
-                        <CardDescription>View and manage all available subjects</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {isLoading ? (
-                            <div className="p-4 text-center text-muted-foreground">
-                                Loading subjects...
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Subjects Management</CardTitle>
+                            <CardDescription>View and manage all available subjects</CardDescription>
+                        </div>
+                        <CreateCourse onSubjectCreated={fetchSubjects} />
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="mb-4">
+                        <div className="relative w-full sm:w-80">
+                            <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search subjects..."
+                                value={searchTerm}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value)
+                                    setPageNum(1) // Reset to first page on search
+                                }}
+                                className="pl-8 w-full sm:w-80"
+                            />
+                        </div>
+                    </div>
+                    {isLoading ? (
+                        <div className="p-4 text-center text-muted-foreground">
+                            Loading subjects...
+                        </div>
+                    ) : error ? (
+                        <div className="p-4 text-center text-red-500">
+                            {error}
+                        </div>
+                    ) : (
+                        <div className="rounded-md border">
+                            <div className="grid grid-cols-[1fr_150px_1fr_150px_100px] gap-2 p-4 font-medium border-b">
+                                <div>Subject Name</div>
+                                <div>Subject Code</div>
+                                <div>Description</div>
+                                <div>Status</div>
+                                <div>Actions</div>
                             </div>
-                        ) : error ? (
-                            <div className="p-4 text-center text-red-500">
-                                {error}
-                            </div>
-                        ) : (
-                            <div className="rounded-md border">
-                                <div className="grid grid-cols-[1fr_150px_1fr_150px_100px] gap-2 p-4 font-medium border-b">
-                                    <div>Subject Name</div>
-                                    <div>Subject Code</div>
-                                    <div>Description</div>
-                                    <div>Status</div>
-                                    <div>Actions</div>
+                            {subjects.length === 0 ? (
+                                <div className="p-4 text-center text-muted-foreground">
+                                    No subjects found.
                                 </div>
-                                {subjects.length === 0 ? (
-                                    <div className="p-4 text-center text-muted-foreground">
-                                        No subjects found.
-                                    </div>
-                                ) : (
-                                    subjects.map((subject) => (
-                                        <div
-                                            key={subject.subjectId}
-                                            className="grid grid-cols-[1fr_150px_1fr_150px_100px] gap-2 p-4 border-b last:border-0 items-center"
-                                        >
-                                            <div>{subject.subjectName}</div>
-                                            <div>{subject.subjectCode}</div>
-                                            <div>{subject.subjectDescription}</div>
-                                            <div>{getStatusBadge(subject.subjectStatus)}</div>
-                                            <div className="flex gap-2">
-                                                <EditCourse
-                                                    subjectId={subject.subjectId}
-                                                    subjectName={subject.subjectName}
-                                                    subjectDescription={subject.subjectDescription}
-                                                    subjectStatus={subject.subjectStatus}
-                                                    onSubjectUpdated={fetchSubjects}
-                                                />
-                                                <DeleteCourse
-                                                    subjectId={subject.subjectId}
-                                                    subjectName={subject.subjectName}
-                                                    onSubjectDeleted={fetchSubjects}
-                                                />
-                                            </div>
+                            ) : (
+                                subjects.map((subject) => (
+                                    <div
+                                        key={subject.subjectId}
+                                        className="grid grid-cols-[1fr_150px_1fr_150px_100px] gap-2 p-4 border-b last:border-0 items-center"
+                                    >
+                                        <div>{subject.subjectName}</div>
+                                        <div>{subject.subjectCode}</div>
+                                        <div>{subject.subjectDescription}</div>
+                                        <div>{getStatusBadge(subject.subjectStatus)}</div>
+                                        <div className="flex gap-2">
+                                            <EditCourse
+                                                subjectId={subject.subjectId}
+                                                subjectName={subject.subjectName}
+                                                subjectDescription={subject.subjectDescription}
+                                                subjectStatus={subject.subjectStatus}
+                                                onSubjectUpdated={fetchSubjects}
+                                            />
+                                            <DeleteCourse
+                                                subjectId={subject.subjectId}
+                                                subjectName={subject.subjectName}
+                                                onSubjectDeleted={fetchSubjects}
+                                            />
                                         </div>
-                                    ))
-                                )}
+                                    </div>
+                                ))
+                            )}
+                            <div className="flex justify-end p-4">
+                                <Pagination
+                                    current={pageNum}
+                                    pageSize={pageSize}
+                                    total={totalItems}
+                                    showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
+                                    onChange={handlePaginationChange}
+                                    showSizeChanger
+                                    onShowSizeChange={(current, size) => {
+                                        setPageNum(1)
+                                        setPageSize(size)
+                                    }}
+                                />
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
+                        </div>
+                    )}
+                </CardContent>
             </div>
         </DashboardLayout>
     )

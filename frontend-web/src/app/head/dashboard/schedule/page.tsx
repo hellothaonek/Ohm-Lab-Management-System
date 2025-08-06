@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { CalendarDays, Clock, Plus, Users, CheckCircle2, XCircle, Calendar } from "lucide-react"
-import DashboardLayout from "@/src/components/dashboard-layout"
-import { Button } from "@/src/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { Calendar as CalendarComponent } from "@/src/components/ui/calendar"
-import { Label } from "@/src/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -16,10 +16,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/src/components/ui/dialog"
-import { Input } from "@/src/components/ui/input"
-import { Textarea } from "@/src/components/ui/textarea"
-import { Badge } from "@/src/components/ui/badge"
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,15 +29,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/src/components/ui/alert-dialog"
-import { getSemesters } from "@/src/services/semesterServices"
-import { getWeeksBySemester } from "@/src/services/weekServices"
-import CreateSemester from "@/src/components/head/semesters/CreateSemester"
-import EditSemester from "@/src/components/head/semesters/EditSemester"
-import DeleteSemester from "@/src/components/head/semesters/DeleteSemester"
-import CreateWeek from "@/src/components/head/weeks/CreateWeek"
-import EditWeek from "@/src/components/head/weeks/EditWeek"
-import DeleteWeek from "@/src/components/head/weeks/DeleteWeek"
+} from "@/components/ui/alert-dialog"
+import { getSemesters } from "@/services/semesterServices"
+import { getWeeksBySemester } from "@/services/weekServices"
+import CreateSemester from "@/components/head/semesters/CreateSemester"
+import EditSemester from "@/components/head/semesters/EditSemester"
+import DeleteSemester from "@/components/head/semesters/DeleteSemester"
+import CreateWeek from "@/components/head/weeks/CreateWeek"
+import EditWeek from "@/components/head/weeks/EditWeek"
+import DeleteWeek from "@/components/head/weeks/DeleteWeek"
 
 interface Semester {
   id: number

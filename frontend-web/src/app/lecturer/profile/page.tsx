@@ -15,13 +15,13 @@ import {
     BookOpen,
     Clock,
 } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { Label } from "@/src/components/ui/label"
-import { Input } from "@/src/components/ui/input"
-import { Button } from "@/src/components/ui/button"
-import { Textarea } from "@/src/components/ui/textarea"
-import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar"
-import DashboardLayout from "@/src/components/dashboard-layout"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import DashboardLayout from "@/components/dashboard-layout"
 
 export default function LecturerProfilePage() {
     const [isEditing, setIsEditing] = useState(false)

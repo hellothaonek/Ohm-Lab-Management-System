@@ -1,42 +1,115 @@
 "use client"
 
-import { useState } from "react"
-import { Plus, Upload, X } from "lucide-react"
-import { Button } from "@/src/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/src/components/ui/dialog"
-import { Input } from "@/src/components/ui/input"
-import { Label } from "@/src/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select"
-import { toast } from "@/src/components/ui/use-toast"
-import * as XLSX from "xlsx"
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "@/components/ui/use-toast"
+import { createClass } from "@/services/classServices"
+import { getSubjects } from "@/services/courseServices"
+import { searchUsers } from "@/services/userServices"
+
+interface ClassItem {
+    classId: number
+    subjectId: number
+    lecturerId: number | null
+    scheduleTypeId: number | null
+    className: string
+    classDescription: string
+    classStatus: string
+    subjectName: string
+    lecturerName: string | null
+    classUsers: any[]
+}
+
+interface Subject {
+    subjectId: number
+    subjectName: string
+}
+
+interface User {
+    userId: number
+    userFullName: string
+}
 
 interface CreateNewClassProps {
-    onCreateClass: (newClass: any) => void
+    onCreateClass: (newClass: ClassItem) => void
 }
 
 export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [formData, setFormData] = useState({
-        subjectName: "",
-        subjectCode: "",
-        classCode: "",
-        semester: "",
-        maxStudents: "",
-        room: "",
-        schedule: "",
+        subjectId: "",
+        lecturerId: "",
+        scheduleTypeId: "",
+        className: "",
+        classDescription: "",
     })
-    const [file, setFile] = useState<File | null>(null)
     const [status, setStatus] = useState("active")
+    const [subjects, setSubjects] = useState<Subject[]>([])
+    const [subjectsLoading, setSubjectsLoading] = useState(true)
+    const [subjectsError, setSubjectsError] = useState<string | null>(null)
+    const [lecturers, setLecturers] = useState<User[]>([])
+    const [lecturersLoading, setLecturersLoading] = useState(true)
+    const [lecturersError, setLecturersError] = useState<string | null>(null)
+
+    useEffect(() => {
+        const fetchSubjects = async () => {
+            try {
+                setSubjectsLoading(true)
+                const response = await getSubjects()
+                if (response) {
+                    setSubjects(response.pageData)
+                } else {
+                    throw new Error("Invalid subjects data format")
+                }
+            } catch (error) {
+                setSubjectsError("Failed to fetch subjects")
+                toast({
+                    title: "Error",
+                    description: "Failed to load subjects",
+                    variant: "destructive",
+                })
+            } finally {
+                setSubjectsLoading(false)
+            }
+        }
+
+        const fetchLecturers = async () => {
+            try {
+                setLecturersLoading(true)
+                const response = await searchUsers(
+                    { keyWord: "", role: "Lecturer", status: "" },
+                    1,
+                    100
+                )
+                console.log("Lecturers: ", response)
+                if (response) {
+                    setLecturers(response.pageData)
+                } else {
+                    throw new Error("Invalid lecturers data format")
+                }
+            } catch (error) {
+                setLecturersError("Failed to fetch lecturers")
+                toast({
+                    title: "Error",
+                    description: "Failed to load lecturers",
+                    variant: "destructive",
+                })
+            } finally {
+                setLecturersLoading(false)
+            }
+        }
+
+        fetchSubjects()
+        fetchLecturers()
+    }, [])
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target
         setFormData((prev) => ({ ...prev, [name]: value }))
-    }
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0])
-        }
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -52,59 +125,56 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
             return
         }
 
-        let studentList: any[] = []
-        if (file) {
-            try {
-                const data = await file.arrayBuffer()
-                const workbook = XLSX.read(data)
-                const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-                studentList = XLSX.utils.sheet_to_json(worksheet)
-            } catch (error) {
-                toast({
-                    title: "Error",
-                    description: "Failed to process Excel file",
-                    variant: "destructive",
-                })
-                return
+        // Prepare data for API
+        const classData = {
+            subjectId: parseInt(formData.subjectId),
+            lecturerId: formData.lecturerId || "",
+            scheduleTypeId: parseInt(formData.scheduleTypeId) || 0,
+            className: formData.className,
+            classDescription: formData.classDescription,
+            classStatus: status,
+        }
+        console.log("Class Data being sent to createClass API:", classData)
+
+        try {
+            const response = await createClass(classData)
+            console.log("API create class Response:", response)
+            const selectedSubject = subjects.find((subject) => subject.subjectId === parseInt(formData.subjectId))
+            const selectedLecturer = lecturers.find((lecturer) => lecturer.userId === parseInt(formData.lecturerId))
+            const newClass: ClassItem = {
+                ...response,
+                subjectName: selectedSubject ? selectedSubject.subjectName : `Subject ${formData.subjectId}`,
+                lecturerName: selectedLecturer ? selectedLecturer.userFullName : null,
             }
+            onCreateClass(newClass)
+            setIsOpen(false)
+            toast({
+                title: "Success",
+                description: "New class created successfully",
+            })
+
+            // Reset form
+            setFormData({
+                subjectId: "",
+                lecturerId: "",
+                scheduleTypeId: "",
+                className: "",
+                classDescription: "",
+            })
+            setStatus("active")
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to create class",
+                variant: "destructive",
+            })
         }
-
-        const newClass = {
-            id: Date.now(), // Temporary ID, replace with actual ID from backend
-            ...formData,
-            students: studentList.length,
-            maxStudents: parseInt(formData.maxStudents),
-            status,
-            createdDate: new Date().toISOString().split('T')[0],
-            studentList, // Include student list if needed
-        }
-
-        onCreateClass(newClass)
-        setIsOpen(false)
-        toast({
-            title: "Success",
-            description: "New class created successfully",
-        })
-
-        // Reset form
-        setFormData({
-            subjectName: "",
-            subjectCode: "",
-            classCode: "",
-            semester: "",
-            maxStudents: "",
-            room: "",
-            schedule: "",
-        })
-        setFile(null)
-        setStatus("active")
     }
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
                 <Button className="bg-orange-500 hover:bg-orange-600">
-                    <Plus className="h-4 w-4 mr-2" />
                     New Class
                 </Button>
             </DialogTrigger>
@@ -112,70 +182,108 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
                 <DialogHeader>
                     <DialogTitle>Create New Class</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="subjectName">Subject Name</Label>
-                            <Input
-                                id="subjectName"
-                                name="subjectName"
-                                value={formData.subjectName}
-                                onChange={handleInputChange}
-                                placeholder="Digital Electronics"
-                                required
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="subjectCode">Subject Code</Label>
-                            <Input
-                                id="subjectCode"
-                                name="subjectCode"
-                                value={formData.subjectCode}
-                                onChange={handleInputChange}
-                                placeholder="ELE301"
-                                required
-                            />
-                        </div>
+                {subjectsError || lecturersError ? (
+                    <div className="text-red-600 text-center">
+                        {subjectsError || lecturersError}
                     </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="subjectId">Subject</Label>
+                                <Select
+                                    value={formData.subjectId}
+                                    onValueChange={(value) => setFormData((prev) => ({ ...prev, subjectId: value }))}
+                                    disabled={subjectsLoading || !subjects.length}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue
+                                            placeholder={
+                                                subjectsLoading
+                                                    ? "Loading subjects..."
+                                                    : subjects.length
+                                                        ? "Select a subject"
+                                                        : "No subjects available"
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {Array.isArray(subjects) &&
+                                            subjects.map((subject) => (
+                                                <SelectItem key={subject.subjectId} value={subject.subjectId.toString()}>
+                                                    {subject.subjectName}
+                                                </SelectItem>
+                                            ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="lecturerId">Lecturer</Label>
+                                <Select
+                                    value={formData.lecturerId}
+                                    onValueChange={(value) => setFormData((prev) => ({ ...prev, lecturerId: value }))}
+                                    disabled={lecturersLoading || !lecturers.length}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue
+                                            placeholder={
+                                                lecturersLoading
+                                                    ? "Loading lecturers..."
+                                                    : lecturers.length
+                                                        ? "Select a lecturer"
+                                                        : "No lecturers available"
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {Array.isArray(lecturers) &&
+                                            lecturers.map((lecturer) => (
+                                                <SelectItem key={lecturer.userId} value={lecturer.userId.toString()}>
+                                                    {lecturer.userFullName}
+                                                </SelectItem>
+                                            ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="classCode">Class Code</Label>
-                            <Input
-                                id="classCode"
-                                name="classCode"
-                                value={formData.classCode}
-                                onChange={handleInputChange}
-                                placeholder="ELE301.01"
-                                required
-                            />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="scheduleTypeId">Schedule Type ID</Label>
+                                <Input
+                                    id="scheduleTypeId"
+                                    name="scheduleTypeId"
+                                    type="number"
+                                    value={formData.scheduleTypeId}
+                                    onChange={handleInputChange}
+                                    placeholder="Enter schedule type ID"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="className">Class Name</Label>
+                                <Input
+                                    id="className"
+                                    name="className"
+                                    value={formData.className}
+                                    onChange={handleInputChange}
+                                    placeholder="e.g., SE1925.01"
+                                    required
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="semester">Semester</Label>
-                            <Input
-                                id="semester"
-                                name="semester"
-                                value={formData.semester}
-                                onChange={handleInputChange}
-                                placeholder="Fall 2024"
-                                required
-                            />
-                        </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="maxStudents">Max Students</Label>
+                            <Label htmlFor="classDescription">Class Description</Label>
                             <Input
-                                id="maxStudents"
-                                name="maxStudents"
-                                type="number"
-                                value={formData.maxStudents}
+                                id="classDescription"
+                                name="classDescription"
+                                value={formData.classDescription}
                                 onChange={handleInputChange}
-                                placeholder="30"
+                                placeholder="Enter class description"
                                 required
                             />
                         </div>
+
                         <div className="space-y-2">
                             <Label htmlFor="status">Status</Label>
                             <Select value={status} onValueChange={setStatus}>
@@ -189,68 +297,21 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
                                 </SelectContent>
                             </Select>
                         </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="room">Room</Label>
-                            <Input
-                                id="room"
-                                name="room"
-                                value={formData.room}
-                                onChange={handleInputChange}
-                                placeholder="Lab A-301"
-                                required
-                            />
+                        <div className="flex justify-end gap-2">
+                            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                className="bg-orange-500 hover:bg-orange-600"
+                                disabled={subjectsLoading || lecturersLoading || !!subjectsError || !!lecturersError}
+                            >
+                                Create Class
+                            </Button>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="schedule">Schedule</Label>
-                            <Input
-                                id="schedule"
-                                name="schedule"
-                                value={formData.schedule}
-                                onChange={handleInputChange}
-                                placeholder="Mon, Wed 08:00-10:00"
-                                required
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="studentList">Student List (Excel)</Label>
-                        <div className="flex items-center gap-2">
-                            <Input
-                                id="studentList"
-                                type="file"
-                                accept=".xlsx,.xls"
-                                onChange={handleFileChange}
-                                className="flex-1"
-                            />
-                            {file && (
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setFile(null)}
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            )}
-                        </div>
-                        <p className="text-sm text-gray-500">
-                            Upload an Excel file containing student information (optional)
-                        </p>
-                    </div>
-
-                    <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
-                            Cancel
-                        </Button>
-                        <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
-                            Create Class
-                        </Button>
-                    </div>
-                </form>
+                    </form>
+                )}
             </DialogContent>
         </Dialog>
     )

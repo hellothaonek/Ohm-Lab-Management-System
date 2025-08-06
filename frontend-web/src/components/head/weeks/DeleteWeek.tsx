@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Trash2 } from "lucide-react"
-import { Button } from "@/src/components/ui/button"
+import { Button } from "@/components/ui/button"
 import {
     Dialog,
     DialogContent,
@@ -10,8 +10,8 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "@/src/components/ui/dialog"
-import { deleteWeek } from "@/src/services/weekServices"
+} from "@/components/ui/dialog"
+import { deleteWeek } from "@/services/weekServices"
 
 interface DeleteWeekProps {
     weekId: number

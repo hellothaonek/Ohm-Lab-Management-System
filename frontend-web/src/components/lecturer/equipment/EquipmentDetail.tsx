@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { getEquipmentById, EquipmentItem } from '@/src/services/equipmentServices';
-import { Button } from '@/src/components/ui/button';
-import { Badge } from '@/src/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/src/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
-import { Separator } from '@/src/components/ui/separator';
+import { getEquipmentById, EquipmentItem } from '@/services/equipmentServices';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { Eye, Package, Wrench, QrCode, Image as ImageIcon, FileText, Hash, Edit, Trash2 } from 'lucide-react';
 
 interface EquipmentDetailProps {

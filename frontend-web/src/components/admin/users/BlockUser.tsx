@@ -9,7 +9,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "../../../components/ui/dialog";
-import { blockUser } from "@/src/services/userServices";
+import { blockUser } from "@/services/userServices";
 
 interface BlockUserProps {
     userId: string | null;

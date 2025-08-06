@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Trash2 } from "lucide-react"
-import { Button } from "@/src/components/ui/button"
+import { Button } from "@/components/ui/button"
 import {
     Dialog,
     DialogContent,
@@ -10,8 +10,8 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "@/src/components/ui/dialog"
-import { deleteSemester } from "@/src/services/semesterServices"
+} from "@/components/ui/dialog"
+import { deleteSemester } from "@/services/semesterServices"
 
 interface DeleteSemesterProps {
     semesterId: number

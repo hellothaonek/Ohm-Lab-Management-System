@@ -1,5 +1,5 @@
-import DashboardLayout from "@/src/components/dashboard-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, Users, ClipboardList, AlertTriangle } from "lucide-react"
 
 export default function LecturerDashboardPage() {
