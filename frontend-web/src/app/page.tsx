@@ -27,7 +27,7 @@ export default function LoginPage() {
     console.log("Google ID:", googleId);
     try {
       const apiResponse = await loginGoogle({ googleId });
-      console.log("2")
+      console.log("2", apiResponse)
       if (apiResponse) {
         const userRole = apiResponse.user?.userRoleName;
         localStorage.setItem('googleId', googleId);
