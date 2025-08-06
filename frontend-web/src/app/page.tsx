@@ -17,6 +17,7 @@ export default function LoginPage() {
 
   const handleLogin = async (response: CredentialResponse) => {
     if (!response.credential) {
+      console.log("1")
       console.error("Error: Google credential is undefined");
       return;
     }
@@ -26,7 +27,7 @@ export default function LoginPage() {
     console.log("Google ID:", googleId);
     try {
       const apiResponse = await loginGoogle({ googleId });
-
+      console.log("2")
       if (apiResponse) {
         const userRole = apiResponse.user?.userRoleName;
         localStorage.setItem('googleId', googleId);
