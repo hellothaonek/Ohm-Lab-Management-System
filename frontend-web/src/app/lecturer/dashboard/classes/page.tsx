@@ -2,13 +2,12 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { CircuitBoard, Search, Users, Calendar, BookOpen, Plus, Eye, Edit, Trash2 } from "lucide-react"
+import { CircuitBoard, Search, Users, Calendar, BookOpen, Plus } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import DashboardLayout from "@/components/dashboard-layout"
 
 // Sample classes data
@@ -139,7 +138,6 @@ export default function LecturerClassesPage() {
     const [searchTerm, setSearchTerm] = useState("")
     const [selectedSubject, setSelectedSubject] = useState("all")
     const [selectedStatus, setSelectedStatus] = useState("all")
-    const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
 
     const filteredClasses = useMemo(() => {
         return classesData.filter((classItem) => {
@@ -153,19 +151,6 @@ export default function LecturerClassesPage() {
         })
     }, [searchTerm, selectedSubject, selectedStatus])
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "active":
-                return "bg-green-500"
-            case "pending":
-                return "bg-yellow-500"
-            case "completed":
-                return "bg-gray-500"
-            default:
-                return "bg-gray-500"
-        }
-    }
-
     const getStatusVariant = (status: string) => {
         switch (status) {
             case "active":
@@ -178,134 +163,6 @@ export default function LecturerClassesPage() {
                 return "outline"
         }
     }
-
-    const getViewModeVariant = (viewMode: string) => {
-        switch (viewMode) {
-            case "grid":
-                return "default";
-            case "table":
-                return "outline";
-            default:
-                return "outline";
-        }
-    };
-
-    const renderGridView = () => (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredClasses.map((classItem) => (
-                <Card key={classItem.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <CardTitle className="text-lg">{classItem.subjectName}</CardTitle>
-                                <CardDescription className="text-orange-500 font-medium">{classItem.classCode}</CardDescription>
-                            </div>
-                            <Badge variant={getStatusVariant(classItem.status)}>{classItem.status}</Badge>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div className="flex items-center gap-2">
-                                <Users className="h-4 w-4 text-gray-500" />
-                                <span>
-                                    {classItem.students}/{classItem.maxStudents}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4 text-gray-500" />
-                                <span>{classItem.semester}</span>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                            <div>
-                                <strong>Room:</strong> {classItem.room}
-                            </div>
-                            <div>
-                                <strong>Schedule:</strong> {classItem.schedule}
-                            </div>
-                            <div>
-                                <strong>Created:</strong> {new Date(classItem.createdDate).toLocaleDateString("vi-VN")}
-                            </div>
-                        </div>
-
-                        <div className="flex gap-2 pt-2">
-                            <Button size="sm" variant="outline" className="flex-1">
-                                <Eye className="h-3 w-3 mr-1" />
-                                View
-                            </Button>
-                            <Button size="sm" variant="outline" className="flex-1">
-                                <Edit className="h-3 w-3 mr-1" />
-                                Edit
-                            </Button>
-                            <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                                <Trash2 className="h-3 w-3" />
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
-    )
-
-    const renderTableView = () => (
-        <Card>
-            <CardContent className="p-0">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Class Code</TableHead>
-                            <TableHead>Subject</TableHead>
-                            <TableHead>Students</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Room</TableHead>
-                            <TableHead>Schedule</TableHead>
-                            <TableHead>Created</TableHead>
-                            <TableHead>Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredClasses.map((classItem) => (
-                            <TableRow key={classItem.id}>
-                                <TableCell className="font-medium text-orange-500">{classItem.classCode}</TableCell>
-                                <TableCell>
-                                    <div>
-                                        <div className="font-medium">{classItem.subjectName}</div>
-                                        <div className="text-sm text-gray-500">{classItem.subjectCode}</div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-1">
-                                        <Users className="h-3 w-3 text-gray-500" />
-                                        {classItem.students}/{classItem.maxStudents}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant={getStatusVariant(classItem.status)}>{classItem.status}</Badge>
-                                </TableCell>
-                                <TableCell>{classItem.room}</TableCell>
-                                <TableCell className="text-sm">{classItem.schedule}</TableCell>
-                                <TableCell>{new Date(classItem.createdDate).toLocaleDateString("vi-VN")}</TableCell>
-                                <TableCell>
-                                    <div className="flex gap-1">
-                                        <Button size="sm" variant="ghost">
-                                            <Eye className="h-3 w-3" />
-                                        </Button>
-                                        <Button size="sm" variant="ghost">
-                                            <Edit className="h-3 w-3" />
-                                        </Button>
-                                        <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700">
-                                            <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
-    )
 
     return (
         <DashboardLayout role="lecturer">
@@ -358,21 +215,6 @@ export default function LecturerClassesPage() {
                             </SelectContent>
                         </Select>
                     </div>
-
-                    <div className="flex gap-2">
-                        <Select
-                            value={viewMode}
-                            onValueChange={(value: string) => setViewMode(value as "grid" | "table")}
-                        >
-                            <SelectTrigger className={`w-32 ${getViewModeVariant(viewMode)}`}>
-                                <SelectValue placeholder="Select view" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="grid">Grid</SelectItem>
-                                <SelectItem value="table">Table</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
                 </div>
 
                 {/* Results */}
@@ -393,13 +235,50 @@ export default function LecturerClassesPage() {
                             </p>
                         </CardContent>
                     </Card>
-                ) : viewMode === "grid" ? (
-                    renderGridView()
                 ) : (
-                    renderTableView()
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredClasses.map((classItem) => (
+                            <Card key={classItem.id} className="hover:shadow-lg transition-shadow">
+                                <CardHeader className="pb-3">
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <CardTitle className="text-lg">{classItem.subjectName}</CardTitle>
+                                            <CardDescription className="text-orange-500 font-medium">{classItem.classCode}</CardDescription>
+                                        </div>
+                                        <Badge variant={getStatusVariant(classItem.status)}>{classItem.status}</Badge>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <Users className="h-4 w-4 text-gray-500" />
+                                            <span>
+                                                {classItem.students}/{classItem.maxStudents}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="h-4 w-4 text-gray-500" />
+                                            <span>{classItem.semester}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                                        <div>
+                                            <strong>Room:</strong> {classItem.room}
+                                        </div>
+                                        <div>
+                                            <strong>Schedule:</strong> {classItem.schedule}
+                                        </div>
+                                        <div>
+                                            <strong>Created:</strong> {new Date(classItem.createdDate).toLocaleDateString("vi-VN")}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
                 )}
             </div>
         </DashboardLayout>
-
     )
 }

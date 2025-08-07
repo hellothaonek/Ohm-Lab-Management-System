@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Pagination } from "antd"
 import DashboardLayout from "@/components/dashboard-layout"
 import CreateNewClass from "@/components/head/classes/CreateNewClass"
 import { getAllClasses } from "@/services/classServices"
@@ -25,13 +26,15 @@ interface ClassItem {
     classUsers: any[]
 }
 
-export default function LecturerClassesPage() {
+export default function HeadClassesPage() {
     const [searchTerm, setSearchTerm] = useState("")
     const [selectedSubject, setSelectedSubject] = useState("all")
     const [selectedStatus, setSelectedStatus] = useState("all")
     const [classes, setClasses] = useState<ClassItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [pageNum, setPageNum] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
 
     // Fetch classes data from API
     useEffect(() => {
@@ -82,6 +85,12 @@ export default function LecturerClassesPage() {
         })
     }, [searchTerm, selectedSubject, selectedStatus, classes])
 
+    // Paginate filtered classes
+    const paginatedClasses = useMemo(() => {
+        const startIndex = (pageNum - 1) * pageSize
+        return filteredClasses.slice(startIndex, startIndex + pageSize)
+    }, [filteredClasses, pageNum, pageSize])
+
     const getStatusVariant = (status: string) => {
         switch (status.toLowerCase()) {
             case "valid":
@@ -93,70 +102,94 @@ export default function LecturerClassesPage() {
 
     const handleCreateClass = (newClass: ClassItem) => {
         setClasses((prev) => [...prev, newClass])
+        setPageNum(1) // Reset to first page when new class is added
     }
 
     const handleEditClass = (classItem: ClassItem) => {
-        // Placeholder for edit functionality
         console.log("Edit class:", classItem)
-        // Implement actual edit logic here (e.g., open a modal or navigate to an edit page)
     }
 
     const handleDeleteClass = (classId: number) => {
-        // Placeholder for delete functionality
         console.log("Delete class with ID:", classId)
-        // Implement actual delete logic here (e.g., call API to delete and update state)
         setClasses((prev) => prev.filter((classItem) => classItem.classId !== classId))
+        // Adjust page number if current page becomes empty
+        if (paginatedClasses.length === 1 && pageNum > 1) {
+            setPageNum((prev) => prev - 1)
+        }
+    }
+
+    const handlePaginationChange = (page: number, size?: number) => {
+        setPageNum(page)
+        if (size && size !== pageSize) {
+            setPageSize(size)
+        }
     }
 
     const renderTableView = () => (
-        <Card>
-            <CardContent className="p-0">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Class Name</TableHead>
-                            <TableHead>Subject</TableHead>
-                            <TableHead>Lecturer</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredClasses.map((classItem) => (
-                            <TableRow key={classItem.classId}>
-                                <TableCell className="font-medium text-orange-500">{classItem.className}</TableCell>
-                                <TableCell>{classItem.subjectName}</TableCell>
-                                <TableCell>{classItem.lecturerName || "N/A"}</TableCell>
-                                <TableCell>
-                                    <Badge variant={getStatusVariant(classItem.classStatus)}>{classItem.classStatus}</Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex gap-1">
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => handleEditClass(classItem)}
-                                            title="Edit class"
-                                        >
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="text-red-600 hover:text-red-700"
-                                            onClick={() => handleDeleteClass(classItem.classId)}
-                                            title="Delete class"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </TableCell>
+        <>
+            <Card>
+                <CardContent className="p-0">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Class Name</TableHead>
+                                <TableHead>Subject</TableHead>
+                                <TableHead>Lecturer</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Actions</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
+                        </TableHeader>
+                        <TableBody>
+                            {paginatedClasses.map((classItem) => (
+                                <TableRow key={classItem.classId}>
+                                    <TableCell className="font-medium text-orange-500">{classItem.className}</TableCell>
+                                    <TableCell>{classItem.subjectName}</TableCell>
+                                    <TableCell>{classItem.lecturerName || "N/A"}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={getStatusVariant(classItem.classStatus)}>{classItem.classStatus}</Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex gap-1">
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => handleEditClass(classItem)}
+                                                title="Edit class"
+                                            >
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-red-600 hover:text-red-700"
+                                                onClick={() => handleDeleteClass(classItem.classId)}
+                                                title="Delete class"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+            <div className="flex justify-end mt-4">
+                <Pagination
+                    current={pageNum}
+                    pageSize={pageSize}
+                    total={filteredClasses.length}
+                    showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
+                    onChange={handlePaginationChange}
+                    showSizeChanger
+                    onShowSizeChange={(current, size) => {
+                        setPageNum(1)
+                        setPageSize(size)
+                    }}
+                />
+            </div>
+        </>
     )
 
     if (loading) {
@@ -240,13 +273,6 @@ export default function LecturerClassesPage() {
                             </SelectContent>
                         </Select>
                     </div>
-                </div>
-
-                {/* Results */}
-                <div className="mb-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Showing {filteredClasses.length} of {classes.length} classes
-                    </p>
                 </div>
 
                 {/* Classes Display */}
