@@ -18,14 +18,13 @@ import {
   GoogleLogin,
   CredentialResponse,
 } from "@react-oauth/google";
-import { loginGoogle } from "../services/userServices"; // ✅ gọi API
-import config from "../config/config"; // ✅ chứa GOOGLE_CLIENT_ID
+import { loginGoogle } from "../services/userServices";
+import config from "../config/config";
 
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  // ✅ Xử lý login thành công từ Google
   const handleLogin = async (response: CredentialResponse) => {
     if (!response.credential) {
       console.error("Google credential is undefined");
@@ -45,7 +44,6 @@ export default function LoginPage() {
       const userRole = apiResponse.user.userRoleName;
       localStorage.setItem("googleId", googleId);
 
-      // ✅ Điều hướng theo role
       switch (userRole) {
         case "Admin":
           router.push("/admin/dashboard");
