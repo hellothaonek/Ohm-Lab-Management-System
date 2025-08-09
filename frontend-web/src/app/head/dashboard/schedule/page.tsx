@@ -2,181 +2,162 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { addDays, startOfWeek, format, eachWeekOfInterval } from "date-fns";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
+import { addDays, startOfWeek, format } from "date-fns";
 import DashboardLayout from "@/components/dashboard-layout";
-
-const mockSchedule = [
-  {
-    subjectCode: "PRM392",
-    subjectName: "Project Management",
-    lecturer: "Dr. John Smith",
-    date: "2025-08-04",
-    slot: 1,
-    room: "NVH 309",
-    time: "7:30 - 9:30",
-    status: "attended"
-  },
-  {
-    subjectCode: "MMA301",
-    subjectName: "Math for AI",
-    lecturer: "Prof. Jane Doe",
-    date: "2025-08-06",
-    slot: 3,
-    room: "NVH 609",
-    time: "12:30 - 14:45",
-    status: "upcoming"
-  }
-];
+import { getAllScheduleTypes } from "@/services/scheduleTypeServices";
+import CreateScheduleType from "@/components/head/schedule/CreateScheduleType";
+import EditScheduleType from "@/components/head/schedule/EditScheduleType";
+import DeleteScheduleType from "@/components/head/schedule/DeleteScheduleType";
 
 const slots = [
-  "7:30 - 9:30",
-  "9:45 - 11:45",
-  "12:30 - 14:30",
-  "14:45 - 16:45",
-  "17:00 - 19:00",
-  "19:15 - 21:15"
+  "7:00 - 9:15",
+  "9:30 - 11:45",
+  "12:30 - 14:45",
+  "15:00 - 17:15"
 ];
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const scheduleTypeColors: { [key: string]: string } = {
+  A1: "bg-blue-100",
+  A2: "bg-green-100",
+  A3: "bg-yellow-100",
+  A4: "bg-red-100",
+  A5: "bg-purple-100",
+  A6: "bg-pink-100",
+  P1: "bg-teal-100",
+  P2: "bg-orange-100",
+  P3: "bg-indigo-100",
+  P4: "bg-cyan-100",
+  P5: "bg-lime-100",
+  P6: "bg-amber-100"
+};
+
 export default function HeadSchedule() {
-  const [selectedWeekStart, setSelectedWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [weekDates, setWeekDates] = useState<string[]>([]);
-  const [weeks, setWeeks] = useState<{ value: string; label: string }[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<string>("all");
-  const [selectedLecturer, setSelectedLecturer] = useState<string>("all");
+  const [scheduleTypes, setScheduleTypes] = useState([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editScheduleId, setEditScheduleId] = useState<number | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteScheduleId, setDeleteScheduleId] = useState<number | null>(null);
+  const [deleteScheduleName, setDeleteScheduleName] = useState("");
+
+  const fetchScheduleTypes = async () => {
+    try {
+      const response = await getAllScheduleTypes();
+      setScheduleTypes(response);
+    } catch (error) {
+      console.error("Error fetching schedule types:", error);
+    }
+  };
 
   useEffect(() => {
-    const currentYear = new Date().getFullYear();
-    const startOfYear = new Date(currentYear, 0, 1);
-    const endOfYear = new Date(currentYear, 11, 31);
-    const weekStarts = eachWeekOfInterval(
-      { start: startOfYear, end: endOfYear },
-      { weekStartsOn: 1 }
-    );
+    fetchScheduleTypes();
+  }, []);
 
-    const weekOptions = weekStarts.map((weekStart) => {
-      const weekEnd = addDays(weekStart, 6);
-      return {
-        value: format(weekStart, "yyyy-MM-dd"),
-        label: `${format(weekStart, "dd/MM")} - ${format(weekEnd, "dd/MM/yyyy")}`
-      };
-    });
-
-    weekOptions.sort((a, b) => new Date(a.value).getTime() - new Date(b.value).getTime());
-    setWeeks(weekOptions);
-
-    const dates = Array.from({ length: 7 }).map((_, i) =>
-      format(addDays(selectedWeekStart, i), "yyyy-MM-dd")
-    );
-    setWeekDates(dates);
-  }, [selectedWeekStart]);
-
-  const handleWeekChange = (value: string) => {
-    setSelectedWeekStart(new Date(value));
+  const handleSuccess = () => {
+    fetchScheduleTypes();
   };
 
-  const handleSubjectChange = (value: string) => {
-    setSelectedSubject(value);
+  const getDaysFromScheduleTypeDow = (scheduleTypeDow: string) => {
+    const dayMap: { [key: string]: string } = {
+      Monday: "Mon",
+      Tuesday: "Tue",
+      Wednesday: "Wed",
+      Thursday: "Thu",
+      Friday: "Fri",
+      Saturday: "Sat",
+      Sunday: "Sun"
+    };
+
+    return scheduleTypeDow
+      .split(",")
+      .map((day) => dayMap[day.trim()])
+      .filter(Boolean);
   };
 
-  const handleLecturerChange = (value: string) => {
-    setSelectedLecturer(value);
+  const getSlotIndex = (slotId: number) => {
+    return slotId - 1;
   };
 
-  const handleCreateSchedule = () => {
-    console.log("Create Schedule button clicked");
+  const handleEdit = (schedule: any) => {
+    setEditScheduleId(schedule.scheduleTypeId);
+    setIsEditDialogOpen(true);
   };
 
-  const uniqueSubjects = Array.from(new Set(mockSchedule.map((lesson) => lesson.subjectCode)));
-  const uniqueLecturers = Array.from(new Set(mockSchedule.map((lesson) => lesson.lecturer)));
+  const handleDelete = (schedule: any) => {
+    setDeleteScheduleId(schedule.scheduleTypeId);
+    setDeleteScheduleName(schedule.scheduleTypeName);
+    setIsDeleteDialogOpen(true);
+  };
 
   const renderCell = (day: string, slotIndex: number) => {
-    const date = weekDates[days.indexOf(day)];
-    const lesson = mockSchedule.find((l) =>
-      l.date === date &&
-      l.slot === slotIndex + 1 &&
-      (selectedSubject === "all" || l.subjectCode === selectedSubject) &&
-      (selectedLecturer === "all" || l.lecturer === selectedLecturer)
-    );
-
-    if (!lesson) return <div className="border p-2 min-h-[80px]" />;
+    const matchingSchedules = scheduleTypes.filter((schedule: any) => {
+      const scheduleDays = getDaysFromScheduleTypeDow(schedule.scheduleTypeDow);
+      const scheduleSlotIndex = getSlotIndex(schedule.slotId);
+      return scheduleDays.includes(day) && scheduleSlotIndex === slotIndex;
+    });
 
     return (
-      <Card className="bg-blue-100 h-full">
-        <CardContent className="p-2 text-sm">
-          <div className="font-bold">{lesson.subjectCode}</div>
-          <div>{lesson.lecturer}</div>
-          <div className="text-xs text-muted-foreground">{lesson.time}</div>
-        </CardContent>
-      </Card>
+      <div className="border p-2 min-h-[80px] flex flex-col items-center justify-center gap-2 w-full h-full">
+        {matchingSchedules.map((schedule: any, index: number) => (
+          <Card
+            key={index}
+            className={`${scheduleTypeColors[schedule.scheduleTypeName] || "bg-gray-100"} w-full h-full flex items-center justify-center relative`}
+          >
+            <CardContent className="p-2 flex items-center justify-center w-full h-full">
+              <div className="text-sm font-bold">{schedule.scheduleTypeName}</div>
+            </CardContent>
+            <div className="absolute top-1 right-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleEdit(schedule)}>Edit</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDelete(schedule)}>Delete</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </Card>
+        ))}
+      </div>
     );
   };
 
   return (
     <DashboardLayout role="lecturer">
       <div className="p-4 space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Select onValueChange={handleWeekChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder={format(selectedWeekStart, "dd/MM/yyyy")} />
-              </SelectTrigger>
-              <SelectContent>
-                {weeks.map((week) => (
-                  <SelectItem key={week.value} value={week.value}>
-                    {week.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select onValueChange={handleSubjectChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select Subject" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Subjects</SelectItem>
-                {uniqueSubjects.map((subject) => (
-                  <SelectItem key={subject} value={subject}>
-                    {subject}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select onValueChange={handleLecturerChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select Lecturer" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Lecturers</SelectItem>
-                {uniqueLecturers.map((lecturer) => (
-                  <SelectItem key={lecturer} value={lecturer}>
-                    {lecturer}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={handleCreateSchedule} className="bg-orange-500 hover:bg-orange-600">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">Schedule</h1>
+        </div>
+        <div className="flex items-center justify-end gap-4">
+          <Button
+            className="bg-orange-500 hover:bg-orange-600"
+            aria-label="Create new schedule"
+            onClick={() => setIsDialogOpen(true)}
+          >
             Create Schedule
           </Button>
         </div>
 
-        <div className="grid grid-cols-8 gap-px border rounded overflow-hidden text-center text-sm">
+        <div className="grid grid-cols-9 gap-px border rounded overflow-hidden text-center text-sm">
+          <div className="bg-gray-100 font-bold p-2">Time</div>
           <div className="bg-gray-100 font-bold p-2">Slot</div>
-          {days.map((d, index) => (
+          {days.map((d) => (
             <div key={d} className="bg-gray-100 font-bold p-2">
               <div>{d}</div>
-              <div className="text-xs text-muted-foreground">
-                {weekDates[index] ? format(new Date(weekDates[index]), "dd/MM") : ""}
-              </div>
             </div>
           ))}
 
           {slots.map((time, slotIdx) => (
             <div key={`slot-${slotIdx}`} className="contents">
+              <div className="bg-gray-100 p-2 min-h-[80px] flex items-center justify-center">{time}</div>
               <div className="bg-gray-100 p-2 min-h-[80px] flex items-center justify-center">{slotIdx + 1}</div>
               {days.map((d) => (
                 <div key={`${d}-${slotIdx}`} className="min-h-[80px]">
@@ -187,6 +168,24 @@ export default function HeadSchedule() {
           ))}
         </div>
       </div>
+      <CreateScheduleType
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSuccess={handleSuccess}
+      />
+      <EditScheduleType
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        scheduleTypeId={editScheduleId}
+        onSuccess={handleSuccess}
+      />
+      <DeleteScheduleType
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        scheduleTypeId={deleteScheduleId}
+        scheduleTypeName={deleteScheduleName}
+        onSuccess={handleSuccess}
+      />
     </DashboardLayout>
   );
 }

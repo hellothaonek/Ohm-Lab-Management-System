@@ -12,6 +12,7 @@ import { Pagination } from "antd"
 import DashboardLayout from "@/components/dashboard-layout"
 import CreateNewClass from "@/components/head/classes/CreateNewClass"
 import { getAllClasses } from "@/services/classServices"
+import { getScheduleTypeById } from "@/services/scheduleTypeServices"
 
 interface ClassItem {
     classId: number
@@ -24,6 +25,9 @@ interface ClassItem {
     subjectName: string
     lecturerName: string | null
     classUsers: any[]
+    scheduleTypeDow?: string
+    slotStartTime?: string
+    slotEndTime?: string
 }
 
 export default function HeadClassesPage() {
@@ -36,14 +40,32 @@ export default function HeadClassesPage() {
     const [pageNum, setPageNum] = useState(1)
     const [pageSize, setPageSize] = useState(10)
 
-    // Fetch classes data from API
     useEffect(() => {
         const fetchClasses = async () => {
             try {
                 setLoading(true)
                 const response = await getAllClasses()
-                console.log("API GET CLASS:", response)
-                setClasses(response)
+                const classesWithSchedule = await Promise.all(
+                    response.map(async (classItem: ClassItem) => {
+                        if (classItem.scheduleTypeId) {
+                            try {
+                                const scheduleData = await getScheduleTypeById(classItem.scheduleTypeId.toString())
+                                return {
+                                    ...classItem,
+                                    scheduleTypeDow: scheduleData.scheduleTypeDow,
+                                    slotStartTime: scheduleData.slotStartTime,
+                                    slotEndTime: scheduleData.slotEndTime,
+                                }
+                            } catch (err) {
+                                console.error(`Failed to fetch schedule for class ${classItem.classId}:`, err)
+                                return classItem
+                            }
+                        }
+                        return classItem
+                    })
+                )
+
+                setClasses(classesWithSchedule)
             } catch (err) {
                 setError("Failed to fetch classes")
             } finally {
@@ -53,7 +75,6 @@ export default function HeadClassesPage() {
         fetchClasses()
     }, [])
 
-    // Derive subjects and status options dynamically from API data
     const subjects = useMemo(() => {
         const uniqueSubjects = [
             ...new Set(classes.map((classItem) => ({
@@ -135,6 +156,8 @@ export default function HeadClassesPage() {
                                 <TableHead>Class Name</TableHead>
                                 <TableHead>Subject</TableHead>
                                 <TableHead>Lecturer</TableHead>
+                                <TableHead>Day of Week</TableHead>
+                                <TableHead>Time</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Actions</TableHead>
                             </TableRow>
@@ -144,7 +167,13 @@ export default function HeadClassesPage() {
                                 <TableRow key={classItem.classId}>
                                     <TableCell className="font-medium text-orange-500">{classItem.className}</TableCell>
                                     <TableCell>{classItem.subjectName}</TableCell>
-                                    <TableCell>{classItem.lecturerName || "N/A"}</TableCell>
+                                    <TableCell>{classItem.lecturerName || "-"}</TableCell>
+                                    <TableCell>{classItem.scheduleTypeDow || "-"}</TableCell>
+                                    <TableCell>
+                                        {classItem.slotStartTime && classItem.slotEndTime
+                                            ? `${classItem.slotStartTime}-${classItem.slotEndTime}`
+                                            : "-"}
+                                    </TableCell>
                                     <TableCell>
                                         <Badge variant={getStatusVariant(classItem.classStatus)}>{classItem.classStatus}</Badge>
                                     </TableCell>

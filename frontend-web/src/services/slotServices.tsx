@@ -17,7 +17,7 @@ export const getSlotById = async (id: string) => {
 };
 
 export const updateSlot = async (id: string, data: { slotName: string; slotStartTime: string; slotEndTime: string; slotDescription: string; slotStatus: string }) => {
-    const response = await defaultAxiosInstance.put(`/api/slot/${id}`, data);
+    const response = await defaultAxiosInstance.put(`/api/slot/${id}`, data); 
     toast.success("Slot updated successfully");
     return response.data;
 };

@@ -70,7 +70,7 @@ export default function EquipmentTab() {
     }, [fetchEquipment])
 
     const getStatusBadge = (status: string) => {
-        switch (status?.toLowerCase()) {
+        switch (status) {
             case "available":
                 return <Badge className="bg-green-500 hover:bg-green-600">Available</Badge>
             case "inuse":

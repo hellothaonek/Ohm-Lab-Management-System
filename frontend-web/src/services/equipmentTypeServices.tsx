@@ -1,7 +1,7 @@
 import { defaultAxiosInstance, axiosWithoutLoading } from "./axios.config";
 import { toast } from "react-toastify";
 
-export const createEquipmentType = async (data: { equipmentType: string }) => {
+export const createEquipmentType = async (data: { equipmentTypeName: string; equipmentTypeCode: string; equipmentTypeDescription: string; equipmentTypeUrlImg: string }) => {
     const response = await defaultAxiosInstance.post("/api/equipmenttype/equipmenttype", data);
     toast.success("Equipment type created successfully");
     return response.data;
@@ -17,7 +17,7 @@ export const getEquipmentTypeById = async (id: string) => {
     return response.data;
 };
 
-export const updateEquipmentType = async (id: string, data: { equipmentType: string }) => {
+export const updateEquipmentType = async (id: string, data: { equipmentTypeName: string; equipmentTypeCode: string; equipmentTypeDescription: string; equipmentTypeQuantity: number; equipmentTypeUrlImg: string; equipmentTypeStatus: string }) => {
     const response = await defaultAxiosInstance.put(`/api/equipmenttype/${id}`, data);
     toast.success("Equipment type updated successfully");
     return response.data;
