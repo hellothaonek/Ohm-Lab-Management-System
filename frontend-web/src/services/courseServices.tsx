@@ -2,8 +2,14 @@ import { defaultAxiosInstance, axiosWithoutLoading } from "./axios.config";
 import { toast } from "react-toastify";
 
 export const getSubjects = async () => {
-    const response = await defaultAxiosInstance.get("/api/course/subjects");
-    return response.data;
+    try {
+        const response = await defaultAxiosInstance.get("/api/course/subjects");
+        // API trả về pageData chứa array subjects
+        return response.data?.pageData || [];
+    } catch (error) {
+        console.error("Error fetching subjects:", error);
+        return [];
+    }
 };
 
 export const createSubject = async (data: { subjectName: string; subjectCode: string; subjectDescription: string }) => {

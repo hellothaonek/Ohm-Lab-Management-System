@@ -18,7 +18,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "../components/ui/
 
 interface DashboardLayoutProps {
   children: React.ReactNode
-  role: "head" | "lecturer" | "admin"
+  role: "head" | "lecturer" | "admin" | "student"
   breadcrumbs?: Array<{ title: string; href?: string }>
 }
 
@@ -35,7 +35,9 @@ export default function DashboardLayout({ children, role, breadcrumbs = [] }: Da
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href={`/${role}/dashboard`}>Dashboard</BreadcrumbLink>
+                    <BreadcrumbLink href={role === "student" ? `/${role}/classes` : `/${role}/dashboard`}>
+                      {role === "student" ? "Classes" : "Dashboard"}
+                    </BreadcrumbLink>
                   </BreadcrumbItem>
                   {breadcrumbs.map((breadcrumb, index) => (
                     <React.Fragment key={index}>

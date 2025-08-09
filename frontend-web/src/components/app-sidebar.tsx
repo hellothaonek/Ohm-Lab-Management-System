@@ -40,13 +40,20 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-    role: "head" | "lecturer" | "admin"
+    role: "head" | "lecturer" | "admin" | "student"
 }
 
 export function AppSidebar({ role, ...props }: AppSidebarProps) {
     const pathname = usePathname()
 
-    const roleTitle = role === "head" ? "Head of Department" : role === "lecturer" ? "Lecturer" : "System Administrator"
+    const roleTitle =
+        role === "head"
+            ? "Head of Department"
+            : role === "lecturer"
+                ? "Lecturer"
+                : role === "admin"
+                    ? "System Administrator"
+                    : "Student"
 
     const navItems = [
         {
@@ -57,15 +64,21 @@ export function AppSidebar({ role, ...props }: AppSidebarProps) {
         },
         {
             title: "Schedule",
-            href: `/${role}/dashboard/schedule`,
+            href: role === "student" ? `/${role}/schedule` : `/${role}/dashboard/schedule`,
             icon: Calendar,
-            roles: ["head", "lecturer"],
+            roles: ["head", "lecturer", "student"],
         },
         {
             title: "Classes",
-            href: `/${role}/dashboard/classes`,
+            href: role === "student" ? `/${role}/classes` : `/${role}/dashboard/classes`,
             icon: Users,
-            roles: ["head", "lecturer"],
+            roles: ["head", "lecturer", "admin", "student"],
+        },
+        {
+            title: "Labs",
+            href: role === "student" ? `/${role}/labs` : `/${role}/dashboard/labs`,
+            icon: Database,
+            roles: ["student"],
         },
         {
             title: "Equipment",
@@ -105,9 +118,9 @@ export function AppSidebar({ role, ...props }: AppSidebarProps) {
         },
         {
             title: "Reports",
-            href: `/${role}/dashboard/reports`,
+            href: role === "student" ? `/${role}/report` : `/${role}/dashboard/reports`,
             icon: BarChart3,
-            roles: ["head", "lecturer", "admin"],
+            roles: ["head", "lecturer", "admin", "student"],
         },
         {
             title: "User Management",
@@ -125,7 +138,7 @@ export function AppSidebar({ role, ...props }: AppSidebarProps) {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={`/${role}/dashboard`}>
+                            <Link href={role === "student" ? `/${role}/classes` : `/${role}/dashboard`}>
                                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-orange-500 text-sidebar-primary-foreground">
                                     <CircuitBoard className="size-4" />
                                 </div>
