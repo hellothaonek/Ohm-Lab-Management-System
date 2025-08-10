@@ -4,7 +4,7 @@ import { Calendar, Users, Database, AlertTriangle, BarChart3 } from "lucide-reac
 
 export default function HeadDashboardPage() {
   return (
-    <DashboardLayout role="head">
+    <DashboardLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>

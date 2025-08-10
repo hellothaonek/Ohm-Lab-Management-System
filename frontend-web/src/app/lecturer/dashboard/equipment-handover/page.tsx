@@ -289,7 +289,7 @@ export default function EquipmentCheckoutPage() {
 
   if (!hasMounted) {
     return (
-      <DashboardLayout role="lecturer">
+      <DashboardLayout>
         <div className="min-h-screen p-4">
           <div className="flex justify-center items-center h-64">
             <div className="text-lg">Đang tải...</div>
@@ -300,7 +300,7 @@ export default function EquipmentCheckoutPage() {
   }
 
   return (
-    <DashboardLayout role="lecturer">
+    <DashboardLayout>
       <div className="min-h-screen p-4">
         {/* Header */}
         <div className="mb-6">

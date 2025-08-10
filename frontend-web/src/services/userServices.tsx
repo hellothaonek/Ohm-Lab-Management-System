@@ -3,7 +3,6 @@ import { toast } from "react-toastify";
 
 export const loginGoogle = async (data: { googleId: string; }) => {
     const response = await defaultAxiosInstance.post("/api/user/loginmail", data);
-    console.log(">>> ", response)
     if (response.data.token) {
         localStorage.setItem('token', response.data.token);
     }

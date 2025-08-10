@@ -1,6 +1,7 @@
 "use client"
 
 import type * as React from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -15,7 +16,6 @@ import {
     Settings,
     LogOut,
 } from "lucide-react"
-
 import {
     Sidebar,
     SidebarContent,
@@ -38,34 +38,60 @@ import {
     DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar"
+import { getCurrentUser } from "@/services/userServices"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-    role: "head" | "lecturer" | "admin"
+    role: "head" | "lecturer" | "admin" | "student"
 }
 
 export function AppSidebar({ role, ...props }: AppSidebarProps) {
     const pathname = usePathname()
+    const [userFullName, setUserFullName] = useState<string>() 
+    const [isLoading, setIsLoading] = useState<boolean>(true)
 
-    const roleTitle = role === "head" ? "Head of Department" : role === "lecturer" ? "Lecturer" : "System Administrator"
+    const roleTitle = role === "head" ? "Head of Department" :
+        role === "lecturer" ? "Lecturer" :
+            role === "admin" ? "System Administrator" :
+                "Student"
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const userData = await getCurrentUser()
+                setUserFullName(userData.userFullName)
+            } catch (error) {
+                console.error("Failed to fetch user:", error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        fetchUser()
+    }, [])
 
     const navItems = [
         {
             title: "Dashboard",
             href: `/${role}/dashboard`,
             icon: BarChart3,
-            roles: ["head", "lecturer", "admin"],
+            roles: ["head", "lecturer", "admin", "student"],
         },
         {
             title: "Schedule",
             href: `/${role}/dashboard/schedule`,
             icon: Calendar,
-            roles: ["head", "lecturer"],
+            roles: ["head", "lecturer", "student"],
         },
         {
             title: "Classes",
             href: `/${role}/dashboard/classes`,
             icon: Users,
-            roles: ["head", "lecturer"],
+            roles: ["head"],
+        },
+        {
+            title: "My Classes",
+            href: `/${role}/dashboard/my-classes`,
+            icon: Users,
+            roles: ["student", "lecturer"],
         },
         {
             title: "Equipment",
@@ -89,14 +115,8 @@ export function AppSidebar({ role, ...props }: AppSidebarProps) {
             title: "My Courses",
             href: `/${role}/dashboard/courses`,
             icon: Database,
-            roles: ["lecturer"],
+            roles: ["lecturer", "student"],
         },
-        //  {
-        //     title: "Lab",
-        //     href: `/${role}/dashboard/labs`,
-        //     icon: Database,
-        //     roles: ["lecturer"],
-        // },
         {
             title: "Kit",
             href: `/${role}/dashboard/kit`,
@@ -168,11 +188,15 @@ export function AppSidebar({ role, ...props }: AppSidebarProps) {
                                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                                 >
                                     <Avatar className="h-8 w-8 rounded-lg">
-                                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt="John Doe" />
-                                        <AvatarFallback className="rounded-lg">JD</AvatarFallback>
+                                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt={userFullName} />
+                                        <AvatarFallback className="rounded-lg">
+                                            {userFullName ? userFullName.slice(0, 2).toUpperCase() : "JD"}
+                                        </AvatarFallback>
                                     </Avatar>
                                     <div className="grid flex-1 text-left text-sm leading-tight">
-                                        <span className="truncate font-semibold">John Doe</span>
+                                        <span className="truncate font-semibold">
+                                            {isLoading ? "Loading..." : userFullName}
+                                        </span>
                                         <span className="truncate text-xs">{roleTitle}</span>
                                     </div>
                                 </SidebarMenuButton>
@@ -186,11 +210,15 @@ export function AppSidebar({ role, ...props }: AppSidebarProps) {
                                 <DropdownMenuLabel className="p-0 font-normal">
                                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                                         <Avatar className="h-8 w-8 rounded-lg">
-                                            <AvatarImage src="/placeholder.svg?height=32&width=32" alt="John Doe" />
-                                            <AvatarFallback className="rounded-lg">JD</AvatarFallback>
+                                            <AvatarImage src="/placeholder.svg?height=32&width=32" alt={userFullName} />
+                                            <AvatarFallback className="rounded-lg">
+                                                {userFullName ? userFullName.slice(0, 2).toUpperCase() : "JD"}
+                                            </AvatarFallback>
                                         </Avatar>
                                         <div className="grid flex-1 text-left text-sm leading-tight">
-                                            <span className="truncate font-semibold">John Doe</span>
+                                            <span className="truncate font-semibold">
+                                                {isLoading ? "Loading..." : userFullName}
+                                            </span>
                                             <span className="truncate text-xs">{roleTitle}</span>
                                         </div>
                                     </div>

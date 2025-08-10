@@ -4,7 +4,7 @@ import { Calendar, Users, ClipboardList, AlertTriangle } from "lucide-react"
 
 export default function LecturerDashboardPage() {
   return (
-    <DashboardLayout role="lecturer">
+    <DashboardLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>

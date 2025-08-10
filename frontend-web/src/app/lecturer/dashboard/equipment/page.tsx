@@ -88,7 +88,7 @@ export default function EquipmentPage() {
   }
 
   return (
-    <DashboardLayout role="lecturer">
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>

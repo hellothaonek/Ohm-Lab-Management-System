@@ -1,18 +1,20 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, BookOpen, Edit, Trash2 } from "lucide-react"
+import { Search, BookOpen, Edit, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Pagination } from "antd"
 import DashboardLayout from "@/components/dashboard-layout"
 import CreateNewClass from "@/components/head/classes/CreateNewClass"
-import { getAllClasses } from "@/services/classServices"
+import DeleteClass from "@/components/head/classes/DeleteClass"
+import { createClass, getAllClasses } from "@/services/classServices"
 import { getScheduleTypeById } from "@/services/scheduleTypeServices"
+import { getSubjectById } from "@/services/courseServices"
+import { getUserById } from "@/services/userServices"
 
 interface ClassItem {
     classId: number
@@ -37,8 +39,6 @@ export default function HeadClassesPage() {
     const [classes, setClasses] = useState<ClassItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [pageNum, setPageNum] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
 
     useEffect(() => {
         const fetchClasses = async () => {
@@ -76,13 +76,17 @@ export default function HeadClassesPage() {
     }, [])
 
     const subjects = useMemo(() => {
-        const uniqueSubjects = [
-            ...new Set(classes.map((classItem) => ({
+        const subjectMap = new Map<string, { value: string; label: string }>()
+        classes.forEach((classItem) => {
+            subjectMap.set(classItem.subjectId.toString(), {
                 value: classItem.subjectId.toString(),
                 label: classItem.subjectName,
-            }))),
+            })
+        })
+        return [
+            { value: "all", label: "All Subjects" },
+            ...Array.from(subjectMap.values()),
         ]
-        return [{ value: "all", label: "All Subjects" }, ...uniqueSubjects]
     }, [classes])
 
     const statusOptions = useMemo(() => {
@@ -97,20 +101,14 @@ export default function HeadClassesPage() {
     const filteredClasses = useMemo(() => {
         return classes.filter((classItem) => {
             const matchesSearch =
-                classItem.className.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                classItem.subjectName.toLowerCase().includes(searchTerm.toLowerCase())
+                classItem.className.includes(searchTerm.toLowerCase()) ||
+                classItem.subjectName.includes(searchTerm.toLowerCase())
             const matchesSubject = selectedSubject === "all" || classItem.subjectId.toString() === selectedSubject
             const matchesStatus = selectedStatus === "all" || classItem.classStatus === selectedStatus
 
             return matchesSearch && matchesSubject && matchesStatus
         })
     }, [searchTerm, selectedSubject, selectedStatus, classes])
-
-    // Paginate filtered classes
-    const paginatedClasses = useMemo(() => {
-        const startIndex = (pageNum - 1) * pageSize
-        return filteredClasses.slice(startIndex, startIndex + pageSize)
-    }, [filteredClasses, pageNum, pageSize])
 
     const getStatusVariant = (status: string) => {
         switch (status.toLowerCase()) {
@@ -121,113 +119,115 @@ export default function HeadClassesPage() {
         }
     }
 
-    const handleCreateClass = (newClass: ClassItem) => {
-        setClasses((prev) => [...prev, newClass])
-        setPageNum(1) // Reset to first page when new class is added
-    }
+    const handleCreateClass = async (newClass: ClassItem) => {
+        try {
+            const createdClass = await createClass({
+                subjectId: newClass.subjectId,
+                lecturerId: newClass.lecturerId?.toString() || "",
+                scheduleTypeId: newClass.scheduleTypeId || 0,
+                className: newClass.className,
+                classDescription: newClass.classDescription,
+                classStatus: newClass.classStatus,
+            });
+
+            const subjectData = await getSubjectById(newClass.subjectId);
+            const subjectName = subjectData?.subjectName || "-";
+
+            const userData = newClass.lecturerId
+                ? await getUserById(newClass.lecturerId.toString())
+                : null;
+            const lecturerName = userData?.userFullName || "-";
+
+            const scheduleData = newClass.scheduleTypeId
+                ? await getScheduleTypeById(newClass.scheduleTypeId.toString())
+                : null;
+
+            const enrichedClass: ClassItem = {
+                ...createdClass,
+                subjectName: subjectName,
+                lecturerName: lecturerName,
+                scheduleTypeDow: scheduleData?.scheduleTypeDow || "-",
+                slotStartTime: scheduleData?.slotStartTime || "-",
+                slotEndTime: scheduleData?.slotEndTime || "-",
+                classUsers: createdClass.classUsers || [],
+            };
+
+            setClasses((prev) => [...prev, enrichedClass]);
+        } catch (err) {
+            console.error("Failed to create or enrich new class:", err);
+        }
+    };
 
     const handleEditClass = (classItem: ClassItem) => {
         console.log("Edit class:", classItem)
     }
 
     const handleDeleteClass = (classId: number) => {
-        console.log("Delete class with ID:", classId)
         setClasses((prev) => prev.filter((classItem) => classItem.classId !== classId))
-        // Adjust page number if current page becomes empty
-        if (paginatedClasses.length === 1 && pageNum > 1) {
-            setPageNum((prev) => prev - 1)
-        }
-    }
-
-    const handlePaginationChange = (page: number, size?: number) => {
-        setPageNum(page)
-        if (size && size !== pageSize) {
-            setPageSize(size)
-        }
     }
 
     const renderTableView = () => (
-        <>
-            <Card>
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Class Name</TableHead>
-                                <TableHead>Subject</TableHead>
-                                <TableHead>Lecturer</TableHead>
-                                <TableHead>Day of Week</TableHead>
-                                <TableHead>Time</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Actions</TableHead>
+        <Card>
+            <CardContent className="p-0">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Class Name</TableHead>
+                            <TableHead>Subject</TableHead>
+                            <TableHead>Lecturer</TableHead>
+                            <TableHead>Day of Week</TableHead>
+                            <TableHead>Time</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredClasses.map((classItem) => (
+                            <TableRow key={classItem.classId}>
+                                <TableCell className="font-medium text-orange-500">{classItem.className}</TableCell>
+                                <TableCell>{classItem.subjectName || "-"}</TableCell>
+                                <TableCell>{classItem.lecturerName || "-"}</TableCell>
+                                <TableCell>{classItem.scheduleTypeDow || "-"}</TableCell>
+                                <TableCell>
+                                    {classItem.slotStartTime && classItem.slotEndTime
+                                        ? `${classItem.slotStartTime}-${classItem.slotEndTime}`
+                                        : "-"}
+                                </TableCell>
+                                <TableCell>
+                                    <Badge variant={getStatusVariant(classItem.classStatus)}>{classItem.classStatus}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex gap-1">
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => handleEditClass(classItem)}
+                                            title="Edit class"
+                                        >
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <DeleteClass
+                                            classId={classItem.classId}
+                                            className={classItem.className}
+                                            onDelete={handleDeleteClass}
+                                        />
+                                    </div>
+                                </TableCell>
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {paginatedClasses.map((classItem) => (
-                                <TableRow key={classItem.classId}>
-                                    <TableCell className="font-medium text-orange-500">{classItem.className}</TableCell>
-                                    <TableCell>{classItem.subjectName}</TableCell>
-                                    <TableCell>{classItem.lecturerName || "-"}</TableCell>
-                                    <TableCell>{classItem.scheduleTypeDow || "-"}</TableCell>
-                                    <TableCell>
-                                        {classItem.slotStartTime && classItem.slotEndTime
-                                            ? `${classItem.slotStartTime}-${classItem.slotEndTime}`
-                                            : "-"}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={getStatusVariant(classItem.classStatus)}>{classItem.classStatus}</Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex gap-1">
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => handleEditClass(classItem)}
-                                                title="Edit class"
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="text-red-600 hover:text-red-700"
-                                                onClick={() => handleDeleteClass(classItem.classId)}
-                                                title="Delete class"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-            <div className="flex justify-end mt-4">
-                <Pagination
-                    current={pageNum}
-                    pageSize={pageSize}
-                    total={filteredClasses.length}
-                    showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
-                    onChange={handlePaginationChange}
-                    showSizeChanger
-                    onShowSizeChange={(current, size) => {
-                        setPageNum(1)
-                        setPageSize(size)
-                    }}
-                />
-            </div>
-        </>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
     )
 
     if (loading) {
         return (
-            <DashboardLayout role="lecturer">
+            <DashboardLayout>
                 <div className="min-h-screen p-4">
                     <Card>
                         <CardContent className="p-8 text-center">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Loading classes...</h3>
+                            <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto mb-4" />
                         </CardContent>
                     </Card>
                 </div>
@@ -237,7 +237,7 @@ export default function HeadClassesPage() {
 
     if (error) {
         return (
-            <DashboardLayout role="lecturer">
+            <DashboardLayout>
                 <div className="min-h-screen p-4">
                     <Card>
                         <CardContent className="p-8 text-center">
@@ -251,9 +251,8 @@ export default function HeadClassesPage() {
     }
 
     return (
-        <DashboardLayout role="lecturer">
+        <DashboardLayout>
             <div className="min-h-screen p-4">
-                {/* Header */}
                 <div className="mb-6">
                     <div className="flex items-center justify-between">
                         <div>
@@ -263,7 +262,6 @@ export default function HeadClassesPage() {
                     </div>
                 </div>
 
-                {/* Filters and Search */}
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
                     <div className="flex gap-2 flex-1">
                         <div className="relative flex-1">
@@ -304,7 +302,6 @@ export default function HeadClassesPage() {
                     </div>
                 </div>
 
-                {/* Classes Display */}
                 {filteredClasses.length === 0 ? (
                     <Card>
                         <CardContent className="p-8 text-center">

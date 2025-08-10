@@ -11,7 +11,7 @@ export default function KitPage() {
     const [showReportDialog, setShowReportDialog] = useState(false)
 
     return (
-        <DashboardLayout role="head">
+        <DashboardLayout>
             <div className="space-y-6">
                 <Tabs defaultValue="kit-template" className="space-y-4">
                     <TabsList>

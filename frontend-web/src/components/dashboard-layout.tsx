@@ -1,9 +1,7 @@
 "use client"
 
-import React from "react"
-
+import React, { useEffect, useState } from "react"
 import { Bell } from "lucide-react"
-
 import { AppSidebar } from "../components/app-sidebar"
 import {
   Breadcrumb,
@@ -15,14 +13,57 @@ import {
 } from "../components/ui/breadcrumb"
 import { Button } from "../components/ui/button"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "../components/ui/sidebar"
+import { getCurrentUser } from "@/services/userServices"
+import { LoadingSkeleton } from "./loading-skeleton"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
-  role: "head" | "lecturer" | "admin"
   breadcrumbs?: Array<{ title: string; href?: string }>
 }
 
-export default function DashboardLayout({ children, role, breadcrumbs = [] }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, breadcrumbs = [] }: DashboardLayoutProps) {
+  const [role, setRole] = useState<"head" | "lecturer" | "admin" | "student" | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchUserRole() {
+      try {
+        setLoading(true)
+        const userData = await getCurrentUser()
+        const userRoleName = userData.userRoleName
+
+        const roleMap: { [key: string]: "head" | "lecturer" | "admin" | "student" } = {
+          HeadOfDepartment: "head",
+          Lecturer: "lecturer",
+          Admin: "admin",
+          Student: "student",
+        }
+
+        const mappedRole = roleMap[userRoleName]
+        if (mappedRole) {
+          setRole(mappedRole)
+        } else {
+          setError("Invalid user role")
+        }
+      } catch (err) {
+        setError("Failed to fetch user role")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserRole()
+  }, [])
+
+  if (loading) {
+    return <LoadingSkeleton />
+  }
+
+  if (error || !role) {
+    return <div>Error: {error || "User role not found"}</div> 
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar role={role} />

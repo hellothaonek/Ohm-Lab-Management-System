@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Edit, Trash2, Search as SearchIcon } from "lucide-react"
+import { Edit, Trash2, Search as SearchIcon, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import DashboardLayout from "@/components/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -73,7 +73,7 @@ export default function CoursesPage() {
     }
 
     return (
-        <DashboardLayout role="head">
+        <DashboardLayout>
             <div className="space-y-6">
                 <CardHeader>
                     <div className="flex items-center justify-between">
@@ -93,7 +93,7 @@ export default function CoursesPage() {
                                 value={searchTerm}
                                 onChange={(e) => {
                                     setSearchTerm(e.target.value)
-                                    setPageNum(1) // Reset to first page on search
+                                    setPageNum(1) 
                                 }}
                                 className="pl-8 w-full sm:w-80"
                             />
@@ -101,7 +101,7 @@ export default function CoursesPage() {
                     </div>
                     {isLoading ? (
                         <div className="p-4 text-center text-muted-foreground">
-                            Loading subjects...
+                            <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto mb-4" />
                         </div>
                     ) : error ? (
                         <div className="p-4 text-center text-red-500">

@@ -45,7 +45,7 @@ export default function LecturerCoursesPage() {
     }
 
     return (
-        <DashboardLayout role="lecturer">
+        <DashboardLayout>
             <div className="space-y-6">
                 <CardHeader>
                     <CardTitle>My Courses</CardTitle>

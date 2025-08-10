@@ -7,7 +7,7 @@ import EquipmentTypeTab from "@/components/head/equipment/EquipmentTypeTab"
 
 export default function EquipmentPage() {
     return (
-        <DashboardLayout role="head">
+        <DashboardLayout>
             <div className="space-y-6">
                 <Tabs defaultValue="equipment" className="w-full">
                     <TabsList className="mb-4">

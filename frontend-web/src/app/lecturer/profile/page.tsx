@@ -65,7 +65,7 @@ export default function LecturerProfilePage() {
     }
 
     return (
-        <DashboardLayout role="lecturer">
+        <DashboardLayout>
             <div className="min-h-screen p-4">
                 {/* Header */}
                 <div className="mb-6">
