@@ -17,7 +17,7 @@ export const getSlotById = async (id: string) => {
 };
 
 export const updateSlot = async (id: string, data: { slotName: string; slotStartTime: string; slotEndTime: string; slotDescription: string; slotStatus: string }) => {
-    const response = await defaultAxiosInstance.put(`/api/slot/${id}`, data); 
+    const response = await defaultAxiosInstance.put(`/api/slot/${id}`, data);
     toast.success("Slot updated successfully");
     return response.data;
 };
@@ -25,5 +25,10 @@ export const updateSlot = async (id: string, data: { slotName: string; slotStart
 export const deleteSlot = async (id: string) => {
     const response = await defaultAxiosInstance.delete(`/api/slot/${id}`);
     toast.success("Slot deleted successfully");
+    return response.data;
+};
+
+export const searchSlots = async (data: { pageNum: number; pageSize: number; keyWord: string; status: string }) => {
+    const response = await defaultAxiosInstance.post("/api/slot/getallslots", data);
     return response.data;
 };

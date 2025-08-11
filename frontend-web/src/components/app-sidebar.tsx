@@ -15,6 +15,7 @@ import {
     User,
     Settings,
     LogOut,
+    Clock,
 } from "lucide-react"
 import {
     Sidebar,
@@ -46,7 +47,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 
 export function AppSidebar({ role, ...props }: AppSidebarProps) {
     const pathname = usePathname()
-    const [userFullName, setUserFullName] = useState<string>() 
+    const [userFullName, setUserFullName] = useState<string>()
     const [isLoading, setIsLoading] = useState<boolean>(true)
 
     const roleTitle = role === "head" ? "Head of Department" :
@@ -76,10 +77,22 @@ export function AppSidebar({ role, ...props }: AppSidebarProps) {
             roles: ["head", "lecturer", "admin", "student"],
         },
         {
+            title: "Semester",
+            href: `/${role}/dashboard/semester`,
+            icon: Calendar,
+            roles: ["admin"],
+        },
+        {
+            title: "Slot",
+            href: `/${role}/dashboard/slot`,
+            icon: Clock,
+            roles: ["admin"],
+        },
+        {
             title: "Schedule",
             href: `/${role}/dashboard/schedule`,
             icon: Calendar,
-            roles: ["head", "lecturer", "student"],
+            roles: ["head", "lecturer", "student", "admin"],
         },
         {
             title: "Classes",

@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import DashboardLayout from "@/components/dashboard-layout"
 import CreateNewClass from "@/components/head/classes/CreateNewClass"
 import DeleteClass from "@/components/head/classes/DeleteClass"
+import EditClass from "@/components/head/classes/EditClass"
 import { createClass, getAllClasses } from "@/services/classServices"
 import { getScheduleTypeById } from "@/services/scheduleTypeServices"
 import { getSubjectById } from "@/services/courseServices"
@@ -39,6 +40,7 @@ export default function HeadClassesPage() {
     const [classes, setClasses] = useState<ClassItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [editingClass, setEditingClass] = useState<ClassItem | null>(null)
 
     useEffect(() => {
         const fetchClasses = async () => {
@@ -46,7 +48,7 @@ export default function HeadClassesPage() {
                 setLoading(true)
                 const response = await getAllClasses()
                 const classesWithSchedule = await Promise.all(
-                    response.map(async (classItem: ClassItem) => {
+                    response.pageData.map(async (classItem: ClassItem) => {
                         if (classItem.scheduleTypeId) {
                             try {
                                 const scheduleData = await getScheduleTypeById(classItem.scheduleTypeId.toString())
@@ -101,8 +103,8 @@ export default function HeadClassesPage() {
     const filteredClasses = useMemo(() => {
         return classes.filter((classItem) => {
             const matchesSearch =
-                classItem.className.includes(searchTerm.toLowerCase()) ||
-                classItem.subjectName.includes(searchTerm.toLowerCase())
+                classItem.className.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                classItem.subjectName.toLowerCase().includes(searchTerm.toLowerCase())
             const matchesSubject = selectedSubject === "all" || classItem.subjectId.toString() === selectedSubject
             const matchesStatus = selectedStatus === "all" || classItem.classStatus === selectedStatus
 
@@ -159,7 +161,16 @@ export default function HeadClassesPage() {
     };
 
     const handleEditClass = (classItem: ClassItem) => {
-        console.log("Edit class:", classItem)
+        setEditingClass(classItem)
+    }
+
+    const handleUpdateClass = (updatedClass: ClassItem) => {
+        setClasses((prev) =>
+            prev.map((classItem) =>
+                classItem.classId === updatedClass.classId ? updatedClass : classItem
+            )
+        )
+        setEditingClass(null)
     }
 
     const handleDeleteClass = (classId: number) => {
@@ -314,6 +325,15 @@ export default function HeadClassesPage() {
                     </Card>
                 ) : (
                     renderTableView()
+                )}
+
+                {editingClass && (
+                    <EditClass
+                        classItem={editingClass}
+                        onUpdate={handleUpdateClass}
+                        onClose={() => setEditingClass(null)}
+                        open={!!editingClass}
+                    />
                 )}
             </div>
         </DashboardLayout>

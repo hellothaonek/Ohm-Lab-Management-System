@@ -2,15 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreVertical } from "lucide-react";
-import { addDays, startOfWeek, format } from "date-fns";
-import DashboardLayout from "@/components/dashboard-layout";
 import { getAllScheduleTypes } from "@/services/scheduleTypeServices";
-import CreateScheduleType from "@/components/head/schedule/CreateScheduleType";
-import EditScheduleType from "@/components/head/schedule/EditScheduleType";
-import DeleteScheduleType from "@/components/head/schedule/DeleteScheduleType";
+import DashboardLayout from "@/components/dashboard-layout";
 
 const slots = [
   "7:00 - 9:15",
@@ -38,16 +31,11 @@ const scheduleTypeColors: { [key: string]: string } = {
 
 export default function HeadSchedule() {
   const [scheduleTypes, setScheduleTypes] = useState([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editScheduleId, setEditScheduleId] = useState<number | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [deleteScheduleId, setDeleteScheduleId] = useState<number | null>(null);
-  const [deleteScheduleName, setDeleteScheduleName] = useState("");
 
   const fetchScheduleTypes = async () => {
     try {
       const response = await getAllScheduleTypes();
+      console.log(">>>", response)
       setScheduleTypes(response);
     } catch (error) {
       console.error("Error fetching schedule types:", error);
@@ -57,10 +45,6 @@ export default function HeadSchedule() {
   useEffect(() => {
     fetchScheduleTypes();
   }, []);
-
-  const handleSuccess = () => {
-    fetchScheduleTypes();
-  };
 
   const getDaysFromScheduleTypeDow = (scheduleTypeDow: string) => {
     const dayMap: { [key: string]: string } = {
@@ -83,17 +67,6 @@ export default function HeadSchedule() {
     return slotId - 1;
   };
 
-  const handleEdit = (schedule: any) => {
-    setEditScheduleId(schedule.scheduleTypeId);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleDelete = (schedule: any) => {
-    setDeleteScheduleId(schedule.scheduleTypeId);
-    setDeleteScheduleName(schedule.scheduleTypeName);
-    setIsDeleteDialogOpen(true);
-  };
-
   const renderCell = (day: string, slotIndex: number) => {
     const matchingSchedules = scheduleTypes.filter((schedule: any) => {
       const scheduleDays = getDaysFromScheduleTypeDow(schedule.scheduleTypeDow);
@@ -111,19 +84,6 @@ export default function HeadSchedule() {
             <CardContent className="p-2 flex items-center justify-center w-full h-full">
               <div className="text-sm font-bold">{schedule.scheduleTypeName}</div>
             </CardContent>
-            <div className="absolute top-1 right-1">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleEdit(schedule)}>Edit</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleDelete(schedule)}>Delete</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
           </Card>
         ))}
       </div>
@@ -135,15 +95,6 @@ export default function HeadSchedule() {
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight">Schedule</h1>
-        </div>
-        <div className="flex items-center justify-end gap-4">
-          <Button
-            className="bg-orange-500 hover:bg-orange-600"
-            aria-label="Create new schedule"
-            onClick={() => setIsDialogOpen(true)}
-          >
-            Create Schedule
-          </Button>
         </div>
 
         <div className="grid grid-cols-9 gap-px border rounded overflow-hidden text-center text-sm">
@@ -168,24 +119,6 @@ export default function HeadSchedule() {
           ))}
         </div>
       </div>
-      <CreateScheduleType
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        onSuccess={handleSuccess}
-      />
-      <EditScheduleType
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        scheduleTypeId={editScheduleId}
-        onSuccess={handleSuccess}
-      />
-      <DeleteScheduleType
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        scheduleTypeId={deleteScheduleId}
-        scheduleTypeName={deleteScheduleName}
-        onSuccess={handleSuccess}
-      />
     </DashboardLayout>
   );
 }

@@ -231,7 +231,6 @@ export default function LecturerReportsPage() {
                         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button className="bg-orange-500 hover:bg-orange-600">
-                                    <Plus className="h-4 w-4 mr-2" />
                                     New Report
                                 </Button>
                             </DialogTrigger>
