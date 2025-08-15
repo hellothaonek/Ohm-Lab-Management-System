@@ -1,7 +1,7 @@
 "use client"
 
 import type * as React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -39,35 +39,19 @@ import {
     DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar"
-import { getCurrentUser } from "@/services/userServices"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     role: "head" | "lecturer" | "admin" | "student"
+    userFullName: string
 }
 
-export function AppSidebar({ role, ...props }: AppSidebarProps) {
+export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
     const pathname = usePathname()
-    const [userFullName, setUserFullName] = useState<string>()
-    const [isLoading, setIsLoading] = useState<boolean>(true)
 
     const roleTitle = role === "head" ? "Head of Department" :
         role === "lecturer" ? "Lecturer" :
             role === "admin" ? "System Administrator" :
                 "Student"
-
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const userData = await getCurrentUser()
-                setUserFullName(userData.userFullName)
-            } catch (error) {
-                console.error("Failed to fetch user:", error)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-        fetchUser()
-    }, [])
 
     const navItems = [
         {
@@ -207,9 +191,7 @@ export function AppSidebar({ role, ...props }: AppSidebarProps) {
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="grid flex-1 text-left text-sm leading-tight">
-                                        <span className="truncate font-semibold">
-                                            {isLoading ? "Loading..." : userFullName}
-                                        </span>
+                                        <span className="truncate font-semibold">{userFullName}</span>
                                         <span className="truncate text-xs">{roleTitle}</span>
                                     </div>
                                 </SidebarMenuButton>
@@ -229,9 +211,7 @@ export function AppSidebar({ role, ...props }: AppSidebarProps) {
                                             </AvatarFallback>
                                         </Avatar>
                                         <div className="grid flex-1 text-left text-sm leading-tight">
-                                            <span className="truncate font-semibold">
-                                                {isLoading ? "Loading..." : userFullName}
-                                            </span>
+                                            <span className="truncate font-semibold">{userFullName}</span>
                                             <span className="truncate text-xs">{roleTitle}</span>
                                         </div>
                                     </div>

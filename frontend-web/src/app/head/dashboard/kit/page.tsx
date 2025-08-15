@@ -11,23 +11,21 @@ export default function KitPage() {
     const [showReportDialog, setShowReportDialog] = useState(false)
 
     return (
-        <DashboardLayout>
-            <div className="space-y-6">
-                <Tabs defaultValue="kit-template" className="space-y-4">
-                    <TabsList>
-                        <TabsTrigger value="kit-template">Kit Template</TabsTrigger>
-                        <TabsTrigger value="kit">Kit</TabsTrigger>
-                    </TabsList>
+        <div className="space-y-6">
+            <Tabs defaultValue="kit-template" className="space-y-4">
+                <TabsList>
+                    <TabsTrigger value="kit-template">Kit Template</TabsTrigger>
+                    <TabsTrigger value="kit">Kit</TabsTrigger>
+                </TabsList>
 
-                    <TabsContent value="kit-template">
-                        <KitTemplateTab setShowReportDialog={setShowReportDialog} />
-                    </TabsContent>
-                    <TabsContent value="kit">
-                        <KitTab setShowReportDialog={setShowReportDialog} />
-                    </TabsContent>
-                </Tabs>
-            </div>
+                <TabsContent value="kit-template">
+                    <KitTemplateTab setShowReportDialog={setShowReportDialog} />
+                </TabsContent>
+                <TabsContent value="kit">
+                    <KitTab setShowReportDialog={setShowReportDialog} />
+                </TabsContent>
+            </Tabs>
+        </div>
 
-        </DashboardLayout>
     )
 }

@@ -1,7 +1,7 @@
 import { defaultAxiosInstance, axiosWithoutLoading } from "./axios.config";
 import { toast } from "react-toastify";
 
-export const addClassUser = async (data: any) => {
+export const addClassUser = async (data: { userId: string; classId: number }) => {
     const response = await defaultAxiosInstance.post("/api/classuser/add", data);
     return response.data;
 };
@@ -21,7 +21,7 @@ export const getClassUserByUserId = async (userId: string) => {
     return response.data;
 };
 
-export const removeClassUser = async (data: any) => {
+export const removeClassUser = async (data: { userId: string; classId: number }) => {
     const response = await defaultAxiosInstance.delete("/api/classuser/remove", { data });
     return response.data;
 };

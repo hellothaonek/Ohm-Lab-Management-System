@@ -73,98 +73,96 @@ export default function CoursesPage() {
     }
 
     return (
-        <DashboardLayout>
-            <div className="space-y-6">
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle>Subjects Management</CardTitle>
-                            <CardDescription>View and manage all available subjects</CardDescription>
-                        </div>
-                        <CreateCourse onSubjectCreated={fetchSubjects} />
+        <div className="space-y-6">
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle>Subjects Management</CardTitle>
+                        <CardDescription>View and manage all available subjects</CardDescription>
                     </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="mb-4">
-                        <div className="relative w-full sm:w-80">
-                            <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search subjects..."
-                                value={searchTerm}
-                                onChange={(e) => {
-                                    setSearchTerm(e.target.value)
-                                    setPageNum(1) 
+                    <CreateCourse onSubjectCreated={fetchSubjects} />
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="mb-4">
+                    <div className="relative w-full sm:w-80">
+                        <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search subjects..."
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value)
+                                setPageNum(1)
+                            }}
+                            className="pl-8 w-full sm:w-80"
+                        />
+                    </div>
+                </div>
+                {isLoading ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                        <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto mb-4" />
+                    </div>
+                ) : error ? (
+                    <div className="p-4 text-center text-red-500">
+                        {error}
+                    </div>
+                ) : (
+                    <div className="rounded-md border">
+                        <div className="grid grid-cols-[1fr_150px_1fr_150px_100px] gap-2 p-4 font-medium border-b">
+                            <div>Subject Name</div>
+                            <div>Subject Code</div>
+                            <div>Description</div>
+                            <div>Status</div>
+                            <div>Actions</div>
+                        </div>
+                        {subjects.length === 0 ? (
+                            <div className="p-4 text-center text-muted-foreground">
+                                No subjects found.
+                            </div>
+                        ) : (
+                            subjects.map((subject) => (
+                                <div
+                                    key={subject.subjectId}
+                                    className="grid grid-cols-[1fr_150px_1fr_150px_100px] gap-2 p-4 border-b last:border-0 items-center"
+                                >
+                                    <div>{subject.subjectName}</div>
+                                    <div>{subject.subjectCode}</div>
+                                    <div>{subject.subjectDescription}</div>
+                                    <div>{getStatusBadge(subject.subjectStatus)}</div>
+                                    <div className="flex gap-2">
+                                        <EditCourse
+                                            subjectId={subject.subjectId}
+                                            subjectName={subject.subjectName}
+                                            subjectDescription={subject.subjectDescription}
+                                            subjectStatus={subject.subjectStatus}
+                                            onSubjectUpdated={fetchSubjects}
+                                        />
+                                        <DeleteCourse
+                                            subjectId={subject.subjectId}
+                                            subjectName={subject.subjectName}
+                                            onSubjectDeleted={fetchSubjects}
+                                        />
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                        <div className="flex justify-end p-4">
+                            <Pagination
+                                current={pageNum}
+                                pageSize={pageSize}
+                                total={totalItems}
+                                showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
+                                onChange={handlePaginationChange}
+                                showSizeChanger
+                                onShowSizeChange={(current, size) => {
+                                    setPageNum(1)
+                                    setPageSize(size)
                                 }}
-                                className="pl-8 w-full sm:w-80"
                             />
                         </div>
                     </div>
-                    {isLoading ? (
-                        <div className="p-4 text-center text-muted-foreground">
-                            <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto mb-4" />
-                        </div>
-                    ) : error ? (
-                        <div className="p-4 text-center text-red-500">
-                            {error}
-                        </div>
-                    ) : (
-                        <div className="rounded-md border">
-                            <div className="grid grid-cols-[1fr_150px_1fr_150px_100px] gap-2 p-4 font-medium border-b">
-                                <div>Subject Name</div>
-                                <div>Subject Code</div>
-                                <div>Description</div>
-                                <div>Status</div>
-                                <div>Actions</div>
-                            </div>
-                            {subjects.length === 0 ? (
-                                <div className="p-4 text-center text-muted-foreground">
-                                    No subjects found.
-                                </div>
-                            ) : (
-                                subjects.map((subject) => (
-                                    <div
-                                        key={subject.subjectId}
-                                        className="grid grid-cols-[1fr_150px_1fr_150px_100px] gap-2 p-4 border-b last:border-0 items-center"
-                                    >
-                                        <div>{subject.subjectName}</div>
-                                        <div>{subject.subjectCode}</div>
-                                        <div>{subject.subjectDescription}</div>
-                                        <div>{getStatusBadge(subject.subjectStatus)}</div>
-                                        <div className="flex gap-2">
-                                            <EditCourse
-                                                subjectId={subject.subjectId}
-                                                subjectName={subject.subjectName}
-                                                subjectDescription={subject.subjectDescription}
-                                                subjectStatus={subject.subjectStatus}
-                                                onSubjectUpdated={fetchSubjects}
-                                            />
-                                            <DeleteCourse
-                                                subjectId={subject.subjectId}
-                                                subjectName={subject.subjectName}
-                                                onSubjectDeleted={fetchSubjects}
-                                            />
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                            <div className="flex justify-end p-4">
-                                <Pagination
-                                    current={pageNum}
-                                    pageSize={pageSize}
-                                    total={totalItems}
-                                    showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
-                                    onChange={handlePaginationChange}
-                                    showSizeChanger
-                                    onShowSizeChange={(current, size) => {
-                                        setPageNum(1)
-                                        setPageSize(size)
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    )}
-                </CardContent>
-            </div>
-        </DashboardLayout>
+                )}
+            </CardContent>
+        </div>
     )
 }

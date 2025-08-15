@@ -220,291 +220,289 @@ export default function LecturerReportsPage() {
     }
 
     return (
-        <DashboardLayout>
-            <div className="min-h-screen p-4">
-                {/* Header */}
-                <div className="mb-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Equipment Reports</h1>
-                        </div>
-                        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button className="bg-orange-500 hover:bg-orange-600">
-                                    New Report
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-[550px]">
-                                <DialogHeader>
-                                    <DialogTitle>Create Equipment Report</DialogTitle>
-                                    <DialogDescription>
-                                        Report damaged or malfunctioning equipment in the lab. Provide as much detail as possible.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="title">Report Title</Label>
-                                        <Input
-                                            id="title"
-                                            placeholder="Brief description of the issue"
-                                            value={newReport.title}
-                                            onChange={(e) => handleInputChange("title", e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="equipmentType">Equipment Type</Label>
-                                            <Input
-                                                id="equipmentType"
-                                                placeholder="Enter equipment type"
-                                                value={newReport.equipmentType}
-                                                onChange={(e) => handleInputChange("equipmentType", e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="serialNumber">Serial Number</Label>
-                                            <Input
-                                                id="serialNumber"
-                                                placeholder="Equipment serial/ID number"
-                                                value={newReport.serialNumber}
-                                                onChange={(e) => handleInputChange("serialNumber", e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="description">Description</Label>
-                                        <Textarea
-                                            id="description"
-                                            placeholder="Describe the issue in detail. Include when it started, how it manifests, and any troubleshooting steps you've taken."
-                                            rows={5}
-                                            value={newReport.description}
-                                            onChange={(e) => handleInputChange("description", e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        className="bg-orange-500 hover:bg-orange-600"
-                                        onClick={handleCreateReport}
-                                        disabled={
-                                            !newReport.title || !newReport.description || !newReport.equipmentType || !newReport.serialNumber
-                                        }
-                                    >
-                                        Submit Report
-                                    </Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+        <div className="min-h-screen p-4">
+            {/* Header */}
+            <div className="mb-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Equipment Reports</h1>
                     </div>
-                </div>
-
-                {/* Tabs and Reports List */}
-                <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mb-6">
-                    <TabsList>
-                        <TabsTrigger value="all">All Reports</TabsTrigger>
-                        <TabsTrigger value="pending">Pending</TabsTrigger>
-                        <TabsTrigger value="resolved">Resolved</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="all" className="mt-4">
-                        <Card>
-                            <CardContent className="p-0">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Title</TableHead>
-                                            <TableHead>Equipment</TableHead>
-                                            <TableHead>Serial Number</TableHead>
-                                            <TableHead>Report Date</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {filteredReports.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-8">
-                                                    <div className="flex flex-col items-center justify-center text-gray-500">
-                                                        <AlertTriangle className="h-8 w-8 mb-2" />
-                                                        <p>No reports found</p>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            filteredReports.map((report) => (
-                                                <TableRow key={report.id}>
-                                                    <TableCell className="font-medium">{report.title}</TableCell>
-                                                    <TableCell>{getEquipmentTypeLabel(report.equipmentType)}</TableCell>
-                                                    <TableCell className="font-mono text-sm">{report.serialNumber}</TableCell>
-                                                    <TableCell>{new Date(report.reportDate).toLocaleDateString("vi-VN")}</TableCell>
-                                                    <TableCell>{getStatusBadge(report.status)}</TableCell>
-                                                    <TableCell>
-                                                        <div className="flex gap-1">
-                                                            <Button size="sm" variant="ghost" onClick={() => handleViewReport(report)}>
-                                                                <Eye className="h-3 w-3" />
-                                                            </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                    <TabsContent value="pending" className="mt-4">
-                        <Card>
-                            <CardContent className="p-0">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Title</TableHead>
-                                            <TableHead>Equipment</TableHead>
-                                            <TableHead>Serial Number</TableHead>
-                                            <TableHead>Report Date</TableHead>
-                                            <TableHead>Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {filteredReports.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={5} className="text-center py-8">
-                                                    <div className="flex flex-col items-center justify-center text-gray-500">
-                                                        <AlertTriangle className="h-8 w-8 mb-2" />
-                                                        <p>No pending reports found</p>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            filteredReports.map((report) => (
-                                                <TableRow key={report.id}>
-                                                    <TableCell className="font-medium">{report.title}</TableCell>
-                                                    <TableCell>{getEquipmentTypeLabel(report.equipmentType)}</TableCell>
-                                                    <TableCell className="font-mono text-sm">{report.serialNumber}</TableCell>
-                                                    <TableCell>{new Date(report.reportDate).toLocaleDateString("vi-VN")}</TableCell>
-                                                    <TableCell>
-                                                        <div className="flex gap-1">
-                                                            <Button size="sm" variant="ghost" onClick={() => handleViewReport(report)}>
-                                                                <Eye className="h-3 w-3" />
-                                                            </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                    <TabsContent value="resolved" className="mt-4">
-                        <Card>
-                            <CardContent className="p-0">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Title</TableHead>
-                                            <TableHead>Equipment</TableHead>
-                                            <TableHead>Serial Number</TableHead>
-                                            <TableHead>Report Date</TableHead>
-                                            <TableHead>Resolved Date</TableHead>
-                                            <TableHead>Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {filteredReports.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-8">
-                                                    <div className="flex flex-col items-center justify-center text-gray-500">
-                                                        <AlertTriangle className="h-8 w-8 mb-2" />
-                                                        <p>No resolved reports found</p>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            filteredReports.map((report) => (
-                                                <TableRow key={report.id}>
-                                                    <TableCell className="font-medium">{report.title}</TableCell>
-                                                    <TableCell>{getEquipmentTypeLabel(report.equipmentType)}</TableCell>
-                                                    <TableCell className="font-mono text-sm">{report.serialNumber}</TableCell>
-                                                    <TableCell>{new Date(report.reportDate).toLocaleDateString("vi-VN")}</TableCell>
-                                                    <TableCell>{new Date(report.updatedDate).toLocaleDateString("vi-VN")}</TableCell>
-                                                    <TableCell>
-                                                        <Button size="sm" variant="ghost" onClick={() => handleViewReport(report)}>
-                                                            <Eye className="h-3 w-3" />
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
-
-                {/* View Report Dialog */}
-                {selectedReport && (
-                    <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-                        <DialogContent className="sm:max-w-[600px]">
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="bg-orange-500 hover:bg-orange-600">
+                                New Report
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[550px]">
                             <DialogHeader>
-                                <DialogTitle>{selectedReport.title}</DialogTitle>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    {getStatusBadge(selectedReport.status)}
-                                    <span>Reported on {new Date(selectedReport.reportDate).toLocaleDateString("vi-VN")}</span>
-                                </div>
+                                <DialogTitle>Create Equipment Report</DialogTitle>
+                                <DialogDescription>
+                                    Report damaged or malfunctioning equipment in the lab. Provide as much detail as possible.
+                                </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="title">Report Title</Label>
+                                    <Input
+                                        id="title"
+                                        placeholder="Brief description of the issue"
+                                        value={newReport.title}
+                                        onChange={(e) => handleInputChange("title", e.target.value)}
+                                    />
+                                </div>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Equipment Type</h4>
-                                        <p className="text-gray-900 dark:text-white">{getEquipmentTypeLabel(selectedReport.equipmentType)}</p>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="equipmentType">Equipment Type</Label>
+                                        <Input
+                                            id="equipmentType"
+                                            placeholder="Enter equipment type"
+                                            value={newReport.equipmentType}
+                                            onChange={(e) => handleInputChange("equipmentType", e.target.value)}
+                                        />
                                     </div>
-                                    <div>
-                                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Serial Number</h4>
-                                        <p className="text-gray-900 dark:text-white font-mono">{selectedReport.serialNumber}</p>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="serialNumber">Serial Number</Label>
+                                        <Input
+                                            id="serialNumber"
+                                            placeholder="Equipment serial/ID number"
+                                            value={newReport.serialNumber}
+                                            onChange={(e) => handleInputChange("serialNumber", e.target.value)}
+                                        />
                                     </div>
                                 </div>
-                                <div>
-                                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</h4>
-                                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md text-gray-900 dark:text-white">
-                                        {selectedReport.description}
-                                    </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="description">Description</Label>
+                                    <Textarea
+                                        id="description"
+                                        placeholder="Describe the issue in detail. Include when it started, how it manifests, and any troubleshooting steps you've taken."
+                                        rows={5}
+                                        value={newReport.description}
+                                        onChange={(e) => handleInputChange("description", e.target.value)}
+                                    />
                                 </div>
-
-                                {selectedReport.comments.length > 0 && (
-                                    <div>
-                                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Updates</h4>
-                                        <div className="space-y-3">
-                                            {selectedReport.comments.map((comment: any, index: number) => (
-                                                <div key={index} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="font-medium text-gray-900 dark:text-white">{comment.author}</span>
-                                                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                            {new Date(comment.date).toLocaleString("vi-VN")}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-gray-700 dark:text-gray-300">{comment.text}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                             <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-                                    Close
+                                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    className="bg-orange-500 hover:bg-orange-600"
+                                    onClick={handleCreateReport}
+                                    disabled={
+                                        !newReport.title || !newReport.description || !newReport.equipmentType || !newReport.serialNumber
+                                    }
+                                >
+                                    Submit Report
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                )}
+                </div>
             </div>
-        </DashboardLayout>
+
+            {/* Tabs and Reports List */}
+            <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mb-6">
+                <TabsList>
+                    <TabsTrigger value="all">All Reports</TabsTrigger>
+                    <TabsTrigger value="pending">Pending</TabsTrigger>
+                    <TabsTrigger value="resolved">Resolved</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all" className="mt-4">
+                    <Card>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Title</TableHead>
+                                        <TableHead>Equipment</TableHead>
+                                        <TableHead>Serial Number</TableHead>
+                                        <TableHead>Report Date</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredReports.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center py-8">
+                                                <div className="flex flex-col items-center justify-center text-gray-500">
+                                                    <AlertTriangle className="h-8 w-8 mb-2" />
+                                                    <p>No reports found</p>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredReports.map((report) => (
+                                            <TableRow key={report.id}>
+                                                <TableCell className="font-medium">{report.title}</TableCell>
+                                                <TableCell>{getEquipmentTypeLabel(report.equipmentType)}</TableCell>
+                                                <TableCell className="font-mono text-sm">{report.serialNumber}</TableCell>
+                                                <TableCell>{new Date(report.reportDate).toLocaleDateString("vi-VN")}</TableCell>
+                                                <TableCell>{getStatusBadge(report.status)}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex gap-1">
+                                                        <Button size="sm" variant="ghost" onClick={() => handleViewReport(report)}>
+                                                            <Eye className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="pending" className="mt-4">
+                    <Card>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Title</TableHead>
+                                        <TableHead>Equipment</TableHead>
+                                        <TableHead>Serial Number</TableHead>
+                                        <TableHead>Report Date</TableHead>
+                                        <TableHead>Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredReports.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-8">
+                                                <div className="flex flex-col items-center justify-center text-gray-500">
+                                                    <AlertTriangle className="h-8 w-8 mb-2" />
+                                                    <p>No pending reports found</p>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredReports.map((report) => (
+                                            <TableRow key={report.id}>
+                                                <TableCell className="font-medium">{report.title}</TableCell>
+                                                <TableCell>{getEquipmentTypeLabel(report.equipmentType)}</TableCell>
+                                                <TableCell className="font-mono text-sm">{report.serialNumber}</TableCell>
+                                                <TableCell>{new Date(report.reportDate).toLocaleDateString("vi-VN")}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex gap-1">
+                                                        <Button size="sm" variant="ghost" onClick={() => handleViewReport(report)}>
+                                                            <Eye className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="resolved" className="mt-4">
+                    <Card>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Title</TableHead>
+                                        <TableHead>Equipment</TableHead>
+                                        <TableHead>Serial Number</TableHead>
+                                        <TableHead>Report Date</TableHead>
+                                        <TableHead>Resolved Date</TableHead>
+                                        <TableHead>Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredReports.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center py-8">
+                                                <div className="flex flex-col items-center justify-center text-gray-500">
+                                                    <AlertTriangle className="h-8 w-8 mb-2" />
+                                                    <p>No resolved reports found</p>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredReports.map((report) => (
+                                            <TableRow key={report.id}>
+                                                <TableCell className="font-medium">{report.title}</TableCell>
+                                                <TableCell>{getEquipmentTypeLabel(report.equipmentType)}</TableCell>
+                                                <TableCell className="font-mono text-sm">{report.serialNumber}</TableCell>
+                                                <TableCell>{new Date(report.reportDate).toLocaleDateString("vi-VN")}</TableCell>
+                                                <TableCell>{new Date(report.updatedDate).toLocaleDateString("vi-VN")}</TableCell>
+                                                <TableCell>
+                                                    <Button size="sm" variant="ghost" onClick={() => handleViewReport(report)}>
+                                                        <Eye className="h-3 w-3" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+
+            {/* View Report Dialog */}
+            {selectedReport && (
+                <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+                    <DialogContent className="sm:max-w-[600px]">
+                        <DialogHeader>
+                            <DialogTitle>{selectedReport.title}</DialogTitle>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                {getStatusBadge(selectedReport.status)}
+                                <span>Reported on {new Date(selectedReport.reportDate).toLocaleDateString("vi-VN")}</span>
+                            </div>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Equipment Type</h4>
+                                    <p className="text-gray-900 dark:text-white">{getEquipmentTypeLabel(selectedReport.equipmentType)}</p>
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Serial Number</h4>
+                                    <p className="text-gray-900 dark:text-white font-mono">{selectedReport.serialNumber}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</h4>
+                                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md text-gray-900 dark:text-white">
+                                    {selectedReport.description}
+                                </div>
+                            </div>
+
+                            {selectedReport.comments.length > 0 && (
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Updates</h4>
+                                    <div className="space-y-3">
+                                        {selectedReport.comments.map((comment: any, index: number) => (
+                                            <div key={index} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="font-medium text-gray-900 dark:text-white">{comment.author}</span>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {new Date(comment.date).toLocaleString("vi-VN")}
+                                                    </span>
+                                                </div>
+                                                <p className="text-gray-700 dark:text-gray-300">{comment.text}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                                Close
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
+        </div>
 
     )
 }

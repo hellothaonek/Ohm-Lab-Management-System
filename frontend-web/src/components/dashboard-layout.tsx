@@ -23,11 +23,12 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, breadcrumbs = [] }: DashboardLayoutProps) {
   const [role, setRole] = useState<"head" | "lecturer" | "admin" | "student" | null>(null)
+  const [userFullName, setUserFullName] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function fetchUserRole() {
+    async function fetchUserData() {
       try {
         setLoading(true)
         const userData = await getCurrentUser()
@@ -43,17 +44,18 @@ export default function DashboardLayout({ children, breadcrumbs = [] }: Dashboar
         const mappedRole = roleMap[userRoleName]
         if (mappedRole) {
           setRole(mappedRole)
+          setUserFullName(userData.userFullName)
         } else {
           setError("Invalid user role")
         }
       } catch (err) {
-        setError("Failed to fetch user role")
+        setError("Failed to fetch user data")
       } finally {
         setLoading(false)
       }
     }
 
-    fetchUserRole()
+    fetchUserData()
   }, [])
 
   if (loading) {
@@ -61,12 +63,12 @@ export default function DashboardLayout({ children, breadcrumbs = [] }: Dashboar
   }
 
   if (error || !role) {
-    return <div>Error: {error || "User role not found"}</div> 
+    return <div>Error: {error || "User role not found"}</div>
   }
 
   return (
     <SidebarProvider>
-      <AppSidebar role={role} />
+      <AppSidebar role={role} userFullName={userFullName || "Unknown User"} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">

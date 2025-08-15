@@ -10,13 +10,13 @@ import { toast } from "@/components/ui/use-toast"
 import { createClass } from "@/services/classServices"
 import { getSubjects } from "@/services/courseServices"
 import { searchUsers } from "@/services/userServices"
-import { getAllScheduleTypes } from "@/services/scheduleTypeServices"
 
 interface ClassItem {
     classId: number
     subjectId: number
     lecturerId: number | null
     scheduleTypeId: number | null
+    semesterName: string
     className: string
     classDescription: string
     classStatus: string
@@ -35,11 +35,6 @@ interface User {
     userFullName: string
 }
 
-interface ScheduleType {
-    scheduleTypeId: number
-    scheduleTypeName: string
-}
-
 interface CreateNewClassProps {
     onCreateClass: (newClass: ClassItem) => void
 }
@@ -49,7 +44,6 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
     const [formData, setFormData] = useState({
         subjectId: "",
         lecturerId: "",
-        scheduleTypeId: "",
         className: "",
         classDescription: "",
     })
@@ -60,9 +54,6 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
     const [lecturers, setLecturers] = useState<User[]>([])
     const [lecturersLoading, setLecturersLoading] = useState(true)
     const [lecturersError, setLecturersError] = useState<string | null>(null)
-    const [scheduleTypes, setScheduleTypes] = useState<ScheduleType[]>([])
-    const [scheduleTypesLoading, setScheduleTypesLoading] = useState(true)
-    const [scheduleTypesError, setScheduleTypesError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchSubjects = async () => {
@@ -90,9 +81,7 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
             try {
                 setLecturersLoading(true)
                 const response = await searchUsers(
-                    { keyWord: "", role: "Lecturer", status: "" },
-                    1,
-                    100
+                    { keyWord: "", role: "Lecturer", status: "", pageNum: 1, pageSize: 100 },
                 )
                 if (response) {
                     setLecturers(response.pageData)
@@ -111,30 +100,8 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
             }
         }
 
-        const fetchScheduleTypes = async () => {
-            try {
-                setScheduleTypesLoading(true)
-                const response = await getAllScheduleTypes()
-                if (response) {
-                    setScheduleTypes(response)
-                } else {
-                    throw new Error("Invalid schedule types data format")
-                }
-            } catch (error) {
-                setScheduleTypesError("Failed to fetch schedule types")
-                toast({
-                    title: "Error",
-                    description: "Failed to load schedule types",
-                    variant: "destructive",
-                })
-            } finally {
-                setScheduleTypesLoading(false)
-            }
-        }
-
         fetchSubjects()
         fetchLecturers()
-        fetchScheduleTypes()
     }, [])
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,7 +126,7 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
         const classData = {
             subjectId: parseInt(formData.subjectId),
             lecturerId: formData.lecturerId || "",
-            scheduleTypeId: parseInt(formData.scheduleTypeId) || 0,
+            scheduleTypeId: 0, // Set scheduleTypeId to 0 as per requirement
             className: formData.className,
             classDescription: formData.classDescription,
             classStatus: status,
@@ -185,7 +152,6 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
             setFormData({
                 subjectId: "",
                 lecturerId: "",
-                scheduleTypeId: "",
                 className: "",
                 classDescription: "",
             })
@@ -210,9 +176,9 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
                 <DialogHeader>
                     <DialogTitle>Create New Class</DialogTitle>
                 </DialogHeader>
-                {subjectsError || lecturersError || scheduleTypesError ? (
+                {subjectsError || lecturersError ? (
                     <div className="text-red-600 text-center">
-                        {subjectsError || lecturersError || scheduleTypesError}
+                        {subjectsError || lecturersError}
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -277,34 +243,6 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="scheduleTypeId">Schedule Type</Label>
-                                <Select
-                                    value={formData.scheduleTypeId}
-                                    onValueChange={(value) => setFormData((prev) => ({ ...prev, scheduleTypeId: value }))}
-                                    disabled={scheduleTypesLoading || !scheduleTypes.length}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue
-                                            placeholder={
-                                                scheduleTypesLoading
-                                                    ? "Loading schedule types..."
-                                                    : scheduleTypes.length
-                                                        ? "Select a schedule type"
-                                                        : "No schedule types available"
-                                            }
-                                        />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {Array.isArray(scheduleTypes) &&
-                                            scheduleTypes.map((scheduleType) => (
-                                                <SelectItem key={scheduleType.scheduleTypeId} value={scheduleType.scheduleTypeId.toString()}>
-                                                    {scheduleType.scheduleTypeName}
-                                                </SelectItem>
-                                            ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
                                 <Label htmlFor="className">Class Name</Label>
                                 <Input
                                     id="className"
@@ -333,12 +271,11 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
                             <Label htmlFor="status">Status</Label>
                             <Select value={status} onValueChange={setStatus}>
                                 <SelectTrigger>
-                                    <SelectValue />
+                                    <SelectValue placeholder="Select status" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="Active">Active</SelectItem>
-                                    <SelectItem value="pending">Pending</SelectItem>
-                                    <SelectItem value="completed">Completed</SelectItem>
+                                    <SelectItem value="Inactive">Inactive</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -350,7 +287,7 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
                             <Button
                                 type="submit"
                                 className="bg-orange-500 hover:bg-orange-600"
-                                disabled={subjectsLoading || lecturersLoading || scheduleTypesLoading || !!subjectsError || !!lecturersError || !!scheduleTypesError}
+                                disabled={subjectsLoading || lecturersLoading || !!subjectsError || !!lecturersError}
                             >
                                 Create Class
                             </Button>

@@ -2,15 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { format, isValid } from "date-fns";
 import { getAllScheduleTypes } from "@/services/scheduleTypeServices";
+import { getAllSlots } from "@/services/slotServices";
 import DashboardLayout from "@/components/dashboard-layout";
-
-const slots = [
-  "7:00 - 9:15",
-  "9:30 - 11:45",
-  "12:30 - 14:45",
-  "15:00 - 17:15"
-];
+import { ScheduleSkeleton } from "@/components/loading-skeleton";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -31,19 +27,42 @@ const scheduleTypeColors: { [key: string]: string } = {
 
 export default function HeadSchedule() {
   const [scheduleTypes, setScheduleTypes] = useState([]);
+  const [slots, setSlots] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchScheduleTypes = async () => {
     try {
       const response = await getAllScheduleTypes();
-      console.log(">>>", response)
+      console.log(">>> Schedule Types:", response);
       setScheduleTypes(response);
     } catch (error) {
       console.error("Error fetching schedule types:", error);
+      setScheduleTypes([]);
+    }
+  };
+
+  const fetchSlots = async () => {
+    try {
+      setIsLoading(true);
+      const response = await getAllSlots();
+      console.log(">>> Slots:", response);
+      if (response) {
+        setSlots(response);
+      } else {
+        console.warn("Invalid slots data:", response);
+        setSlots([]);
+      }
+    } catch (error) {
+      console.error("Error fetching slots:", error);
+      setSlots([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchScheduleTypes();
+    fetchSlots();
   }, []);
 
   const getDaysFromScheduleTypeDow = (scheduleTypeDow: string) => {
@@ -58,13 +77,15 @@ export default function HeadSchedule() {
     };
 
     return scheduleTypeDow
-      .split(",")
-      .map((day) => dayMap[day.trim()])
-      .filter(Boolean);
+      ? scheduleTypeDow
+        .split(",")
+        .map((day) => dayMap[day.trim()])
+        .filter(Boolean)
+      : [];
   };
 
   const getSlotIndex = (slotId: number) => {
-    return slotId - 1;
+    return slots.findIndex((slot: any) => slot.slotId === slotId);
   };
 
   const renderCell = (day: string, slotIndex: number) => {
@@ -90,35 +111,84 @@ export default function HeadSchedule() {
     );
   };
 
+  const formatTime = (startTime: string | null, endTime: string | null) => {
+    if (!startTime || !endTime) {
+      console.warn("Missing time values:", { startTime, endTime });
+      return `${startTime || "N/A"} - ${endTime || "N/A"}`;
+    }
+
+    try {
+      const normalizeTime = (time: string) => {
+        const parts = time.trim().split(":");
+        if (parts.length !== 2) {
+          throw new Error(`Invalid time format: ${time}`);
+        }
+        const [hours, minutes] = parts.map((part) => parseInt(part, 10));
+        if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+          throw new Error(`Invalid time components: ${time}`);
+        }
+        return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:00`;
+      };
+
+      const normalizedStart = normalizeTime(startTime);
+      const normalizedEnd = normalizeTime(endTime);
+
+      const startDate = new Date(`1970-01-01T${normalizedStart}`);
+      const endDate = new Date(`1970-01-01T${normalizedEnd}`);
+
+      if (!isValid(startDate) || !isValid(endDate)) {
+        console.warn("Invalid date objects created:", { normalizedStart, normalizedEnd });
+        return `${startTime} - ${endTime}`;
+      }
+
+      const start = format(startDate, "HH:mm");
+      const end = format(endDate, "HH:mm");
+      return `${start} - ${end}`;
+    } catch (error) {
+      console.error("Error formatting time:", error, { startTime, endTime });
+      return `${startTime} - ${endTime}`;
+    }
+  };
+
+  if (isLoading) return <ScheduleSkeleton />;
+
+  if (!Array.isArray(slots) || slots.length === 0) {
+    return (
+      <DashboardLayout>
+        <div className="p-4 text-center">Không có slot nào được tìm thấy.</div>
+      </DashboardLayout>
+    );
+  }
+
   return (
-    <DashboardLayout>
-      <div className="p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">Schedule</h1>
-        </div>
-
-        <div className="grid grid-cols-9 gap-px border rounded overflow-hidden text-center text-sm">
-          <div className="bg-gray-100 font-bold p-2">Time</div>
-          <div className="bg-gray-100 font-bold p-2">Slot</div>
-          {days.map((d) => (
-            <div key={d} className="bg-gray-100 font-bold p-2">
-              <div>{d}</div>
-            </div>
-          ))}
-
-          {slots.map((time, slotIdx) => (
-            <div key={`slot-${slotIdx}`} className="contents">
-              <div className="bg-gray-100 p-2 min-h-[80px] flex items-center justify-center">{time}</div>
-              <div className="bg-gray-100 p-2 min-h-[80px] flex items-center justify-center">{slotIdx + 1}</div>
-              {days.map((d) => (
-                <div key={`${d}-${slotIdx}`} className="min-h-[80px]">
-                  {renderCell(d, slotIdx)}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Schedule</h1>
       </div>
-    </DashboardLayout>
+
+      <div className="grid grid-cols-9 gap-px border rounded overflow-hidden text-center text-sm">
+        <div className="bg-gray-100 font-bold p-2">Time</div>
+        <div className="bg-gray-100 font-bold p-2">Slot</div>
+        {days.map((d) => (
+          <div key={d} className="bg-gray-100 font-bold p-2">
+            <div>{d}</div>
+          </div>
+        ))}
+
+        {slots.map((slot: any, slotIdx: number) => (
+          <div key={`slot-${slotIdx}`} className="contents">
+            <div className="bg-gray-100 p-2 min-h-[80px] flex items-center justify-center">
+              {formatTime(slot.slotStartTime, slot.slotEndTime)}
+            </div>
+            <div className="bg-gray-100 p-2 min-h-[80px] flex items-center justify-center">{slot.slotName}</div>
+            {days.map((d) => (
+              <div key={`${d}-${slotIdx}`} className="min-h-[80px]">
+                {renderCell(d, slotIdx)}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

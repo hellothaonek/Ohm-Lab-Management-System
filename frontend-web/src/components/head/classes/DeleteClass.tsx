@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -10,65 +9,55 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog"
-import { deleteClass } from "@/services/classServices"
+import { updateClassStatus } from "@/services/classServices"
 
 interface DeleteClassProps {
-    classId: number
+    open: boolean
+    onClose: () => void
+    onDelete: () => void
+    classId: string
     className: string
-    onDelete: (classId: number) => void
 }
 
-export default function DeleteClass({ classId, className, onDelete }: DeleteClassProps) {
-    const [open, setOpen] = useState(false)
+export default function DeleteClass({ open, onClose, onDelete, classId, className }: DeleteClassProps) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    const handleDelete = async () => {
+    const handleDeactivate = async () => {
         try {
             setLoading(true)
-            await deleteClass(classId.toString())
-            onDelete(classId)
-            setOpen(false)
+            await updateClassStatus(classId, "Inactive")
+            onDelete()
+            onClose()
         } catch (err) {
-            setError("Failed to delete class")
-            console.error("Error deleting class:", err)
+            setError("Failed to deactivate class")
+            console.error("Error deactivating class:", err)
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-red-600 hover:text-red-700"
-                    title="Delete class"
-                >
-                    <Trash2 className="h-4 w-4" />
-                </Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={onClose}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Delete Class</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to delete the class "{className}"? This action cannot be undone.
+                        Are you sure you want to deactivate the class "{className}"? This will set the class status to Inactive.
                     </DialogDescription>
                 </DialogHeader>
                 {error && <p className="text-red-600 text-sm">{error}</p>}
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+                    <Button variant="outline" onClick={onClose} disabled={loading}>
                         Cancel
                     </Button>
                     <Button
                         variant="destructive"
-                        onClick={handleDelete}
+                        onClick={handleDeactivate}
                         disabled={loading}
                     >
-                        {loading ? "Deleting..." : "Delete"}
+                        {loading ? "Deactivating..." : "Delete"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

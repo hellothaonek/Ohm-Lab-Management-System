@@ -7,8 +7,8 @@ export const createClass = async (data: { subjectId: number; lecturerId: string;
     return response.data;
 };
 
-export const getAllClasses = async () => {
-    const response = await axiosWithoutLoading.get("/api/class");
+export const getAllClasses = async (status: string) => {
+    const response = await axiosWithoutLoading.get(`/api/class?status=${status}`);
     return response.data;
 };
 
@@ -22,12 +22,18 @@ export const updateClass = async (id: string, data: { subjectId: number; lecture
     return response.data;
 };
 
-export const deleteClass = async (id: string) => {
-    const response = await defaultAxiosInstance.delete(`/api/class/${id}`);
+export const getClassByLecturerId = async (lecturerId: string) => {
+    const response = await axiosWithoutLoading.get(`/api/class/lecturer/${lecturerId}`);
     return response.data;
 };
 
-export const getClassByLecturerId = async (lecturerId: string) => {
-    const response = await axiosWithoutLoading.get(`/api/class/lecturer/${lecturerId}`);
+export const updateClassStatus = async (id: string, status: string) => {
+    const response = await defaultAxiosInstance.put(`/api/class/${id}/status`, { status });
+    return response.data;
+};
+
+export const addScheduleForClass = async (data: { classId: number; scheduleTypeId: number }) => {
+    const response = await defaultAxiosInstance.post(`/api/class/addscheduleforclass`, data);
+    toast.success("Create schedule for class successful");
     return response.data;
 };

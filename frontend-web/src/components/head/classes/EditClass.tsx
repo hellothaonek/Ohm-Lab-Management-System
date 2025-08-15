@@ -86,9 +86,7 @@ export default function EditClass({ classItem, onUpdate, onClose, open }: EditCl
                     getClassById(classItem.classId.toString()),
                     getSubjects(),
                     searchUsers(
-                        { keyWord: "", role: "", status: "" },
-                        1,
-                        100
+                        { keyWord: "", role: "Lecturer", status: "", pageNum: 1, pageSize: 100 },
                     ),
                     getAllScheduleTypes(),
                 ])
@@ -236,7 +234,7 @@ export default function EditClass({ classItem, onUpdate, onClose, open }: EditCl
                                                 key={`schedule-${schedule.scheduleTypeId}`}
                                                 value={schedule.scheduleTypeId.toString()}
                                             >
-                                                {schedule.scheduleTypeName}
+                                                {`${schedule.scheduleTypeDow}, ${schedule.slotStartTime} - ${schedule.slotEndTime}`}
                                             </SelectItem>
                                         ))
                                     ) : (
@@ -265,10 +263,10 @@ export default function EditClass({ classItem, onUpdate, onClose, open }: EditCl
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem key="status-valid" value="valid">
-                                        Valid
+                                    <SelectItem value="Active">
+                                        Active
                                     </SelectItem>
-                                    <SelectItem key="status-inactive" value="inactive">
+                                    <SelectItem value="Inactive">
                                         Inactive
                                     </SelectItem>
                                 </SelectContent>

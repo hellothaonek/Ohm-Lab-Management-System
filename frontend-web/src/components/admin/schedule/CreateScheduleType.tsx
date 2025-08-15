@@ -11,8 +11,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { createScheduleType } from "@/services/scheduleTypeServices";
-import { useState } from "react";
+import { getAllSlots } from "@/services/slotServices";
+import { useState, useEffect } from "react";
+
+interface Slot {
+    slotId: number;
+    slotName: string;
+}
 
 interface CreateScheduleTypeProps {
     open: boolean;
@@ -34,6 +47,19 @@ export default function CreateScheduleType({
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [slots, setSlots] = useState<Slot[]>([]);
+
+    useEffect(() => {
+        const fetchSlots = async () => {
+            try {
+                const slotData = await getAllSlots();
+                setSlots(slotData);
+            } catch (err) {
+                setError("Failed to fetch slots");
+            }
+        };
+        fetchSlots();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -71,6 +97,10 @@ export default function CreateScheduleType({
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
+    const handleSelectChange = (value: string) => {
+        setFormData((prev) => ({ ...prev, slotId: value }));
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
@@ -80,15 +110,24 @@ export default function CreateScheduleType({
                 <form onSubmit={handleSubmit}>
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="slotId">Slot ID</Label>
-                            <Input
-                                id="slotId"
+                            <Label htmlFor="slotId">Slot</Label>
+                            <Select
                                 name="slotId"
-                                type="number"
                                 value={formData.slotId}
-                                onChange={handleChange}
+                                onValueChange={handleSelectChange}
                                 required
-                            />
+                            >
+                                <SelectTrigger id="slotId">
+                                    <SelectValue placeholder="Select a slot" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {slots.map((slot) => (
+                                        <SelectItem key={slot.slotId} value={slot.slotId.toString()}>
+                                            {slot.slotName}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="scheduleTypeName">Schedule Type Name</Label>

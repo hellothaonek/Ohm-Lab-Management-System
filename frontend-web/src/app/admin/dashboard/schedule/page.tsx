@@ -5,18 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreVertical } from "lucide-react";
-import { addDays, startOfWeek, format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { getAllScheduleTypes } from "@/services/scheduleTypeServices";
+import { getAllSlots } from "@/services/slotServices";
 import CreateScheduleType from "@/components/admin/schedule/CreateScheduleType";
 import EditScheduleType from "@/components/admin/schedule/EditScheduleType";
 import DeleteScheduleType from "@/components/admin/schedule/DeleteScheduleType";
-
-const slots = [
-    "7:00 - 9:15",
-    "9:30 - 11:45",
-    "12:30 - 14:45",
-    "15:00 - 17:15"
-];
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -25,7 +19,7 @@ const scheduleTypeColors: { [key: string]: string } = {
     A2: "bg-green-100",
     A3: "bg-yellow-100",
     A4: "bg-red-100",
-    A5: "bg-purple-100",
+    A5: "bg-purple-200",
     A6: "bg-pink-100",
     P1: "bg-teal-100",
     P2: "bg-orange-100",
@@ -37,6 +31,7 @@ const scheduleTypeColors: { [key: string]: string } = {
 
 export default function AdminSchedule() {
     const [scheduleTypes, setScheduleTypes] = useState([]);
+    const [slots, setSlots] = useState([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editScheduleId, setEditScheduleId] = useState<number | null>(null);
@@ -47,15 +42,26 @@ export default function AdminSchedule() {
     const fetchScheduleTypes = async () => {
         try {
             const response = await getAllScheduleTypes();
-            console.log(">>>", response);
+            console.log(">>> Schedule Types:", response);
             setScheduleTypes(response);
         } catch (error) {
             console.error("Error fetching schedule types:", error);
         }
     };
 
+    const fetchSlots = async () => {
+        try {
+            const response = await getAllSlots();
+            console.log(">>> Slots:", response);
+            setSlots(response); 
+        } catch (error) {
+            console.error("Error fetching slots:", error);
+        }
+    };
+
     useEffect(() => {
         fetchScheduleTypes();
+        fetchSlots();
     }, []);
 
     const handleSuccess = () => {
@@ -80,7 +86,7 @@ export default function AdminSchedule() {
     };
 
     const getSlotIndex = (slotId: number) => {
-        return slotId - 1;
+        return slots.findIndex((slot: any) => slot.slotId === slotId);
     };
 
     const handleEdit = (schedule: any) => {
@@ -130,6 +136,48 @@ export default function AdminSchedule() {
         );
     };
 
+    const formatTime = (startTime: string | null, endTime: string | null) => {
+        // Validate inputs
+        if (!startTime || !endTime) {
+            console.warn("Missing time values:", { startTime, endTime });
+            return `${startTime || "N/A"} - ${endTime || "N/A"}`;
+        }
+
+        try {
+            // Normalize time to HH:mm:ss format
+            const normalizeTime = (time: string) => {
+                // Ensure HH:mm format
+                const parts = time.trim().split(":");
+                if (parts.length !== 2) {
+                    throw new Error(`Invalid time format: ${time}`);
+                }
+                const [hours, minutes] = parts.map((part) => parseInt(part, 10));
+                if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+                    throw new Error(`Invalid time components: ${time}`);
+                }
+                return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:00`;
+            };
+
+            const normalizedStart = normalizeTime(startTime);
+            const normalizedEnd = normalizeTime(endTime);
+
+            const startDate = new Date(`1970-01-01T${normalizedStart}`);
+            const endDate = new Date(`1970-01-01T${normalizedEnd}`);
+
+            if (!isValid(startDate) || !isValid(endDate)) {
+                console.warn("Invalid date objects created:", { normalizedStart, normalizedEnd });
+                return `${startTime} - ${endTime}`; // Fallback to raw values
+            }
+
+            const start = format(startDate, "HH:mm");
+            const end = format(endDate, "HH:mm");
+            return `${start} - ${end}`;
+        } catch (error) {
+            console.error("Error formatting time:", error, { startTime, endTime });
+            return `${startTime} - ${endTime}`; // Fallback to raw values
+        }
+    };
+
     return (
         <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
@@ -154,10 +202,12 @@ export default function AdminSchedule() {
                     </div>
                 ))}
 
-                {slots.map((time, slotIdx) => (
+                {slots.map((slot: any, slotIdx: number) => (
                     <div key={`slot-${slotIdx}`} className="contents">
-                        <div className="bg-gray-100 p-2 min-h-[80px] flex items-center justify-center">{time}</div>
-                        <div className="bg-gray-100 p-2 min-h-[80px] flex items-center justify-center">{slotIdx + 1}</div>
+                        <div className="bg-gray-100 p-2 min-h-[80px] flex items-center justify-center">
+                            {formatTime(slot.slotStartTime, slot.slotEndTime)}
+                        </div>
+                        <div className="bg-gray-100 p-2 min-h-[80px] flex items-center justify-center">{slot.slotName}</div>
                         {days.map((d) => (
                             <div key={`${d}-${slotIdx}`} className="min-h-[80px]">
                                 {renderCell(d, slotIdx)}

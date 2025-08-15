@@ -159,137 +159,135 @@ export default function LecturerLabPage() {
     )
 
     return (
-        <DashboardLayout>
-            <div className="min-h-screen p-4">
-                {/* Header */}
-                <div className="mb-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Lab Management</h1>
-                        </div>
-                        <Button className="bg-orange-500 hover:bg-orange-600">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Lab
-                        </Button>
+        <div className="min-h-screen p-4">
+            {/* Header */}
+            <div className="mb-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Lab Management</h1>
                     </div>
+                    <Button className="bg-orange-500 hover:bg-orange-600">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Lab
+                    </Button>
                 </div>
-
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                                    <BookOpen className="h-5 w-5 text-orange-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Labs</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                        {labData.length}
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                                    <BookOpen className="h-5 w-5 text-green-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Open Labs</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                        {labData.filter((l) => l.status === "open").length}
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                                    <Calendar className="h-5 w-5 text-blue-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Submissions</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                        {labData.reduce((sum, l) => sum + l.submissions, 0)}
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Filters and Search */}
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                    <div className="flex gap-2 flex-1">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                                placeholder="Search by lab name or course..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-
-                        <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-                            <SelectTrigger className="w-64">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {courseOptions.map((course) => (
-                                    <SelectItem key={course.value} value={course.value}>
-                                        {course.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
-                        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                            <SelectTrigger className="w-40">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {statusOptions.map((status) => (
-                                    <SelectItem key={status.value} value={status.value}>
-                                        {status.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-
-                {/* Results */}
-                <div className="mb-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Showing {filteredLabs.length} of {labData.length} labs
-                    </p>
-                </div>
-
-                {/* Lab Display */}
-                {filteredLabs.length === 0 ? (
-                    <Card>
-                        <CardContent className="p-8 text-center">
-                            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                                No labs found
-                            </h3>
-                            <p className="text-gray-600 dark:text-gray-400">
-                                Try adjusting your search criteria or add new labs.
-                            </p>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    renderTableView()
-                )}
             </div>
-        </DashboardLayout>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                                <BookOpen className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Total Labs</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {labData.length}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                                <BookOpen className="h-5 w-5 text-green-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Open Labs</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {labData.filter((l) => l.status === "open").length}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                                <Calendar className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Total Submissions</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {labData.reduce((sum, l) => sum + l.submissions, 0)}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Filters and Search */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex gap-2 flex-1">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                            placeholder="Search by lab name or course..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10"
+                        />
+                    </div>
+
+                    <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+                        <SelectTrigger className="w-64">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {courseOptions.map((course) => (
+                                <SelectItem key={course.value} value={course.value}>
+                                    {course.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
+                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                        <SelectTrigger className="w-40">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {statusOptions.map((status) => (
+                                <SelectItem key={status.value} value={status.value}>
+                                    {status.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
+            {/* Results */}
+            <div className="mb-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Showing {filteredLabs.length} of {labData.length} labs
+                </p>
+            </div>
+
+            {/* Lab Display */}
+            {filteredLabs.length === 0 ? (
+                <Card>
+                    <CardContent className="p-8 text-center">
+                        <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                            No labs found
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-400">
+                            Try adjusting your search criteria or add new labs.
+                        </p>
+                    </CardContent>
+                </Card>
+            ) : (
+                renderTableView()
+            )}
+        </div>
     )
 }

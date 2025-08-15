@@ -1,21 +1,19 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, BookOpen, Edit, Loader2 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Search, BookOpen, Loader2, EllipsisVertical, CalendarPlus, UsersRound, UserPen, Trash2, Edit } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import DashboardLayout from "@/components/dashboard-layout"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { getAllClasses } from "@/services/classServices"
 import CreateNewClass from "@/components/head/classes/CreateNewClass"
 import DeleteClass from "@/components/head/classes/DeleteClass"
 import EditClass from "@/components/head/classes/EditClass"
-import { createClass, getAllClasses } from "@/services/classServices"
-import { getScheduleTypeById } from "@/services/scheduleTypeServices"
-import { getSubjectById } from "@/services/courseServices"
-import { getUserById } from "@/services/userServices"
+import AddSchedule from "@/components/head/classes/AddSchedule"
 
 interface ClassItem {
     classId: number
@@ -28,6 +26,7 @@ interface ClassItem {
     subjectName: string
     lecturerName: string | null
     classUsers: any[]
+    semesterName: string
     scheduleTypeDow?: string
     slotStartTime?: string
     slotEndTime?: string
@@ -35,59 +34,44 @@ interface ClassItem {
 
 export default function HeadClassesPage() {
     const [searchTerm, setSearchTerm] = useState("")
-    const [selectedSubject, setSelectedSubject] = useState("all")
+    const [selectedSemester, setSelectedSemester] = useState("all")
     const [selectedStatus, setSelectedStatus] = useState("all")
     const [classes, setClasses] = useState<ClassItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [editingClass, setEditingClass] = useState<ClassItem | null>(null)
+    const [deletingClass, setDeletingClass] = useState<ClassItem | null>(null)
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+    const [addingScheduleClass, setAddingScheduleClass] = useState<ClassItem | null>(null)
+    const [isAddScheduleModalOpen, setIsAddScheduleModalOpen] = useState(false)
+
+    const fetchClasses = async () => {
+        try {
+            setLoading(true)
+            const response = await getAllClasses("active")
+            setClasses(response.pageData)
+        } catch (err) {
+            setError("Failed to fetch classes")
+        } finally {
+            setLoading(false)
+        }
+    }
 
     useEffect(() => {
-        const fetchClasses = async () => {
-            try {
-                setLoading(true)
-                const response = await getAllClasses()
-                const classesWithSchedule = await Promise.all(
-                    response.pageData.map(async (classItem: ClassItem) => {
-                        if (classItem.scheduleTypeId) {
-                            try {
-                                const scheduleData = await getScheduleTypeById(classItem.scheduleTypeId.toString())
-                                return {
-                                    ...classItem,
-                                    scheduleTypeDow: scheduleData.scheduleTypeDow,
-                                    slotStartTime: scheduleData.slotStartTime,
-                                    slotEndTime: scheduleData.slotEndTime,
-                                }
-                            } catch (err) {
-                                console.error(`Failed to fetch schedule for class ${classItem.classId}:`, err)
-                                return classItem
-                            }
-                        }
-                        return classItem
-                    })
-                )
-
-                setClasses(classesWithSchedule)
-            } catch (err) {
-                setError("Failed to fetch classes")
-            } finally {
-                setLoading(false)
-            }
-        }
         fetchClasses()
     }, [])
 
-    const subjects = useMemo(() => {
-        const subjectMap = new Map<string, { value: string; label: string }>()
+    const semesters = useMemo(() => {
+        const semesterMap = new Map<string, { value: string; label: string }>()
         classes.forEach((classItem) => {
-            subjectMap.set(classItem.subjectId.toString(), {
-                value: classItem.subjectId.toString(),
-                label: classItem.subjectName,
+            semesterMap.set(classItem.semesterName, {
+                value: classItem.semesterName,
+                label: classItem.semesterName,
             })
         })
         return [
-            { value: "all", label: "All Subjects" },
-            ...Array.from(subjectMap.values()),
+            { value: "all", label: "All Semesters" },
+            ...Array.from(semesterMap.values()),
         ]
     }, [classes])
 
@@ -99,18 +83,17 @@ export default function HeadClassesPage() {
         ]
     }, [classes])
 
-    // Filter classes based on search and select inputs
     const filteredClasses = useMemo(() => {
         return classes.filter((classItem) => {
             const matchesSearch =
                 classItem.className.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 classItem.subjectName.toLowerCase().includes(searchTerm.toLowerCase())
-            const matchesSubject = selectedSubject === "all" || classItem.subjectId.toString() === selectedSubject
+            const matchesSemester = selectedSemester === "all" || classItem.semesterName === selectedSemester
             const matchesStatus = selectedStatus === "all" || classItem.classStatus === selectedStatus
 
-            return matchesSearch && matchesSubject && matchesStatus
+            return matchesSearch && matchesSemester && matchesStatus
         })
-    }, [searchTerm, selectedSubject, selectedStatus, classes])
+    }, [searchTerm, selectedSemester, selectedStatus, classes])
 
     const getStatusVariant = (status: string) => {
         switch (status.toLowerCase()) {
@@ -121,60 +104,27 @@ export default function HeadClassesPage() {
         }
     }
 
-    const handleCreateClass = async (newClass: ClassItem) => {
-        try {
-            const createdClass = await createClass({
-                subjectId: newClass.subjectId,
-                lecturerId: newClass.lecturerId?.toString() || "",
-                scheduleTypeId: newClass.scheduleTypeId || 0,
-                className: newClass.className,
-                classDescription: newClass.classDescription,
-                classStatus: newClass.classStatus,
-            });
-
-            const subjectData = await getSubjectById(newClass.subjectId);
-            const subjectName = subjectData?.subjectName || "-";
-
-            const userData = newClass.lecturerId
-                ? await getUserById(newClass.lecturerId.toString())
-                : null;
-            const lecturerName = userData?.userFullName || "-";
-
-            const scheduleData = newClass.scheduleTypeId
-                ? await getScheduleTypeById(newClass.scheduleTypeId.toString())
-                : null;
-
-            const enrichedClass: ClassItem = {
-                ...createdClass,
-                subjectName: subjectName,
-                lecturerName: lecturerName,
-                scheduleTypeDow: scheduleData?.scheduleTypeDow || "-",
-                slotStartTime: scheduleData?.slotStartTime || "-",
-                slotEndTime: scheduleData?.slotEndTime || "-",
-                classUsers: createdClass.classUsers || [],
-            };
-
-            setClasses((prev) => [...prev, enrichedClass]);
-        } catch (err) {
-            console.error("Failed to create or enrich new class:", err);
-        }
-    };
-
-    const handleEditClass = (classItem: ClassItem) => {
-        setEditingClass(classItem)
+    const handleCreateClass = (newClass: ClassItem) => {
+        setClasses((prev) => [...prev, {
+            ...newClass,
+            subjectName: newClass.subjectName || "-",
+            lecturerName: newClass.lecturerName || "-",
+            semesterName: newClass.semesterName || "-",
+            scheduleTypeDow: newClass.scheduleTypeDow || "-",
+            slotStartTime: newClass.slotStartTime || "-",
+            slotEndTime: newClass.slotEndTime || "-",
+            classUsers: newClass.classUsers || [],
+        }])
     }
 
-    const handleUpdateClass = (updatedClass: ClassItem) => {
-        setClasses((prev) =>
-            prev.map((classItem) =>
-                classItem.classId === updatedClass.classId ? updatedClass : classItem
-            )
-        )
-        setEditingClass(null)
+    const handleDeleteClass = () => {
+        fetchClasses()
     }
 
-    const handleDeleteClass = (classId: number) => {
-        setClasses((prev) => prev.filter((classItem) => classItem.classId !== classId))
+    const handleAddSchedule = (schedule: { scheduleTypeId: number; classId: number }) => {
+        // In a real implementation, you would make an API call to save the schedule
+        // and then refresh the classes data
+        fetchClasses()
     }
 
     const renderTableView = () => (
@@ -188,6 +138,8 @@ export default function HeadClassesPage() {
                             <TableHead>Lecturer</TableHead>
                             <TableHead>Day of Week</TableHead>
                             <TableHead>Time</TableHead>
+                            <TableHead>Semester</TableHead>
+                            <TableHead>Students</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Actions</TableHead>
                         </TableRow>
@@ -204,25 +156,47 @@ export default function HeadClassesPage() {
                                         ? `${classItem.slotStartTime}-${classItem.slotEndTime}`
                                         : "-"}
                                 </TableCell>
+                                <TableCell>{classItem.semesterName || "-"}</TableCell>
+                                <TableCell>{classItem.classUsers.length}</TableCell>
                                 <TableCell>
                                     <Badge variant={getStatusVariant(classItem.classStatus)}>{classItem.classStatus}</Badge>
                                 </TableCell>
                                 <TableCell>
-                                    <div className="flex gap-1">
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => handleEditClass(classItem)}
-                                            title="Edit class"
-                                        >
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <DeleteClass
-                                            classId={classItem.classId}
-                                            className={classItem.className}
-                                            onDelete={handleDeleteClass}
-                                        />
-                                    </div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button size="sm" variant="ghost" title="Actions" aria-label={`Actions for ${classItem.className}`}>
+                                                <EllipsisVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            <DropdownMenuItem onClick={() => setEditingClass(classItem)}>
+                                                <Edit className="h-4 w-4 mr-2" />
+                                                Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={() => {
+                                                    setDeletingClass(classItem)
+                                                    setIsDeleteModalOpen(true)
+                                                }}
+                                            >
+                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                Delete
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={() => {
+                                                    setAddingScheduleClass(classItem)
+                                                    setIsAddScheduleModalOpen(true)
+                                                }}
+                                            >
+                                                <CalendarPlus className="h-4 w-4 mr-2" />
+                                                Add Schedule
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem>
+                                                <UsersRound className="h-4 w-4 mr-2" />
+                                                Add Student
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -234,108 +208,137 @@ export default function HeadClassesPage() {
 
     if (loading) {
         return (
-            <DashboardLayout>
-                <div className="min-h-screen p-4">
-                    <Card>
-                        <CardContent className="p-8 text-center">
-                            <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto mb-4" />
-                        </CardContent>
-                    </Card>
-                </div>
-            </DashboardLayout>
+            <div className="min-h-screen p-4">
+                <Card>
+                    <CardContent className="p-8 text-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto mb-4" />
+                    </CardContent>
+                </Card>
+            </div>
         )
     }
 
     if (error) {
         return (
-            <DashboardLayout>
-                <div className="min-h-screen p-4">
-                    <Card>
-                        <CardContent className="p-8 text-center">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{error}</h3>
-                            <Button onClick={() => window.location.reload()}>Retry</Button>
-                        </CardContent>
-                    </Card>
-                </div>
-            </DashboardLayout>
+            <div className="min-h-screen p-4">
+                <Card>
+                    <CardContent className="p-8 text-center">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{error}</h3>
+                    </CardContent>
+                </Card>
+            </div>
         )
     }
 
     return (
-        <DashboardLayout>
-            <div className="min-h-screen p-4">
-                <div className="mb-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Classes Management</h1>
-                        </div>
-                        <CreateNewClass onCreateClass={handleCreateClass} />
+        <div className="min-h-screen p-4">
+            <div className="mb-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Classes</h1>
                     </div>
+                    <CreateNewClass onCreateClass={handleCreateClass} />
                 </div>
-
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                    <div className="flex gap-2 flex-1">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                                placeholder="Search by class name or subject..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-
-                        <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                            <SelectTrigger className="w-64">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {subjects.map((subject) => (
-                                    <SelectItem key={subject.value} value={subject.value}>
-                                        {subject.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
-                        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                            <SelectTrigger className="w-40">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {statusOptions.map((status) => (
-                                    <SelectItem key={status.value} value={status.value}>
-                                        {status.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-
-                {filteredClasses.length === 0 ? (
-                    <Card>
-                        <CardContent className="p-8 text-center">
-                            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No classes found</h3>
-                            <p className="text-gray-600 dark:text-gray-400">
-                                Try adjusting your search criteria or create a new class.
-                            </p>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    renderTableView()
-                )}
-
-                {editingClass && (
-                    <EditClass
-                        classItem={editingClass}
-                        onUpdate={handleUpdateClass}
-                        onClose={() => setEditingClass(null)}
-                        open={!!editingClass}
-                    />
-                )}
             </div>
-        </DashboardLayout>
+
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex gap-2 flex-1">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" aria-label="Search icon" />
+                        <Input
+                            placeholder="Search by class name or subject..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10"
+                        />
+                    </div>
+
+                    <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+                        <SelectTrigger className="w-64">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {semesters.map((semester) => (
+                                <SelectItem key={semester.value} value={semester.value}>
+                                    {semester.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
+                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                        <SelectTrigger className="w-40">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {statusOptions.map((status) => (
+                                <SelectItem key={status.value} value={status.value}>
+                                    {status.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
+            {editingClass && (
+                <EditClass
+                    classItem={editingClass}
+                    open={!!editingClass}
+                    onClose={() => setEditingClass(null)}
+                    onUpdate={(updatedClass) => {
+                        setClasses((prev) =>
+                            prev.map((c) => (c.classId === updatedClass.classId ? {
+                                ...c,
+                                ...updatedClass,
+                                classUsers: c.classUsers,
+                                semesterName: c.semesterName,
+                            } : c))
+                        )
+                        setEditingClass(null)
+                    }}
+                />
+            )}
+
+            {deletingClass && (
+                <DeleteClass
+                    open={isDeleteModalOpen}
+                    onClose={() => {
+                        setIsDeleteModalOpen(false)
+                        setDeletingClass(null)
+                    }}
+                    onDelete={handleDeleteClass}
+                    classId={deletingClass.classId.toString()}
+                    className={deletingClass.className}
+                />
+            )}
+
+            {addingScheduleClass && (
+                <AddSchedule
+                    open={isAddScheduleModalOpen}
+                    onClose={() => {
+                        setIsAddScheduleModalOpen(false)
+                        setAddingScheduleClass(null)
+                    }}
+                    onAddSchedule={handleAddSchedule}
+                    classId={addingScheduleClass.classId}
+                    className={addingScheduleClass.className}
+                />
+            )}
+
+            {filteredClasses.length === 0 ? (
+                <Card>
+                    <CardContent className="p-8 text-center">
+                        <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No classes found</h3>
+                        <p className="text-gray-600 dark:text-gray-400">
+                            Try adjusting your search criteria.
+                        </p>
+                    </CardContent>
+                </Card>
+            ) : (
+                renderTableView()
+            )}
+        </div>
     )
 }

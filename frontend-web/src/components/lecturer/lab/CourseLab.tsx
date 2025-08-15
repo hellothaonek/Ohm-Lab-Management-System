@@ -1,10 +1,26 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Edit, Trash2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import {
+    Edit,
+    Trash2,
+    Plus,
+    FlaskConical,
+    Target,
+    FileText,
+    RefreshCw,
+    MoreHorizontal,
+    CheckCircle,
+    Clock,
+    XCircle,
+} from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { getLabsBySubjectId } from "@/services/courseServices"
 import CreateLab from "./CreateLab"
 import DeleteLab from "./DeleteLab"
@@ -21,6 +37,22 @@ interface Lab {
 
 interface CourseLabProps {
     subjectId: number
+}
+
+const getStatusVariant = (status?: string): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status?.toLowerCase()) {
+        case "completed":
+        case "active":
+            return "default"
+        case "pending":
+        case "in progress":
+            return "secondary"
+        case "inactive":
+        case "cancelled":
+            return "destructive"
+        default:
+            return "outline"
+    }
 }
 
 const CourseLab: React.FC<CourseLabProps> = ({ subjectId }) => {
@@ -86,74 +118,133 @@ const CourseLab: React.FC<CourseLabProps> = ({ subjectId }) => {
         setSelectedLab(null)
     }
 
+
     return (
         <div className="space-y-6">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Course Labs</CardTitle>
-                    <Button onClick={handleNewLab} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                        New Lab
-                    </Button>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <div className="p-4 text-center text-muted-foreground">
-                            Loading labs...
+
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <div className="flex items-center gap-2">
+                    <FlaskConical className="h-5 w-5 text-orange-600" />
+                    <CardTitle>Course Lab</CardTitle>
+                </div>
+                {labs.length > 0 && (
+                    <div className="flex items-center gap-2">
+                        <Button onClick={handleNewLab} className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700">
+                            New Lab
+                        </Button>
+                    </div>
+                )}
+            </CardHeader>
+            <CardContent>
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">Loading laboratory sessions...</p>
+                    </div>
+                ) : error ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                        <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
+                            <FlaskConical className="h-8 w-8 text-red-600 dark:text-red-400" />
                         </div>
-                    ) : error ? (
-                        <div className="p-4 text-center text-red-500">
-                            {error}
+                        <p className="text-red-600 dark:text-red-400 text-center mb-4">{error}</p>
+                        <Button onClick={fetchLabs} variant="outline" size="sm">
+                            Try Again
+                        </Button>
+                    </div>
+                ) : labs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                        <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full mb-4">
+                            <FlaskConical className="h-8 w-8 text-muted-foreground" />
                         </div>
-                    ) : labs.length === 0 ? (
-                        <div className="p-4 text-center text-muted-foreground">
-                            No labs found for this course.
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Request</TableHead>
-                                        <TableHead>Target</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Action</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {labs.map((lab, index) => (
-                                        <TableRow key={lab.labId || index}>
-                                            <TableCell>{lab.labName}</TableCell>
-                                            <TableCell>{lab.labRequest}</TableCell>
-                                            <TableCell>{lab.labTarget}</TableCell>
-                                            <TableCell>{lab.labStatus}</TableCell>
-                                            <TableCell>
-                                                <div className="flex gap-1">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => handleEditClick(lab)}
-                                                    >
-                                                        <Edit className="h-3 w-3" />
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        className="text-red-600 hover:text-red-700"
-                                                        onClick={() => handleDeleteClick(lab)}
-                                                    >
-                                                        <Trash2 className="h-3 w-3" />
-                                                    </Button>
+                        <p className="text-muted-foreground text-center mb-2">No laboratory sessions yet</p>
+                        <p className="text-sm text-muted-foreground mb-4">Create your first lab to get started</p>
+                        <Button onClick={handleNewLab} className="flex items-center gap-2">
+                            Create Lab
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/50">
+                                    <TableHead className="font-semibold">
+                                        <div className="flex items-center gap-2">
+                                            <FileText className="h-4 w-4" />
+                                            Lab Name
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="font-semibold">
+                                        <div className="flex items-center gap-2">
+                                            <FileText className="h-4 w-4" />
+                                            Request
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="font-semibold">
+                                        <div className="flex items-center gap-2">
+                                            <Target className="h-4 w-4" />
+                                            Target
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="font-semibold">Status</TableHead>
+                                    <TableHead className="font-semibold text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {labs.map((lab, index) => (
+                                    <TableRow key={lab.labId || index} className="hover:bg-muted/30">
+                                        <TableCell className="font-medium">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
+                                                    <FlaskConical className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                                                 </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                                                <span className="font-semibold">{lab.labName}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="max-w-xs">
+                                                <p className="text-sm text-muted-foreground line-clamp-2">{lab.labRequest}</p>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="max-w-xs">
+                                                <p className="text-sm text-muted-foreground line-clamp-2">{lab.labTarget}</p>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant={getStatusVariant(lab.labStatus)} className="flex items-center gap-1 w-fit">
+                                                {lab.labStatus || "Pending"}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleEditClick(lab)}>
+                                                        <Edit className="h-4 w-4 mr-2" />
+                                                        Edit Lab
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleDeleteClick(lab)}
+                                                        className="text-red-600 focus:text-red-600"
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                        Delete Lab
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                )}
+            </CardContent>
+
             <CreateLab
                 subjectId={subjectId}
                 isOpen={isModalOpen}
