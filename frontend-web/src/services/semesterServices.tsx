@@ -8,7 +8,7 @@ export const createSemester = async (data: { semesterName: string; semesterStart
 };
 
 export const getSemesters = async () => {
-    const response = await axiosWithoutLoading.get("/api/semester");
+    const response = await axiosWithoutLoading.get("/api/semester/getallsemesters");
     return response.data;
 };
 

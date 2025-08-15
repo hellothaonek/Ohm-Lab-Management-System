@@ -6,7 +6,7 @@ export const getSubjects = async () => {
     return response.data;
 };
 
-export const createSubject = async (data: { subjectName: string; subjectCode: string; subjectDescription: string }) => {
+export const createSubject = async (data: { subjectName: string; subjectCode: string; subjectDescription: string; semesterId: string }) => {
     const response = await defaultAxiosInstance.post("/api/course/subjects", data);
     toast.success("Subject created successfully");
     return response.data;
