@@ -37,3 +37,8 @@ export const addScheduleForClass = async (data: { classId: number; scheduleTypeI
     toast.success("Create schedule for class successful");
     return response.data;
 };
+
+export const getLabByClassId = async (classId: string) => {
+    const response = await axiosWithoutLoading.get(`/api/class/${classId}/labs`);
+    return response.data;
+};

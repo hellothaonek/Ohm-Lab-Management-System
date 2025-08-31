@@ -14,6 +14,8 @@ import CreateNewClass from "@/components/head/classes/CreateNewClass"
 import DeleteClass from "@/components/head/classes/DeleteClass"
 import EditClass from "@/components/head/classes/EditClass"
 import AddSchedule from "@/components/head/classes/AddSchedule"
+import AddStudent from "@/components/head/classes/AddStudent"
+import Link from "next/link"
 
 interface ClassItem {
     classId: number
@@ -44,6 +46,8 @@ export default function HeadClassesPage() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [addingScheduleClass, setAddingScheduleClass] = useState<ClassItem | null>(null)
     const [isAddScheduleModalOpen, setIsAddScheduleModalOpen] = useState(false)
+    const [addingStudentClass, setAddingStudentClass] = useState<ClassItem | null>(null)
+    const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false)
 
     const fetchClasses = async () => {
         try {
@@ -122,8 +126,13 @@ export default function HeadClassesPage() {
     }
 
     const handleAddSchedule = (schedule: { scheduleTypeId: number; classId: number }) => {
-        // In a real implementation, you would make an API call to save the schedule
-        // and then refresh the classes data
+        fetchClasses()
+    }
+
+    const handleAddStudents = (classId: number, file: File) => {
+        // In a real implementation, you would make an API call to upload the file
+        // and process the student data, then refresh the classes
+        console.log(`Uploading file for class ${classId}:`, file.name)
         fetchClasses()
     }
 
@@ -147,7 +156,11 @@ export default function HeadClassesPage() {
                     <TableBody>
                         {filteredClasses.map((classItem) => (
                             <TableRow key={classItem.classId}>
-                                <TableCell className="font-medium text-orange-500">{classItem.className}</TableCell>
+                                <TableCell>
+                                    <Link href={`/head/dashboard/classes/[class-detail]?classId=${classItem.classId}`} as={`/head/dashboard/classes/class-detail?classId=${classItem.classId}`} className="font-medium text-orange-500 hover:underline">
+                                        {classItem.className}
+                                    </Link>
+                                </TableCell>
                                 <TableCell>{classItem.subjectName || "-"}</TableCell>
                                 <TableCell>{classItem.lecturerName || "-"}</TableCell>
                                 <TableCell>{classItem.scheduleTypeDow || "-"}</TableCell>
@@ -191,9 +204,14 @@ export default function HeadClassesPage() {
                                                 <CalendarPlus className="h-4 w-4 mr-2" />
                                                 Add Schedule
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={() => {
+                                                    setAddingStudentClass(classItem)
+                                                    setIsAddStudentModalOpen(true)
+                                                }}
+                                            >
                                                 <UsersRound className="h-4 w-4 mr-2" />
-                                                Add Student
+                                                Add Student List
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
@@ -323,6 +341,19 @@ export default function HeadClassesPage() {
                     onAddSchedule={handleAddSchedule}
                     classId={addingScheduleClass.classId}
                     className={addingScheduleClass.className}
+                />
+            )}
+
+            {addingStudentClass && (
+                <AddStudent
+                    open={isAddStudentModalOpen}
+                    onClose={() => {
+                        setIsAddStudentModalOpen(false)
+                        setAddingStudentClass(null)
+                    }}
+                    onAddStudents={handleAddStudents}
+                    classId={addingStudentClass.classId}
+                    className={addingStudentClass.className}
                 />
             )}
 

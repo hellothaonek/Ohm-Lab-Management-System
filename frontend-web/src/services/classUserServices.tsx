@@ -1,4 +1,4 @@
-import { defaultAxiosInstance, axiosWithoutLoading } from "./axios.config";
+import { defaultAxiosInstance, axiosWithoutLoading, multipartAxiosInstance } from "./axios.config";
 import { toast } from "react-toastify";
 
 export const addClassUser = async (data: { userId: string; classId: number }) => {
@@ -28,5 +28,14 @@ export const removeClassUser = async (data: { userId: string; classId: number })
 
 export const checkClassUser = async () => {
     const response = await axiosWithoutLoading.get("/api/classuser/check");
+    return response.data;
+};
+
+export const addStudentList = async (data: { classId: number; excelFile: File }) => {
+    const formData = new FormData();
+    formData.append("ExcelFile", data.excelFile);
+    formData.append("classId", data.classId.toString());
+
+    const response = await multipartAxiosInstance.post("/api/classuser/import-excel", formData);
     return response.data;
 };

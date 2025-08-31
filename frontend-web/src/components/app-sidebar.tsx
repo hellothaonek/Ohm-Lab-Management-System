@@ -1,7 +1,6 @@
 "use client"
 
 import type * as React from "react"
-import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -23,12 +22,13 @@ import {
     SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
-    SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarRail,
+    SidebarTrigger,
+    useSidebar,
 } from "../components/ui/sidebar"
 import {
     DropdownMenu,
@@ -47,11 +47,16 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 
 export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
     const pathname = usePathname()
+    const { state } = useSidebar()
 
-    const roleTitle = role === "head" ? "Head of Department" :
-        role === "lecturer" ? "Lecturer" :
-            role === "admin" ? "System Administrator" :
-                "Student"
+    const roleTitle =
+        role === "head"
+            ? "Head of Department"
+            : role === "lecturer"
+                ? "Lecturer"
+                : role === "admin"
+                    ? "System Administrator"
+                    : "Student"
 
     const navItems = [
         {
@@ -77,6 +82,12 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
             href: `/${role}/dashboard/schedule`,
             icon: Calendar,
             roles: ["head", "lecturer", "student", "admin"],
+        },
+        {
+            title: "Lab Booking",
+            href: `/${role}/dashboard/lab-booking`,
+            icon: Calendar,
+            roles: ["head", "lecturer"],
         },
         {
             title: "Classes",
@@ -112,7 +123,7 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
             title: "My Courses",
             href: `/${role}/dashboard/courses`,
             icon: Database,
-            roles: ["lecturer", "student"],
+            roles: ["student"],
         },
         {
             title: "Kit",
@@ -137,7 +148,7 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
     const filteredNavItems = navItems.filter((item) => item.roles.includes(role))
 
     return (
-        <Sidebar collapsible="icon" {...props}>
+        <Sidebar collapsible="icon" {...props} className="bg-orange-50">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
@@ -178,66 +189,137 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
             <SidebarFooter>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <SidebarMenuButton
-                                    size="lg"
-                                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                                >
-                                    <Avatar className="h-8 w-8 rounded-lg">
-                                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt={userFullName} />
-                                        <AvatarFallback className="rounded-lg">
-                                            {userFullName ? userFullName.slice(0, 2).toUpperCase() : "JD"}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="grid flex-1 text-left text-sm leading-tight">
-                                        <span className="truncate font-semibold">{userFullName}</span>
-                                        <span className="truncate text-xs">{roleTitle}</span>
-                                    </div>
-                                </SidebarMenuButton>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                                side="bottom"
-                                align="end"
-                                sideOffset={4}
-                            >
-                                <DropdownMenuLabel className="p-0 font-normal">
-                                    <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                                        <Avatar className="h-8 w-8 rounded-lg">
-                                            <AvatarImage src="/placeholder.svg?height=32&width=32" alt={userFullName} />
-                                            <AvatarFallback className="rounded-lg">
-                                                {userFullName ? userFullName.slice(0, 2).toUpperCase() : "JD"}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div className="grid flex-1 text-left text-sm leading-tight">
-                                            <span className="truncate font-semibold">{userFullName}</span>
-                                            <span className="truncate text-xs">{roleTitle}</span>
-                                        </div>
-                                    </div>
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem asChild>
-                                    <Link href={`/${role}/profile`} className="flex items-center gap-2">
-                                        <User className="h-4 w-4" />
-                                        Profile
-                                    </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                    <Link href={`/${role}/settings`} className="flex items-center gap-2">
-                                        <Settings className="h-4 w-4" />
-                                        Settings
-                                    </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem asChild>
-                                    <Link href="/" className="flex items-center gap-2 text-red-500">
-                                        <LogOut className="h-4 w-4" />
-                                        Logout
-                                    </Link>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        {state === "expanded" ? (
+                            <div className="flex items-center gap-2 px-2 py-1">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <SidebarMenuButton
+                                            size="lg"
+                                            className="flex-1 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                                        >
+                                            <Avatar className="h-8 w-8 rounded-lg">
+                                                <AvatarImage src="/placeholder.svg?height=32&width=32" alt={userFullName} />
+                                                <AvatarFallback className="rounded-lg">
+                                                    {userFullName ? userFullName.slice(0, 2).toUpperCase() : "JD"}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="grid flex-1 text-left text-sm leading-tight">
+                                                <span className="truncate font-semibold">{userFullName}</span>
+                                                <span className="truncate text-xs">{roleTitle}</span>
+                                            </div>
+                                        </SidebarMenuButton>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                        className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                                        side="bottom"
+                                        align="end"
+                                        sideOffset={4}
+                                    >
+                                        <DropdownMenuLabel className="p-0 font-normal">
+                                            <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                                                <Avatar className="h-8 w-8 rounded-lg">
+                                                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt={userFullName} />
+                                                    <AvatarFallback className="rounded-lg">
+                                                        {userFullName ? userFullName.slice(0, 2).toUpperCase() : "JD"}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="grid flex-1 text-left text-sm leading-tight">
+                                                    <span className="truncate font-semibold">{userFullName}</span>
+                                                    <span className="truncate text-xs">{roleTitle}</span>
+                                                </div>
+                                            </div>
+                                        </DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem asChild>
+                                            <Link href={`/${role}/profile`} className="flex items-center gap-2">
+                                                <User className="h-4 w-4" />
+                                                Profile
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem asChild>
+                                            <Link href={`/${role}/settings`} className="flex items-center gap-2">
+                                                <Settings className="h-4 w-4" />
+                                                Settings
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/" className="flex items-center gap-2 text-red-500">
+                                                <LogOut className="h-4 w-4" />
+                                                Logout
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <SidebarTrigger className="h-8 w-8" />
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <SidebarMenuButton
+                                            size="lg"
+                                            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                                        >
+                                            <Avatar className="h-8 w-8 rounded-lg">
+                                                <AvatarImage src="/placeholder.svg?height=32&width=32" alt={userFullName} />
+                                                <AvatarFallback className="rounded-lg">
+                                                    {userFullName ? userFullName.slice(0, 2).toUpperCase() : "JD"}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="grid flex-1 text-left text-sm leading-tight">
+                                                <span className="truncate font-semibold">{userFullName}</span>
+                                                <span className="truncate text-xs">{roleTitle}</span>
+                                            </div>
+                                        </SidebarMenuButton>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                        className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                                        side="bottom"
+                                        align="end"
+                                        sideOffset={4}
+                                    >
+                                        <DropdownMenuLabel className="p-0 font-normal">
+                                            <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                                                <Avatar className="h-8 w-8 rounded-lg">
+                                                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt={userFullName} />
+                                                    <AvatarFallback className="rounded-lg">
+                                                        {userFullName ? userFullName.slice(0, 2).toUpperCase() : "JD"}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="grid flex-1 text-left text-sm leading-tight">
+                                                    <span className="truncate font-semibold">{userFullName}</span>
+                                                    <span className="truncate text-xs">{roleTitle}</span>
+                                                </div>
+                                            </div>
+                                        </DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem asChild>
+                                            <Link href={`/${role}/profile`} className="flex items-center gap-2">
+                                                <User className="h-4 w-4" />
+                                                Profile
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem asChild>
+                                            <Link href={`/${role}/settings`} className="flex items-center gap-2">
+                                                <Settings className="h-4 w-4" />
+                                                Settings
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/" className="flex items-center gap-2 text-red-500">
+                                                <LogOut className="h-4 w-4" />
+                                                Logout
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <div className="flex justify-center">
+                                    <SidebarTrigger className="h-8 w-8" />
+                                </div>
+                            </div>
+                        )}
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarFooter>

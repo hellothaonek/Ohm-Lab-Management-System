@@ -28,7 +28,7 @@ export default function DeleteCourse({ subjectId, subjectName, onSubjectDeleted 
         try {
             setIsDeleting(true)
             setError(null)
-            await deleteSubject(subjectId.toString()) 
+            await deleteSubject(subjectId.toString())
             setIsOpen(false)
             onSubjectDeleted()
         } catch (err: any) {

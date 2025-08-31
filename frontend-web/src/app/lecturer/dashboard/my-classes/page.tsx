@@ -1,15 +1,15 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, Users, Calendar, BookOpen } from "lucide-react"
+import { Search, Users, Calendar, BookOpen, ChevronRight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { getCurrentUser } from "@/services/userServices"
 import { getClassByLecturerId } from "@/services/classServices"
+import Link from "next/link"
 
-// Định nghĩa interface cho dữ liệu lớp từ API
 interface ClassUser {
     classUserId: number
     classId: number
@@ -48,8 +48,9 @@ export default function LecturerClassesPage() {
     const [classes, setClasses] = useState<Class[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null)
+    const [selectedClass, setSelectedClass] = useState<Class | null>(null)
 
-    // Tạo danh sách subject động từ dữ liệu classes
     const subjects = useMemo(() => {
         const uniqueSubjects = Array.from(new Set(classes.map((classItem) => classItem.subjectName)))
         return [
@@ -61,7 +62,6 @@ export default function LecturerClassesPage() {
         ]
     }, [classes])
 
-    // Tạo danh sách semester động từ dữ liệu classes
     const semesterOptions = useMemo(() => {
         const uniqueSemesters = Array.from(new Set(classes.map((classItem) => classItem.semesterName)))
         return [
@@ -73,15 +73,13 @@ export default function LecturerClassesPage() {
         ]
     }, [classes])
 
-    // Gọi API khi component mount
     useEffect(() => {
         const fetchClasses = async () => {
             try {
                 setLoading(true)
                 const user = await getCurrentUser()
-                const lecturerId = user.userId // Sử dụng userId từ API getCurrentUser
+                const lecturerId = user.userId
                 const classesData = await getClassByLecturerId(lecturerId)
-                // Lọc chỉ các lớp có classStatus là "Active"
                 const activeClasses = classesData.filter((classItem: Class) => classItem.classStatus === "Active")
                 setClasses(activeClasses)
             } catch (err) {
@@ -94,7 +92,6 @@ export default function LecturerClassesPage() {
         fetchClasses()
     }, [])
 
-    // Lọc danh sách lớp
     const filteredClasses = useMemo(() => {
         return classes.filter((classItem) => {
             const matchesSearch =
@@ -115,9 +112,9 @@ export default function LecturerClassesPage() {
         }
     }
 
+
     return (
         <div className="min-h-screen p-4">
-            {/* Header */}
             <div className="mb-6">
                 <div className="flex items-center justify-between">
                     <div>
@@ -126,7 +123,6 @@ export default function LecturerClassesPage() {
                 </div>
             </div>
 
-            {/* Filters and Search */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <div className="flex gap-2 flex-1">
                     <div className="relative flex-1">
@@ -167,14 +163,12 @@ export default function LecturerClassesPage() {
                 </div>
             </div>
 
-            {/* Results */}
             <div className="mb-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                     Showing {filteredClasses.length} of {classes.length} classes
                 </p>
             </div>
 
-            {/* Classes Display */}
             {loading ? (
                 <Card>
                     <CardContent className="p-8 text-center">
@@ -200,37 +194,42 @@ export default function LecturerClassesPage() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredClasses.map((classItem) => (
-                        <Card key={classItem.classId} className="hover:shadow-lg transition-shadow">
-                            <CardHeader className="pb-3">
-                                <div className="flex items-start justify-between">
-                                    <div>
-                                        <CardTitle className="text-lg">{classItem.subjectName}</CardTitle>
-                                        <CardDescription className="text-orange-500 font-medium">{classItem.className}</CardDescription>
+                        <Card
+                            key={classItem.classId}
+                            className="shadow-lg hover:shadow-xl transition-shadow"
+                        >
+                            <Link href={`/lecturer/dashboard/my-classes/class-detail?classId=${classItem.classId}`} passHref>
+                                <CardHeader className="pb-3">
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <CardTitle className="text-lg">{classItem.subjectName}</CardTitle>
+                                            <CardDescription className="text-orange-500 font-medium">{classItem.className}</CardDescription>
+                                        </div>
+                                        <Badge variant={getStatusVariant(classItem.classStatus)}>{classItem.classStatus}</Badge>
                                     </div>
-                                    <Badge variant={getStatusVariant(classItem.classStatus)}>{classItem.classStatus}</Badge>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <Users className="h-4 w-4 text-gray-500" />
-                                        <span>{classItem.classUsers.length}/30</span>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <Users className="h-4 w-4 text-gray-500" />
+                                            <span>{classItem.classUsers.length} students</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="h-4 w-4 text-gray-500" />
+                                            <span>{classItem.semesterName}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4 text-gray-500" />
-                                        <span>{classItem.semesterName}</span>
-                                    </div>
-                                </div>
 
-                                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                                    <div>
-                                        <strong>Schedule:</strong> {classItem.scheduleTypeDow}
+                                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                                        <div>
+                                            <strong>Schedule:</strong> {classItem.scheduleTypeDow}
+                                        </div>
+                                        <div>
+                                            <strong>Time:</strong> {classItem.slotStartTime} - {classItem.slotEndTime}
+                                        </div>
                                     </div>
-                                    <div>
-                                        <strong>Time:</strong> {classItem.slotStartTime} - {classItem.slotEndTime}
-                                    </div>
-                                </div>
-                            </CardContent>
+                                </CardContent>
+                            </Link>
                         </Card>
                     ))}
                 </div>

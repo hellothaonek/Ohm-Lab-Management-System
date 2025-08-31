@@ -1,8 +1,8 @@
 import { defaultAxiosInstance, axiosWithoutLoading } from "./axios.config";
 import { toast } from "react-toastify";
 
-export const addTeamUser = async (teamId: string, userId: string, data: any) => {
-    const response = await defaultAxiosInstance.post(`/api/teamuser/team/${teamId}/user/${userId}`, data);
+export const addTeamUser = async (teamId: string, userId: string) => {
+    const response = await defaultAxiosInstance.post(`/api/teamuser/team/${teamId}/user/${userId}`);
     return response.data;
 };
 

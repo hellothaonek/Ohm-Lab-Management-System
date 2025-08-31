@@ -91,6 +91,45 @@ axiosWithoutLoading.interceptors.response.use(
     }
 );
 
+// multipartAxiosInstance for multipart/form-data requests
+const multipartAxiosInstance: AxiosInstance = axios.create({
+    baseURL: config.API_URL,
+    timeout: 300000,
+    timeoutErrorMessage: "Connection timeout exceeded",
+});
+
+multipartAxiosInstance.interceptors.request.use(
+    (config) => {
+        setLoading(true);
+        const token = localStorage.getItem("token");
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        // Đặt header multipart/form-data
+        config.headers["Content-Type"] = "multipart/form-data";
+        return config;
+    },
+    (error) => {
+        setLoading(false);
+        return Promise.reject(error);
+    }
+);
+
+multipartAxiosInstance.interceptors.response.use(
+    (response: AxiosResponse) => {
+        setLoading(false);
+        return response.data;
+    },
+    (err: AxiosError<ErrorResponse>) => {
+        setLoading(false);
+        const { response } = err;
+        if (response) {
+            handleErrorByNotification(err);
+        }
+        return Promise.reject(err);
+    }
+);
+
 // Error handler
 const handleErrorByNotification = (errors: AxiosError<ErrorResponse>) => {
     const data = errors.response?.data as ErrorResponse | undefined;
@@ -139,4 +178,4 @@ const handleErrorByNotification = (errors: AxiosError<ErrorResponse>) => {
 };
 
 
-export { defaultAxiosInstance, axiosWithoutLoading };
+export { defaultAxiosInstance, axiosWithoutLoading, multipartAxiosInstance };

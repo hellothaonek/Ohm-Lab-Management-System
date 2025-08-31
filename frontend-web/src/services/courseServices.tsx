@@ -47,8 +47,8 @@ export const deleteLab = async (id: string) => {
     return response.data;
 };
 
-export const createLab = async (data: { subjectId: number; labName: string; labRequest: string; labTarget: string, labStatus: string }) => {
-    const response = await defaultAxiosInstance.post("/api/course/labs", data);
-    toast.success("Lab created successfully");
-    return response.data;
-};
+export const createLab = async (data: { subjectId: number; labName: string; labRequest: string; labTarget: string; labStatus: string; requiredEquipments: { equipmentTypeId: string }[]; requiredKits: { kitTemplateId: string }[] }) => {
+    const response = await defaultAxiosInstance.post("/api/course/labs", data)
+    toast.success("Lab created successfully")
+    return response.data
+}
