@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, Eye, EllipsisVertical } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,41 +15,71 @@ import {
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { QRCodeCanvas } from "qrcode.react"
 import { Pagination } from 'antd'
+import { searchEquipmentType } from "@/services/equipmentTypeServices"
+import CreateEquipmentType from "./CreateEquipmentType"
+import DeleteEquipmentType from "./DeleteEquipmentType"
+import EditEquipmentType from "./EditEquipmentType"
 
 interface EquipmentType {
-    typeId: number;
-    typeName: string;
-    typeCode: string;
-    typeStatus: string;
-    typeQr: string;
+    equipmentTypeId: string;
+    equipmentTypeName: string;
+    equipmentTypeCode: string;
+    equipmentTypeQuantity: number;
+    equipmentTypeStatus: string;
+    equipmentTypeDescription?: string;
+    equipmentTypeUrlImg?: string;
+    equipmentTypeCreateDate?: string;
 }
 
 export default function EquipmentTypeTab() {
     const [searchQuery, setSearchQuery] = useState("")
-    const [equipmentTypeItems] = useState<EquipmentType[]>([
-        { typeId: 1, typeName: "Laptop", typeCode: "LAP-001", typeStatus: "Available", typeQr: "qr-lap-001" },
-        { typeId: 2, typeName: "Projector", typeCode: "PROJ-002", typeStatus: "In Use", typeQr: "qr-proj-002" },
-        { typeId: 3, typeName: "Printer", typeCode: "PRI-003", typeStatus: "Maintenance", typeQr: "" },
-    ])
+    const [equipmentTypeItems, setEquipmentTypeItems] = useState<EquipmentType[]>([])
     const [pageNum, setPageNum] = useState(1)
     const [pageSize, setPageSize] = useState(10)
-    const [totalTypeItems] = useState(3) // Mock total for equipment types
+    const [totalTypeItems, setTotalTypeItems] = useState(0)
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false)
     const [isEditTypeModalOpen, setIsEditTypeModalOpen] = useState(false)
     const [isDeleteTypeModalOpen, setIsDeleteTypeModalOpen] = useState(false)
     const [selectedEquipmentType, setSelectedEquipmentType] = useState<EquipmentType | null>(null)
     const [selectedTypeQrCode, setSelectedTypeQrCode] = useState<string | null>(null)
+    const [loading, setLoading] = useState(false)
+
+    const fetchEquipmentTypes = async () => {
+        setLoading(true)
+        try {
+            const response = await searchEquipmentType({
+                pageNum,
+                pageSize,
+                keyWord: searchQuery,
+                status: ""
+            })
+            setEquipmentTypeItems(response.pageData)
+            setTotalTypeItems(response.pageInfo.totalItem)
+            setPageNum(response.pageInfo.page)
+            setPageSize(response.pageInfo.size)
+        } catch (error) {
+            console.error("Error fetching equipment types:", error)
+            setEquipmentTypeItems([])
+            setTotalTypeItems(0)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchEquipmentTypes()
+    }, [pageNum, pageSize, searchQuery])
 
     const getStatusBadge = (status: string) => {
         switch (status?.toLowerCase()) {
-            case "available":
+            case "Available":
                 return <Badge className="bg-green-500 hover:bg-green-600">Available</Badge>
-            case "inuse":
+            case "InUse":
                 return <Badge className="bg-blue-500 hover:bg-blue-600">In Use</Badge>
-            case "maintenance":
+            case "Maintenance":
                 return <Badge className="bg-amber-500 hover:bg-amber-600">Maintenance</Badge>
-            case "out-of-order":
-                return <Badge className="bg-red-500 hover:bg-red-600">Out of Order</Badge>
+            case "Damaged":
+                return <Badge className="bg-red-500 hover:bg-red-600">Damaged</Badge>
             default:
                 return <Badge>{status}</Badge>
         }
@@ -79,9 +109,10 @@ export default function EquipmentTypeTab() {
                                     <DialogHeader>
                                         <DialogTitle>Create Equipment Type</DialogTitle>
                                     </DialogHeader>
-                                    <div className="p-4 text-center text-muted-foreground">
-                                        Create Equipment Type functionality coming soon.
-                                    </div>
+                                    <CreateEquipmentType
+                                        onClose={() => setIsCreateTypeModalOpen(false)}
+                                        onSuccess={fetchEquipmentTypes}
+                                    />
                                 </DialogContent>
                             </Dialog>
                         </div>
@@ -104,46 +135,30 @@ export default function EquipmentTypeTab() {
                     <div className="grid grid-cols-[1fr_1fr_120px_120px_80px] gap-2 p-4 font-medium border-b">
                         <div>Name</div>
                         <div>Code</div>
+                        <div>Quantity</div>
                         <div>Status</div>
-                        <div>QR Code</div>
                         <div>Actions</div>
                     </div>
-                    {equipmentTypeItems.length === 0 ? (
+                    {loading ? (
+                        <div className="p-4 text-center text-muted-foreground">
+                            Loading...
+                        </div>
+                    ) : equipmentTypeItems.length === 0 ? (
                         <div className="p-4 text-center text-muted-foreground">
                             No equipment types found matching your filters.
                         </div>
                     ) : (
                         equipmentTypeItems.map((item: EquipmentType, index: number) => (
                             <div
-                                key={item.typeId ?? `fallback-type-${index}`}
+                                key={item.equipmentTypeId ?? `fallback-type-${index}`}
                                 className="grid grid-cols-[1fr_1fr_120px_120px_80px] gap-2 p-4 border-b last:border-0 items-center"
                             >
                                 <div>
-                                    <div className="font-medium">{item.typeName}</div>
+                                    <div className="font-medium">{item.equipmentTypeName}</div>
                                 </div>
-                                <div className="text-sm">{item.typeCode}</div>
-                                <div>{getStatusBadge(item.typeStatus)}</div>
-                                <div>
-                                    {item.typeQr ? (
-                                        <Dialog>
-                                            <DialogTrigger asChild>
-                                                <Button variant="link" onClick={() => setSelectedTypeQrCode(item.typeQr!)}>
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent>
-                                                <DialogHeader>
-                                                    <DialogTitle>QR Code for {item.typeName}</DialogTitle>
-                                                </DialogHeader>
-                                                <div className="flex justify-center p-4">
-                                                    <QRCodeCanvas value={selectedTypeQrCode || ''} size={256} />
-                                                </div>
-                                            </DialogContent>
-                                        </Dialog>
-                                    ) : (
-                                        <span className="text-muted-foreground">No QR</span>
-                                    )}
-                                </div>
+                                <div className="text-sm">{item.equipmentTypeCode}</div>
+                                <div className="text-sm">{item.equipmentTypeQuantity}</div>
+                                <div>{getStatusBadge(item.equipmentTypeStatus)}</div>
                                 <div>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -197,9 +212,11 @@ export default function EquipmentTypeTab() {
                             <DialogHeader>
                                 <DialogTitle>Edit Equipment Type</DialogTitle>
                             </DialogHeader>
-                            <div className="p-4 text-center text-muted-foreground">
-                                Edit Equipment Type functionality coming soon.
-                            </div>
+                            <EditEquipmentType
+                                equipmentType={selectedEquipmentType}
+                                onClose={() => setIsEditTypeModalOpen(false)}
+                                onSuccess={fetchEquipmentTypes}
+                            />
                         </DialogContent>
                     </Dialog>
                     <Dialog open={isDeleteTypeModalOpen} onOpenChange={setIsDeleteTypeModalOpen}>
@@ -207,9 +224,12 @@ export default function EquipmentTypeTab() {
                             <DialogHeader>
                                 <DialogTitle>Delete Equipment Type</DialogTitle>
                             </DialogHeader>
-                            <div className="p-4 text-center text-muted-foreground">
-                                Delete Equipment Type functionality coming soon.
-                            </div>
+                            <DeleteEquipmentType
+                                equipmentTypeId={selectedEquipmentType.equipmentTypeId}
+                                equipmentTypeName={selectedEquipmentType.equipmentTypeName}
+                                onClose={() => setIsDeleteTypeModalOpen(false)}
+                                onSuccess={fetchEquipmentTypes}
+                            />
                         </DialogContent>
                     </Dialog>
                 </>

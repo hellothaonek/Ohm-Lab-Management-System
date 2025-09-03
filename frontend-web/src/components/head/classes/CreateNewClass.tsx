@@ -16,6 +16,7 @@ interface ClassItem {
     subjectId: number
     lecturerId: number | null
     scheduleTypeId: number | null
+    semesterName: string
     className: string
     classDescription: string
     classStatus: string
@@ -43,7 +44,6 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
     const [formData, setFormData] = useState({
         subjectId: "",
         lecturerId: "",
-        scheduleTypeId: "",
         className: "",
         classDescription: "",
     })
@@ -81,11 +81,8 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
             try {
                 setLecturersLoading(true)
                 const response = await searchUsers(
-                    { keyWord: "", role: "Lecturer", status: "" },
-                    1,
-                    100
+                    { keyWord: "", role: "Lecturer", status: "", pageNum: 1, pageSize: 100 },
                 )
-                console.log("Lecturers: ", response)
                 if (response) {
                     setLecturers(response.pageData)
                 } else {
@@ -129,16 +126,14 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
         const classData = {
             subjectId: parseInt(formData.subjectId),
             lecturerId: formData.lecturerId || "",
-            scheduleTypeId: parseInt(formData.scheduleTypeId) || 0,
+            scheduleTypeId: 0, // Set scheduleTypeId to 0 as per requirement
             className: formData.className,
             classDescription: formData.classDescription,
             classStatus: status,
         }
-        console.log("Class Data being sent to createClass API:", classData)
 
         try {
             const response = await createClass(classData)
-            console.log("API create class Response:", response)
             const selectedSubject = subjects.find((subject) => subject.subjectId === parseInt(formData.subjectId))
             const selectedLecturer = lecturers.find((lecturer) => lecturer.userId === parseInt(formData.lecturerId))
             const newClass: ClassItem = {
@@ -157,7 +152,6 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
             setFormData({
                 subjectId: "",
                 lecturerId: "",
-                scheduleTypeId: "",
                 className: "",
                 classDescription: "",
             })
@@ -249,17 +243,6 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="scheduleTypeId">Schedule Type ID</Label>
-                                <Input
-                                    id="scheduleTypeId"
-                                    name="scheduleTypeId"
-                                    type="number"
-                                    value={formData.scheduleTypeId}
-                                    onChange={handleInputChange}
-                                    placeholder="Enter schedule type ID"
-                                />
-                            </div>
-                            <div className="space-y-2">
                                 <Label htmlFor="className">Class Name</Label>
                                 <Input
                                     id="className"
@@ -288,12 +271,11 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
                             <Label htmlFor="status">Status</Label>
                             <Select value={status} onValueChange={setStatus}>
                                 <SelectTrigger>
-                                    <SelectValue />
+                                    <SelectValue placeholder="Select status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="active">Active</SelectItem>
-                                    <SelectItem value="pending">Pending</SelectItem>
-                                    <SelectItem value="completed">Completed</SelectItem>
+                                    <SelectItem value="Active">Active</SelectItem>
+                                    <SelectItem value="Inactive">Inactive</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

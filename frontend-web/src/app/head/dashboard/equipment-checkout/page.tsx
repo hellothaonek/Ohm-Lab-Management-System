@@ -309,189 +309,185 @@ export default function HeadEquipmentCheckoutPage() {
 
     if (!hasMounted) {
         return (
-            <DashboardLayout role="head">
-                <div className="min-h-screen p-4">
-                    <div className="flex justify-center items-center h-64">
-                        <div className="text-lg">Đang tải...</div>
-                    </div>
+            <div className="min-h-screen p-4">
+                <div className="flex justify-center items-center h-64">
+                    <div className="text-lg">Đang tải...</div>
                 </div>
-            </DashboardLayout>
+            </div>
         )
     }
 
     return (
-        <DashboardLayout role="head">
-            <div className="min-h-screen p-4">
-                {/* Header */}
-                <div className="mb-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Quản lý Checkout/Checkin Thiết bị</h1>
-                            <p className="text-gray-600 dark:text-gray-400 mt-2">
-                                Theo dõi việc mượn trả thiết bị của các nhóm trong khoa
-                            </p>
-                        </div>
-                        <Button
-                            className="bg-orange-500 hover:bg-orange-600"
-                            onClick={() => setIsCreateModalOpen(true)}
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Tạo checkout mới
-                        </Button>
+        <div className="min-h-screen p-4">
+            {/* Header */}
+            <div className="mb-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Quản lý Checkout/Checkin Thiết bị</h1>
+                        <p className="text-gray-600 dark:text-gray-400 mt-2">
+                            Theo dõi việc mượn trả thiết bị của các nhóm trong khoa
+                        </p>
                     </div>
+                    <Button
+                        className="bg-orange-500 hover:bg-orange-600"
+                        onClick={() => setIsCreateModalOpen(true)}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Tạo checkout mới
+                    </Button>
                 </div>
-
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                                    <Calendar className="h-5 w-5 text-orange-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Tổng số checkout</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                        {checkoutData.length}
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                                    <Clock className="h-5 w-5 text-blue-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Đang sử dụng</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                        {checkoutData.filter((c) => c.status === "InUse").length}
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                                    <CheckCircle className="h-5 w-5 text-green-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Đã trả</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                        {checkoutData.filter((c) => c.status === "Available").length}
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
-                                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Cần bảo trì</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                        {checkoutData.filter((c) => c.status === "Maintenance").length}
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Filters and Search */}
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                    <div className="flex gap-2 flex-1">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                                placeholder="Tìm kiếm theo tên thiết bị, mã thiết bị, người mượn, nhóm..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-
-                        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                            <SelectTrigger className="w-48">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {statusOptions.map((status) => (
-                                    <SelectItem key={status.value} value={status.value}>
-                                        {status.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-
-                {/* Results */}
-                <div className="mb-4 space-y-2">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Hiển thị {filteredCheckoutData.length} trong tổng số {checkoutData.length} checkout
-                    </p>
-                </div>
-
-                {/* Checkout Display */}
-                {filteredCheckoutData.length === 0 ? (
-                    <Card>
-                        <CardContent className="p-8 text-center">
-                            <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                                Không tìm thấy dữ liệu checkout
-                            </h3>
-                            <p className="text-gray-600 dark:text-gray-400">
-                                Thử điều chỉnh tiêu chí tìm kiếm hoặc tạo checkout mới.
-                            </p>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    renderTableView()
-                )}
-
-                {/* Create Checkout Modal */}
-                <CreateCheckout
-                    isOpen={isCreateModalOpen}
-                    onClose={() => setIsCreateModalOpen(false)}
-                    onSuccess={handleCreateSuccess}
-                />
-
-                {/* Checkout Detail Modal */}
-                <CheckoutDetail
-                    checkoutId={selectedCheckoutId}
-                    isOpen={isDetailModalOpen}
-                    onClose={handleCloseDetail}
-                    onEdit={handleEditCheckout}
-                    onDelete={handleDeleteCheckout}
-                />
-
-                {/* Edit Checkout Modal */}
-                <EditCheckout
-                    checkoutId={selectedCheckoutId}
-                    isOpen={isEditModalOpen}
-                    onClose={handleCloseEdit}
-                    onSuccess={handleEditSuccess}
-                />
-
-                {/* Delete Checkout Modal */}
-                <DeleteCheckout
-                    checkoutId={selectedCheckoutId}
-                    isOpen={isDeleteModalOpen}
-                    onClose={handleCloseDelete}
-                    onSuccess={handleDeleteSuccess}
-                />
             </div>
-        </DashboardLayout>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                                <Calendar className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Tổng số checkout</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {checkoutData.length}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                                <Clock className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Đang sử dụng</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {checkoutData.filter((c) => c.status === "InUse").length}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Đã trả</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {checkoutData.filter((c) => c.status === "Available").length}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+                                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Cần bảo trì</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {checkoutData.filter((c) => c.status === "Maintenance").length}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Filters and Search */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex gap-2 flex-1">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                            placeholder="Tìm kiếm theo tên thiết bị, mã thiết bị, người mượn, nhóm..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10"
+                        />
+                    </div>
+
+                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                        <SelectTrigger className="w-48">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {statusOptions.map((status) => (
+                                <SelectItem key={status.value} value={status.value}>
+                                    {status.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
+            {/* Results */}
+            <div className="mb-4 space-y-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Hiển thị {filteredCheckoutData.length} trong tổng số {checkoutData.length} checkout
+                </p>
+            </div>
+
+            {/* Checkout Display */}
+            {filteredCheckoutData.length === 0 ? (
+                <Card>
+                    <CardContent className="p-8 text-center">
+                        <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                            Không tìm thấy dữ liệu checkout
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-400">
+                            Thử điều chỉnh tiêu chí tìm kiếm hoặc tạo checkout mới.
+                        </p>
+                    </CardContent>
+                </Card>
+            ) : (
+                renderTableView()
+            )}
+
+            {/* Create Checkout Modal */}
+            <CreateCheckout
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={handleCreateSuccess}
+            />
+
+            {/* Checkout Detail Modal */}
+            <CheckoutDetail
+                checkoutId={selectedCheckoutId}
+                isOpen={isDetailModalOpen}
+                onClose={handleCloseDetail}
+                onEdit={handleEditCheckout}
+                onDelete={handleDeleteCheckout}
+            />
+
+            {/* Edit Checkout Modal */}
+            <EditCheckout
+                checkoutId={selectedCheckoutId}
+                isOpen={isEditModalOpen}
+                onClose={handleCloseEdit}
+                onSuccess={handleEditSuccess}
+            />
+
+            {/* Delete Checkout Modal */}
+            <DeleteCheckout
+                checkoutId={selectedCheckoutId}
+                isOpen={isDeleteModalOpen}
+                onClose={handleCloseDelete}
+                onSuccess={handleDeleteSuccess}
+            />
+        </div>
     )
 } 

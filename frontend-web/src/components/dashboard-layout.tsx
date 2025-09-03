@@ -1,9 +1,7 @@
 "use client"
 
-import React from "react"
-
+import React, { useEffect, useState } from "react"
 import { Bell } from "lucide-react"
-
 import { AppSidebar } from "../components/app-sidebar"
 import {
   Breadcrumb,
@@ -14,23 +12,68 @@ import {
   BreadcrumbSeparator,
 } from "../components/ui/breadcrumb"
 import { Button } from "../components/ui/button"
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "../components/ui/sidebar"
+import { SidebarInset, SidebarProvider } from "../components/ui/sidebar"
+import { getCurrentUser } from "@/services/userServices"
+import { LoadingSkeleton } from "./loading-skeleton"
+
+type Role = "head" | "lecturer" | "admin" | "student"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
-  role: "head" | "lecturer" | "admin" | "student"
   breadcrumbs?: Array<{ title: string; href?: string }>
 }
 
-export default function DashboardLayout({ children, role, breadcrumbs = [] }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, breadcrumbs = [] }: DashboardLayoutProps) {
+  const [role, setRole] = useState<Role | null>(null)
+  const [userFullName, setUserFullName] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchUserData() {
+      try {
+        setLoading(true)
+        const userData = await getCurrentUser()
+        const userRoleName = userData.userRoleName as string
+
+        const roleMap: Record<string, Role> = {
+          HeadOfDepartment: "head",
+          Lecturer: "lecturer",
+          Admin: "admin",
+          Student: "student",
+        }
+
+        const mappedRole = roleMap[userRoleName]
+        if (mappedRole) {
+          setRole(mappedRole)
+          setUserFullName(userData.userFullName ?? null)
+        } else {
+          setError("Invalid user role")
+        }
+      } catch (_err) {
+        setError("Failed to fetch user data")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserData()
+  }, [])
+
+  if (loading) {
+    return <LoadingSkeleton />
+  }
+
+  if (error || !role) {
+    return <div>Error: {error || "User role not found"}</div>
+  }
+
   return (
     <SidebarProvider>
-      <AppSidebar role={role} />
+      <AppSidebar role={role} userFullName={userFullName || "Unknown User"} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <div className="h-4 w-px bg-sidebar-border" />
             {breadcrumbs.length > 0 && (
               <Breadcrumb>
                 <BreadcrumbList>

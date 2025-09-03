@@ -1,17 +1,18 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Edit, Trash2, Search as SearchIcon } from "lucide-react"
+import { SearchIcon, Loader2, MoreVertical } from "lucide-react"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import DashboardLayout from "@/components/dashboard-layout"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { getSubjects } from "@/services/courseServices"
 import CreateCourse from "@/components/head/courses/CreateCourse"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import DeleteCourse from "@/components/head/courses/DeleteCourse"
 import EditCourse from "@/components/head/courses/EditCourse"
-import { Pagination } from 'antd'
+import { Pagination } from "antd"
+import Link from "next/link" // Import Link from next/link
 
 interface Subject {
     subjectId: number
@@ -54,117 +55,134 @@ export default function CoursesPage() {
         fetchSubjects()
     }, [fetchSubjects])
 
-    const getStatusBadge = (status: string) => {
-        switch (status.toLowerCase()) {
-            case "active":
-                return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
-            case "draft":
-                return <Badge className="bg-gray-500 hover:bg-gray-600">Draft</Badge>
-            case "completed":
-                return <Badge className="bg-blue-500 hover:bg-blue-600">Completed</Badge>
-            default:
-                return <Badge>{status}</Badge>
-        }
-    }
-
     const handlePaginationChange = (page: number, pageSize: number | undefined) => {
         setPageNum(page)
         setPageSize(pageSize || 10)
     }
 
     return (
-        <DashboardLayout role="head">
-            <div className="space-y-6">
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle>Subjects Management</CardTitle>
-                            <CardDescription>View and manage all available subjects</CardDescription>
-                        </div>
-                        <CreateCourse onSubjectCreated={fetchSubjects} />
+        <div className="space-y-6">
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle>Subjects Management</CardTitle>
+                        <CardDescription>View and manage all available subjects</CardDescription>
                     </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="mb-4">
-                        <div className="relative w-full sm:w-80">
-                            <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search subjects..."
-                                value={searchTerm}
-                                onChange={(e) => {
-                                    setSearchTerm(e.target.value)
-                                    setPageNum(1) // Reset to first page on search
+                    <CreateCourse onSubjectCreated={fetchSubjects} />
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="mb-6">
+                    <div className="relative w-full sm:w-80">
+                        <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search subjects..."
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value)
+                                setPageNum(1)
+                            }}
+                            className="pl-8 w-full sm:w-80"
+                        />
+                    </div>
+                </div>
+
+                {isLoading ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                        <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto mb-4" />
+                        <p>Loading subjects...</p>
+                    </div>
+                ) : error ? (
+                    <div className="p-8 text-center text-red-500">
+                        <p>{error}</p>
+                    </div>
+                ) : subjects.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                        <p>No subjects found.</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                            {subjects.map((subject) => (
+                                <Link
+                                    key={subject.subjectId}
+                                    href={`/head/dashboard/courses/[course-detail]/${subject.subjectId}`}
+                                    as={`/head/dashboard/courses/course-detail?subjectId=${subject.subjectId}`}
+                                    passHref
+                                    className="block" 
+                                >
+                                    <Card
+                                        className="hover:shadow-md transition-shadow cursor-pointer"
+                                    >
+                                        <CardHeader className="pb-3">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <CardTitle className="text-lg font-semibold">
+                                                        {subject.subjectName}
+                                                    </CardTitle>
+                                                    <Badge variant="secondary" className="mt-2 bg-green-500">
+                                                        {subject.subjectCode}
+                                                    </Badge>
+                                                </div>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0"
+                                                            onClick={(e) => e.stopPropagation()} 
+                                                        >
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="flex flex-row items-center justify-center gap-2 p-2">
+                                                        <DropdownMenuItem asChild>
+                                                            <EditCourse
+                                                                subjectId={subject.subjectId}
+                                                                subjectName={subject.subjectName}
+                                                                subjectDescription={subject.subjectDescription}
+                                                                subjectStatus={subject.subjectStatus}
+                                                                onSubjectUpdated={fetchSubjects}
+                                                            />
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem asChild>
+                                                            <DeleteCourse
+                                                                subjectId={subject.subjectId}
+                                                                subjectName={subject.subjectName}
+                                                                onSubjectDeleted={fetchSubjects}
+                                                            />
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="pt-0">
+                                            <CardDescription className="mb-4 min-h-[3rem]">
+                                                {subject.subjectDescription}
+                                            </CardDescription>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            ))}
+                        </div>
+
+                        <div className="flex justify-end">
+                            <Pagination
+                                current={pageNum}
+                                pageSize={pageSize}
+                                total={totalItems}
+                                showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
+                                onChange={handlePaginationChange}
+                                showSizeChanger
+                                onShowSizeChange={(current, size) => {
+                                    setPageNum(1)
+                                    setPageSize(size)
                                 }}
-                                className="pl-8 w-full sm:w-80"
                             />
                         </div>
-                    </div>
-                    {isLoading ? (
-                        <div className="p-4 text-center text-muted-foreground">
-                            Loading subjects...
-                        </div>
-                    ) : error ? (
-                        <div className="p-4 text-center text-red-500">
-                            {error}
-                        </div>
-                    ) : (
-                        <div className="rounded-md border">
-                            <div className="grid grid-cols-[1fr_150px_1fr_150px_100px] gap-2 p-4 font-medium border-b">
-                                <div>Subject Name</div>
-                                <div>Subject Code</div>
-                                <div>Description</div>
-                                <div>Status</div>
-                                <div>Actions</div>
-                            </div>
-                            {subjects.length === 0 ? (
-                                <div className="p-4 text-center text-muted-foreground">
-                                    No subjects found.
-                                </div>
-                            ) : (
-                                subjects.map((subject) => (
-                                    <div
-                                        key={subject.subjectId}
-                                        className="grid grid-cols-[1fr_150px_1fr_150px_100px] gap-2 p-4 border-b last:border-0 items-center"
-                                    >
-                                        <div>{subject.subjectName}</div>
-                                        <div>{subject.subjectCode}</div>
-                                        <div>{subject.subjectDescription}</div>
-                                        <div>{getStatusBadge(subject.subjectStatus)}</div>
-                                        <div className="flex gap-2">
-                                            <EditCourse
-                                                subjectId={subject.subjectId}
-                                                subjectName={subject.subjectName}
-                                                subjectDescription={subject.subjectDescription}
-                                                subjectStatus={subject.subjectStatus}
-                                                onSubjectUpdated={fetchSubjects}
-                                            />
-                                            <DeleteCourse
-                                                subjectId={subject.subjectId}
-                                                subjectName={subject.subjectName}
-                                                onSubjectDeleted={fetchSubjects}
-                                            />
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                            <div className="flex justify-end p-4">
-                                <Pagination
-                                    current={pageNum}
-                                    pageSize={pageSize}
-                                    total={totalItems}
-                                    showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
-                                    onChange={handlePaginationChange}
-                                    showSizeChanger
-                                    onShowSizeChange={(current, size) => {
-                                        setPageNum(1)
-                                        setPageSize(size)
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    )}
-                </CardContent>
-            </div>
-        </DashboardLayout>
+                    </>
+                )}
+            </CardContent>
+        </div>
     )
 }

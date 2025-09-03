@@ -3,7 +3,6 @@ import { toast } from "react-toastify";
 
 export const loginGoogle = async (data: { googleId: string; }) => {
     const response = await defaultAxiosInstance.post("/api/user/loginmail", data);
-    console.log(">>> ", response)
     if (response.data.token) {
         localStorage.setItem('token', response.data.token);
     }
@@ -16,11 +15,8 @@ export const getCurrentUser = async () => {
     return response.data;
 };
 
-export const searchUsers = async (searchInfo: { keyWord: string; role: string; status: string }, pageNum: number, pageSize: number) => {
-    const response = await defaultAxiosInstance.post("/api/user/search", {
-        searchInfo,
-        pageInfo: { pageNum, pageSize }
-    });
+export const searchUsers = async (data: { keyWord: string; role: string; status: string, pageNum: number, pageSize: number }) => {
+    const response = await defaultAxiosInstance.post("/api/user/search", data);
     return response.data;
 };
 

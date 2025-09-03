@@ -20,6 +20,7 @@ import {
 } from "@react-oauth/google";
 import { loginGoogle } from "../services/userServices";
 import config from "../config/config";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -103,9 +104,9 @@ export default function LoginPage() {
                 logo_alignment="center"
               />
               {isLoading && (
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Logging in...
-                </span>
+                <div className="flex justify-center">
+                  <Spinner />
+                </div>
               )}
             </div>
           </CardContent>

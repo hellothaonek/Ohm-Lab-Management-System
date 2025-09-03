@@ -7,21 +7,19 @@ import EquipmentTypeTab from "@/components/head/equipment/EquipmentTypeTab"
 
 export default function EquipmentPage() {
     return (
-        <DashboardLayout role="head">
-            <div className="space-y-6">
-                <Tabs defaultValue="equipment" className="w-full">
-                    <TabsList className="mb-4">
-                        <TabsTrigger value="equipment">Equipment</TabsTrigger>
-                        <TabsTrigger value="equipment-type">Equipment Type</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="equipment">
-                        <EquipmentTab />
-                    </TabsContent>
-                    <TabsContent value="equipment-type">
-                        <EquipmentTypeTab />
-                    </TabsContent>
-                </Tabs>
-            </div>
-        </DashboardLayout>
+        <div className="space-y-6">
+            <Tabs defaultValue="equipment" className="w-full">
+                <TabsList className="mb-4">
+                    <TabsTrigger value="equipment">Equipment</TabsTrigger>
+                    <TabsTrigger value="equipment-type">Equipment Type</TabsTrigger>
+                </TabsList>
+                <TabsContent value="equipment">
+                    <EquipmentTab />
+                </TabsContent>
+                <TabsContent value="equipment-type">
+                    <EquipmentTypeTab />
+                </TabsContent>
+            </Tabs>
+        </div>
     )
 }

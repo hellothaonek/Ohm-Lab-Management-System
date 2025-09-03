@@ -27,3 +27,8 @@ export const deleteSlot = async (id: string) => {
     toast.success("Slot deleted successfully");
     return response.data;
 };
+
+export const searchSlots = async (data: { pageNum: number; pageSize: number; keyWord: string; status: string }) => {
+    const response = await defaultAxiosInstance.post("/api/slot/getallslots", data);
+    return response.data;
+};

@@ -1,15 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createSubject } from "@/services/courseServices"
+import { getSemesters } from "@/services/semesterServices"
 
 interface CreateCourseProps {
-  onSubjectCreated: () => void 
+  onSubjectCreated: () => void
+}
+
+interface Semester {
+  semesterId: string
+  semesterName: string
 }
 
 export default function CreateCourse({ onSubjectCreated }: CreateCourseProps) {
@@ -17,10 +24,25 @@ export default function CreateCourse({ onSubjectCreated }: CreateCourseProps) {
     subjectName: "",
     subjectCode: "",
     subjectDescription: "",
+    semesterId: ""
   })
+  const [semesters, setSemesters] = useState<Semester[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    const fetchSemesters = async () => {
+      try {
+        const semesterData = await getSemesters()
+        setSemesters(semesterData.pageData)
+      } catch (err) {
+        setError("Failed to load semesters")
+        console.error("Error fetching semesters:", err)
+      }
+    }
+    fetchSemesters()
+  }, [])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -28,9 +50,13 @@ export default function CreateCourse({ onSubjectCreated }: CreateCourseProps) {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
+  const handleSemesterChange = (value: string) => {
+    setFormData({ ...formData, semesterId: value })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.subjectName || !formData.subjectCode || !formData.subjectDescription) {
+    if (!formData.subjectName || !formData.subjectCode || !formData.subjectDescription || !formData.semesterId) {
       setError("All fields are required")
       return
     }
@@ -42,10 +68,11 @@ export default function CreateCourse({ onSubjectCreated }: CreateCourseProps) {
         subjectName: formData.subjectName,
         subjectCode: formData.subjectCode,
         subjectDescription: formData.subjectDescription,
+        semesterId: formData.semesterId
       })
-      setFormData({ subjectName: "", subjectCode: "", subjectDescription: "" })
+      setFormData({ subjectName: "", subjectCode: "", subjectDescription: "", semesterId: "" })
       setOpen(false)
-      onSubjectCreated() 
+      onSubjectCreated()
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to create subject")
       console.error("Error creating subject:", err)
@@ -53,6 +80,9 @@ export default function CreateCourse({ onSubjectCreated }: CreateCourseProps) {
       setIsLoading(false)
     }
   }
+
+  // Find the selected semester to display its name
+  const selectedSemester = semesters.find(semester => semester.semesterId === formData.semesterId)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -101,6 +131,28 @@ export default function CreateCourse({ onSubjectCreated }: CreateCourseProps) {
               placeholder="Enter subject description"
               disabled={isLoading}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="semesterId">Semester</Label>
+            <Select
+              name="semesterId"
+              value={formData.semesterId}
+              onValueChange={handleSemesterChange}
+              disabled={isLoading || semesters.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a semester">
+                  {selectedSemester ? selectedSemester.semesterName : "Select a semester"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {semesters.map((semester) => (
+                  <SelectItem key={semester.semesterId} value={semester.semesterId}>
+                    {semester.semesterName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Creating..." : "Create Subject"}
