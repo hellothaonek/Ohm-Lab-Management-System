@@ -270,7 +270,7 @@ export default function AdminDashboard() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid gap-4 md:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                         <Button asChild className="h-20 flex-col">
                             <Link href="/admin/dashboard/users">
                                 <Users className="h-6 w-6 mb-2" />
@@ -278,8 +278,14 @@ export default function AdminDashboard() {
                             </Link>
                         </Button>
                         <Button asChild variant="outline" className="h-20 flex-col">
-                            <Link href="/admin/dashboard/reports">
+                            <Link href="/admin/dashboard/classes">
                                 <Database className="h-6 w-6 mb-2" />
+                                Manage Classes
+                            </Link>
+                        </Button>
+                        <Button asChild variant="outline" className="h-20 flex-col">
+                            <Link href="/admin/dashboard/reports">
+                                <Activity className="h-6 w-6 mb-2" />
                                 System Reports
                             </Link>
                         </Button>

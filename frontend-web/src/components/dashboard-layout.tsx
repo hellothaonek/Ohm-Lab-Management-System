@@ -16,13 +16,15 @@ import { SidebarInset, SidebarProvider } from "../components/ui/sidebar"
 import { getCurrentUser } from "@/services/userServices"
 import { LoadingSkeleton } from "./loading-skeleton"
 
+type Role = "head" | "lecturer" | "admin" | "student"
+
 interface DashboardLayoutProps {
   children: React.ReactNode
   breadcrumbs?: Array<{ title: string; href?: string }>
 }
 
 export default function DashboardLayout({ children, breadcrumbs = [] }: DashboardLayoutProps) {
-  const [role, setRole] = useState<"head" | "lecturer" | "admin" | "student" | null>(null)
+  const [role, setRole] = useState<Role | null>(null)
   const [userFullName, setUserFullName] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -32,9 +34,9 @@ export default function DashboardLayout({ children, breadcrumbs = [] }: Dashboar
       try {
         setLoading(true)
         const userData = await getCurrentUser()
-        const userRoleName = userData.userRoleName
+        const userRoleName = userData.userRoleName as string
 
-        const roleMap: { [key: string]: "head" | "lecturer" | "admin" | "student" } = {
+        const roleMap: Record<string, Role> = {
           HeadOfDepartment: "head",
           Lecturer: "lecturer",
           Admin: "admin",
@@ -44,11 +46,11 @@ export default function DashboardLayout({ children, breadcrumbs = [] }: Dashboar
         const mappedRole = roleMap[userRoleName]
         if (mappedRole) {
           setRole(mappedRole)
-          setUserFullName(userData.userFullName)
+          setUserFullName(userData.userFullName ?? null)
         } else {
           setError("Invalid user role")
         }
-      } catch (err) {
+      } catch (_err) {
         setError("Failed to fetch user data")
       } finally {
         setLoading(false)
@@ -76,7 +78,9 @@ export default function DashboardLayout({ children, breadcrumbs = [] }: Dashboar
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href={`/${role}/dashboard`}>Dashboard</BreadcrumbLink>
+                    <BreadcrumbLink href={role === "student" ? `/${role}/classes` : `/${role}/dashboard`}>
+                      {role === "student" ? "Classes" : "Dashboard"}
+                    </BreadcrumbLink>
                   </BreadcrumbItem>
                   {breadcrumbs.map((breadcrumb, index) => (
                     <React.Fragment key={index}>
