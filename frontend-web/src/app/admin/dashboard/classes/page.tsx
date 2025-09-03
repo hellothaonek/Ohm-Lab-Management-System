@@ -37,8 +37,31 @@ export default function AdminClassesPage() {
                 getAllClasses(),
                 getSubjects()
             ])
-            setClasses(classesData || [])
-            setSubjects(subjectsData || [])
+
+            
+            // Handle classes data - check if it's an array or has a pageData property
+            if (Array.isArray(classesData)) {
+                setClasses(classesData)
+            } else if (classesData && classesData.pageData && Array.isArray(classesData.pageData)) {
+                setClasses(classesData.pageData)
+            } else if (classesData && classesData.data && Array.isArray(classesData.data)) {
+                setClasses(classesData.data)
+            } else if (classesData && classesData.classes && Array.isArray(classesData.classes)) {
+                setClasses(classesData.classes)
+            } else {
+                setClasses([])
+            }
+            
+            // Handle subjects data - check if it's an array or has a data property
+            if (Array.isArray(subjectsData)) {
+                setSubjects(subjectsData)
+            } else if (subjectsData && subjectsData.data && Array.isArray(subjectsData.data)) {
+                setSubjects(subjectsData.data)
+            } else if (subjectsData && subjectsData.subjects && Array.isArray(subjectsData.subjects)) {
+                setSubjects(subjectsData.subjects)
+            } else {
+                setSubjects([])
+            }
         } catch (error) {
             toast.error("Failed to fetch data")
             console.error("Error fetching data:", error)
@@ -63,7 +86,7 @@ export default function AdminClassesPage() {
         setIsDeleteDialogOpen(true)
     }
 
-    const filteredClasses = classes.filter(classItem => {
+    const filteredClasses = (classes || []).filter(classItem => {
         const matchesSearch = classItem.className.toLowerCase().includes(searchTerm.toLowerCase()) ||
                              classItem.classDescription.toLowerCase().includes(searchTerm.toLowerCase())
         const matchesStatus = statusFilter === "all" || classItem.classStatus === statusFilter
@@ -72,9 +95,9 @@ export default function AdminClassesPage() {
 
     const getStatusBadgeVariant = (status: string) => {
         switch (status) {
-            case "Valid":
+            case "Active":
                 return "default"
-            case "Invalid":
+            case "Inactive":
                 return "destructive"
             default:
                 return "secondary"
@@ -140,8 +163,8 @@ export default function AdminClassesPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Status</SelectItem>
-                                    <SelectItem value="Valid">Valid</SelectItem>
-                                    <SelectItem value="Invalid">Invalid</SelectItem>
+                                    <SelectItem value="Active">Active</SelectItem>
+                                    <SelectItem value="Inactive">Inactive</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

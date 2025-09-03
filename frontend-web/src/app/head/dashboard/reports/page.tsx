@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { CircuitBoard, Search, Plus, AlertTriangle, CheckCircle, Clock, Eye, Filter } from "lucide-react"
+import { CircuitBoard, Search, AlertTriangle, Eye } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,7 +17,6 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog"
 import { getAllReports, getReportDetailById } from "@/services/reportServices"
 import { toast } from "react-toastify"
@@ -36,21 +35,11 @@ interface Report {
     resolutionNotes: string | null;
 }
 
-// Define status options for the Select dropdown
-const statusOptions = [
-    { value: "all", label: "All Status" },
-    { value: "Pending", label: "Pending" },
-    { value: "In Progress", label: "In Progress" },
-    { value: "Resolved", label: "Resolved" },
-    { value: "Rejected", label: "Rejected" },
-]
-
-export default function AdminReportsPage() {
+export default function HeadReportsPage() {
     const [activeTab, setActiveTab] = useState("all")
     const [searchTerm, setSearchTerm] = useState("")
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
     const [selectedReport, setSelectedReport] = useState<Report | null>(null)
-    const [priorityFilter, setPriorityFilter] = useState("all")
     const [reports, setReports] = useState<Report[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -181,14 +170,14 @@ export default function AdminReportsPage() {
             <div className="mb-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Equipment Reports Management</h1>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Reports Management</h1>
                         <p className="text-muted-foreground mt-1">
-                            Monitor and manage all equipment reports from lecturers and staff
+                            Monitor and manage all reports from students and lecturers
                         </p>
                     </div>
                     <div className="flex gap-2">
                         <Button variant="outline" asChild>
-                            <Link href="/admin/dashboard">
+                            <Link href="/head/dashboard">
                                 <CircuitBoard className="h-4 w-4 mr-2" />
                                 Dashboard
                             </Link>
@@ -499,4 +488,3 @@ export default function AdminReportsPage() {
         </div>
     )
 }
-

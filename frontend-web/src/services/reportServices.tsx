@@ -27,44 +27,21 @@ export const getReportById = async (id: string) => {
     return response.data;
 };
 
-export const getReportDetailById = async (id: string) => {
-    const response = await axiosWithoutLoading.get(`/api/report/${id}/detail`);
-    return response.data;
-};
-
-// Admin/Head of Department
+// Admin/Head - Get all reports
 export const getAllReports = async () => {
     const response = await axiosWithoutLoading.get("/api/report");
     return response.data;
 };
 
+// Admin/Head - Get report detail by ID
+export const getReportDetailById = async (id: string) => {
+    const response = await axiosWithoutLoading.get(`/api/report/${id}/detail`);
+    return response.data;
+};
+
+// Admin/Head - Update report status
 export const updateReportStatus = async (id: string, data: { reportStatus: string, resolutionNotes: string }) => {
     const response = await defaultAxiosInstance.put(`/api/report/${id}/status`, data);
     toast.success("Report status updated successfully");
-    return response.data;
-};
-
-export const getReportStatistics = async () => {
-    const response = await axiosWithoutLoading.get("/api/report/statistics");
-    return response.data;
-};
-
-export const getReportByUserId = async (userId: string) => {
-    const response = await axiosWithoutLoading.get(`/api/report/user/${userId}`);
-    return response.data;
-};
-
-export const getReportByScheduleId = async (scheduleId: string) => {
-    const response = await axiosWithoutLoading.get(`/api/report/schedule/${scheduleId}`);
-    return response.data;
-};
-
-export const getPendingReports = async () => {
-    const response = await axiosWithoutLoading.get("/api/report/pending");
-    return response.data;
-};
-
-export const getResolvedReports = async () => {
-    const response = await axiosWithoutLoading.get("/api/report/resolved");
     return response.data;
 };
