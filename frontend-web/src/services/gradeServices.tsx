@@ -27,6 +27,11 @@ export const getTeamGradeStatistics = async (labId: string) => {
     return response.data;
 };
 
+export const getGradeForLabId = async (labId: string) => {
+    const response = await axiosWithoutLoading.get(`/api/grade/labs/${labId}/grade-for-id`);
+    return response.data;
+};
+
 export const getAllGrades = async (labId: string) => {
     const response = await axiosWithoutLoading.get(`/api/grade/labs/${labId}/all-grades`);
     return response.data;

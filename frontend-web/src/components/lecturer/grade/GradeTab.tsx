@@ -1,146 +1,195 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Edit3, Check, X } from "lucide-react"
+import { Loader2, GraduationCap, ChevronDown, ChevronRight, ClipboardPen, PenLine } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { getLabByClassById } from "@/services/labServices"
+import { getGradeForLabId } from "@/services/gradeServices"
+import { getTeamsByClassId } from "@/services/teamServices" // Assuming this service exists
+import { Button } from "@/components/ui/button"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogTrigger } from "@/components/ui/dialog"
+import CreateTeamGrade from "@/components/lecturer/grade/CreateTeamGrade"
 
-interface Student {
-    classUserId: number
-    userName: string
-    userEmail: string
-    userNumberCode: string
+interface Team {
+    teamId: string
+    teamName: string
 }
 
-interface Grade {
-    studentId: number
-    midtermGrade?: number
-    finalGrade?: number
-    totalGrade?: number
-    status: "Pass" | "Fail" | "Not Graded"
+interface Lab {
+    labId: number
+    labName: string
+}
+
+interface Member {
+    studentId: string
+    studentName: string
+    individualGrade: number
+    individualComment: string
+}
+
+interface TeamGradeData {
+    teamId: string // Changed to string to match CreateTeamGrade
+    teamName: string
+    labId: number
+    labName: string
+    teamGrade: number
+    teamComment: string
+    members: Member[]
+    gradedDate: string
+    gradeStatus: "Graded" | "Not Graded"
 }
 
 interface GradeTabProps {
     classId: string
-    students: Student[]
 }
 
-export default function GradeTab({ classId, students }: GradeTabProps) {
-    const [grades, setGrades] = useState<Grade[]>([])
+export default function GradeTab({ classId }: GradeTabProps) {
+    const [gradesData, setGradesData] = useState<{ [key: string]: TeamGradeData }>({})
+    const [labs, setLabs] = useState<Lab[]>([])
+    const [teams, setTeams] = useState<Team[]>([])
     const [loading, setLoading] = useState(true)
-    const [saving, setSaving] = useState(false)
-    const [editingStudent, setEditingStudent] = useState<number | null>(null)
-    const [tempGrades, setTempGrades] = useState<{ midterm: string; final: string }>({ midterm: "", final: "" })
+    const [expandedLabs, setExpandedLabs] = useState<Set<number>>(new Set())
+    const [openGradeDialog, setOpenGradeDialog] = useState(false)
+    const [selectedLabId, setSelectedLabId] = useState<number | null>(null)
     const { toast } = useToast()
 
-    useEffect(() => {
-        // Initialize grades for all students
-        const initialGrades = students.map((student) => ({
-            studentId: student.classUserId,
-            midtermGrade: undefined,
-            finalGrade: undefined,
-            totalGrade: undefined,
-            status: "Not Graded" as const,
-        }))
-        setGrades(initialGrades)
-        setLoading(false)
-    }, [students])
+    const fetchLabsAndGrades = async () => {
+        try {
+            // Fetch labs
+            const labResult = await getLabByClassById(classId)
+            console.log("GradeTab Labs:", labResult)
+            if (labResult) {
+                const fetchedLabs = labResult.pageData.map((lab: any) => ({
+                    labId: lab.labId,
+                    labName: lab.labName,
+                }))
+                setLabs(fetchedLabs)
 
-    const calculateTotalGrade = (midterm?: number, final?: number): number | undefined => {
-        if (midterm !== undefined && final !== undefined) {
-            return Math.round((midterm * 0.4 + final * 0.6) * 100) / 100
+                // Fetch teams
+                try {
+                    const teamResult = await getTeamsByClassId(classId)
+                    console.log("GradeTab Teams:", teamResult)
+                    const fetchedTeams = teamResult ? teamResult.map((team: any) => ({
+                        teamId: team.teamId.toString(), // Ensure teamId is string
+                        teamName: team.teamName,
+                    })) : []
+                    setTeams(fetchedTeams)
+                } catch (error) {
+                    console.log("Error fetching teams:", error)
+                    toast({
+                        title: "Warning",
+                        description: "Failed to load teams, grading may be limited",
+                        variant: "destructive",
+                    })
+                    setTeams([])
+                }
+
+                // Fetch grades for each lab
+                const gradesPromises = fetchedLabs.map(async (lab: Lab) => {
+                    try {
+                        const gradeResult = await getGradeForLabId(lab.labId.toString())
+                        console.log(`GradeTab Grades for Lab ${lab.labId}:`, JSON.stringify(gradeResult, null, 2))
+                        if (gradeResult) {
+                            return gradeResult.map((grade: any) => ({
+                                teamId: grade.teamId.toString(), // Ensure teamId is string
+                                teamName: grade.teamName,
+                                labId: lab.labId,
+                                labName: lab.labName,
+                                teamGrade: grade.teamGrade || 0,
+                                teamComment: grade.teamComment || "",
+                                members: grade.members || [],
+                                gradedDate: grade.gradedDate || new Date().toISOString(),
+                                gradeStatus: grade.teamGrade !== undefined ? "Graded" : "Not Graded",
+                            }))
+                        }
+                        return []
+                    } catch (error) {
+                        console.log(`Error fetching grades for lab ${lab.labId}:`, error)
+                        return []
+                    }
+                })
+
+                const gradesArrays = await Promise.all(gradesPromises)
+                const allGrades = gradesArrays.flat()
+                const newGradesData: { [key: string]: TeamGradeData } = {}
+                allGrades.forEach((grade: TeamGradeData) => {
+                    const key = `${grade.teamId}-${grade.labId}`
+                    newGradesData[key] = grade
+                })
+                setGradesData(newGradesData)
+            } else {
+                throw new Error("Failed to fetch labs")
+            }
+        } catch (error) {
+            console.log("[v0] Error fetching labs, teams, or grades:", error)
+            toast({
+                title: "Error",
+                description: "Failed to load labs, teams, or grades",
+                variant: "destructive",
+            })
+        } finally {
+            setLoading(false)
         }
-        return undefined
     }
 
-    const getGradeStatus = (total?: number): "Pass" | "Fail" | "Not Graded" => {
-        if (total === undefined) return "Not Graded"
-        return total >= 5.0 ? "Pass" : "Fail"
-    }
+    useEffect(() => {
+        fetchLabsAndGrades()
+    }, [classId])
 
-    const handleEditGrade = (studentId: number) => {
-        const grade = grades.find((g) => g.studentId === studentId)
-        setEditingStudent(studentId)
-        setTempGrades({
-            midterm: grade?.midtermGrade?.toString() || "",
-            final: grade?.finalGrade?.toString() || "",
+    const toggleLabExpansion = (labId: number) => {
+        setExpandedLabs((prev) => {
+            const newSet = new Set(prev)
+            if (newSet.has(labId)) {
+                newSet.delete(labId)
+            } else {
+                newSet.add(labId)
+            }
+            return newSet
         })
     }
 
-    const handleSaveGrade = async (studentId: number) => {
-        const midterm = tempGrades.midterm ? Number.parseFloat(tempGrades.midterm) : undefined
-        const final = tempGrades.final ? Number.parseFloat(tempGrades.final) : undefined
-
-        // Validate grades
-        if (
-            (midterm !== undefined && (midterm < 0 || midterm > 10)) ||
-            (final !== undefined && (final < 0 || final > 10))
-        ) {
+    const handleGradeForLab = (labId: number) => {
+        if (teams.length === 0) {
             toast({
-                title: "Invalid Grade",
-                description: "Grades must be between 0 and 10",
+                title: "No Teams Available",
+                description: "Cannot grade because no teams are available for this class",
                 variant: "destructive",
             })
             return
         }
-
-        setSaving(true)
-        try {
-            const total = calculateTotalGrade(midterm, final)
-            const status = getGradeStatus(total)
-
-            setGrades((prev) =>
-                prev.map((grade) =>
-                    grade.studentId === studentId
-                        ? { ...grade, midtermGrade: midterm, finalGrade: final, totalGrade: total, status }
-                        : grade,
-                ),
-            )
-
-            setEditingStudent(null)
-            setTempGrades({ midterm: "", final: "" })
-
-            toast({
-                title: "Grade Saved",
-                description: "Student grade has been updated successfully",
-            })
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to save grade",
-                variant: "destructive",
-            })
-        } finally {
-            setSaving(false)
-        }
+        setSelectedLabId(labId)
+        setOpenGradeDialog(true)
     }
 
-    const handleCancelEdit = () => {
-        setEditingStudent(null)
-        setTempGrades({ midterm: "", final: "" })
-    }
-
-    const getStatusBadgeVariant = (status: string) => {
-        switch (status) {
-            case "Pass":
-                return "default"
-            case "Fail":
-                return "destructive"
-            default:
-                return "secondary"
-        }
+    const handleGradeSubmitted = () => {
+        setOpenGradeDialog(false)
+        setSelectedLabId(null)
+        fetchLabsAndGrades() // Refresh grades data after submission
     }
 
     if (loading) {
         return (
+            <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-secondary mx-auto mb-4" />
+                    <p className="text-muted-foreground">Loading grades...</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (!labs.length) {
+        return (
             <Card>
                 <CardContent className="p-8 text-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto mb-4" />
-                    <p>Loading grades...</p>
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                        <GraduationCap className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-card-foreground mb-2">No Data Available</h3>
+                    <p className="text-muted-foreground">No labs available</p>
                 </CardContent>
             </Card>
         )
@@ -148,108 +197,113 @@ export default function GradeTab({ classId, students }: GradeTabProps) {
 
     return (
         <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-2xl font-bold">Student Grades</CardTitle>
-                    <p className="text-muted-foreground">
-                        Manage and track student grades for this class. Total grade = Midterm (40%) + Final (60%)
-                    </p>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-muted/50">
-                                    <TableHead className="font-semibold">STT</TableHead>
-                                    <TableHead className="font-semibold">Student Code</TableHead>
-                                    <TableHead className="font-semibold">Name</TableHead>
-                                    <TableHead className="font-semibold text-center">Midterm (40%)</TableHead>
-                                    <TableHead className="font-semibold text-center">Final (60%)</TableHead>
-                                    <TableHead className="font-semibold text-center">Total</TableHead>
-                                    <TableHead className="font-semibold text-center">Status</TableHead>
-                                    <TableHead className="font-semibold text-center">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {students.map((student, index) => {
-                                    const grade = grades.find((g) => g.studentId === student.classUserId)
-                                    const isEditing = editingStudent === student.classUserId
+            {labs.map((lab) => {
+                const isExpanded = expandedLabs.has(lab.labId)
+                const labGrades = Object.values(gradesData).filter((grade) => grade.labId === lab.labId)
+                const gradedCount = labGrades.filter((grade) => grade.gradeStatus === "Graded").length
+                const totalTeams = labGrades.length
 
-                                    return (
-                                        <TableRow key={student.classUserId}>
-                                            <TableCell className="font-medium">{index + 1}</TableCell>
-                                            <TableCell>{student.userNumberCode}</TableCell>
-                                            <TableCell>{student.userName}</TableCell>
-                                            <TableCell className="text-center">
-                                                {isEditing ? (
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        max="10"
-                                                        step="0.1"
-                                                        value={tempGrades.midterm}
-                                                        onChange={(e) => setTempGrades((prev) => ({ ...prev, midterm: e.target.value }))}
-                                                        className="w-20 text-center"
-                                                        placeholder="0-10"
-                                                    />
+                return (
+                    <div key={lab.labId}>
+                        <CardContent className="p-0">
+                            <div className="flex items-center justify-between p-6 bg-card border-b border-border bg-secondary">
+                                <div className="flex items-center gap-4">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => toggleLabExpansion(lab.labId)}
+                                        className="p-2 h-auto rounded-full hover:bg-accent/10 transition-colors"
+                                    >
+                                        {isExpanded ? (
+                                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                                        ) : (
+                                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                        )}
+                                    </Button>
+
+                                    <div className="flex items-center gap-3">
+                                        <div>
+                                            <h3 className="text-xl font-bold text-card-foreground">{lab.labName}</h3>
+                                            <p className="text-sm text-muted-foreground mt-1">Lab Assignment Grades</p>
+                                        </div>
+                                    </div>
+
+                                    <Badge variant="secondary" className="ml-2 bg-green-500">
+                                        {gradedCount} graded
+                                    </Badge>
+                                </div>
+
+                                <Dialog open={openGradeDialog && selectedLabId === lab.labId} onOpenChange={(open) => {
+                                    setOpenGradeDialog(open)
+                                    if (!open) setSelectedLabId(null)
+                                }}>
+                                    <CreateTeamGrade
+                                        labId={lab.labId.toString()}
+                                        classId={classId}
+                                        teams={teams}
+                                        onGradeSubmitted={handleGradeSubmitted}
+                                    />
+                                </Dialog>
+                            </div>
+                            {isExpanded && (
+                                <div className="p-6 bg-background">
+                                    <div className="rounded-md border overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow className="bg-muted/50">
+                                                    <TableHead className="font-semibold">STT</TableHead>
+                                                    <TableHead className="font-semibold">Team Name</TableHead>
+                                                    <TableHead className="font-semibold text-center">Grade</TableHead>
+                                                    <TableHead className="font-semibold text-center">Comment</TableHead>
+                                                    <TableHead className="font-semibold text-center">Status</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {labGrades.length > 0 ? (
+                                                    labGrades.map((grade, index) => (
+                                                        <TableRow key={`${grade.teamId}-${grade.labId}`}>
+                                                            <TableCell className="font-medium">{index + 1}</TableCell>
+                                                            <TableCell className="font-medium">{grade.teamName}</TableCell>
+                                                            <TableCell className="text-center">{grade.teamGrade}</TableCell>
+                                                            <TableCell className="text-center">
+                                                                <span className="text-sm text-muted-foreground truncate block">
+                                                                    {grade.teamComment}
+                                                                </span>
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <Badge
+                                                                    variant={
+                                                                        grade.gradeStatus === "Graded"
+                                                                            ? "default"
+                                                                            : "destructive"
+                                                                    }
+                                                                >
+                                                                    {grade.gradeStatus}
+                                                                </Badge>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
                                                 ) : (
-                                                    <span className="font-medium">
-                                                        {grade?.midtermGrade !== undefined ? grade.midtermGrade : "-"}
-                                                    </span>
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} className="text-center">
+                                                            <div className="flex flex-col items-center justify-center h-full">
+                                                                <div className="w-12 h-12 rounded-full border-2 border-muted flex items-center justify-center mb-2">
+                                                                    <ClipboardPen className="h-6 w-6 text-muted-foreground" />
+                                                                </div>
+                                                                <span className="text-muted-foreground">No grades available for this lab</span>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
                                                 )}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                {isEditing ? (
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        max="10"
-                                                        step="0.1"
-                                                        value={tempGrades.final}
-                                                        onChange={(e) => setTempGrades((prev) => ({ ...prev, final: e.target.value }))}
-                                                        className="w-20 text-center"
-                                                        placeholder="0-10"
-                                                    />
-                                                ) : (
-                                                    <span className="font-medium">
-                                                        {grade?.finalGrade !== undefined ? grade.finalGrade : "-"}
-                                                    </span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <span className="font-bold text-lg">
-                                                    {grade?.totalGrade !== undefined ? grade.totalGrade : "-"}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Badge variant={getStatusBadgeVariant(grade?.status || "Not Graded")}>
-                                                    {grade?.status || "Not Graded"}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                {isEditing ? (
-                                                    <div className="flex justify-center gap-2">
-                                                        <Button size="sm" onClick={() => handleSaveGrade(student.classUserId)} disabled={saving}>
-                                                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                                        </Button>
-                                                        <Button size="sm" variant="outline" onClick={handleCancelEdit} disabled={saving}>
-                                                            <X className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                ) : (
-                                                    <Button size="sm" variant="outline" onClick={() => handleEditGrade(student.classUserId)}>
-                                                        <Edit3 className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    )
-                                })}
-                            </TableBody>
-                        </Table>
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
                     </div>
-                </CardContent>
-            </Card>
+                )
+            })}
         </div>
     )
 }

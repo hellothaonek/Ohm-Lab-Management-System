@@ -3,15 +3,16 @@
 import { useState, useEffect, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ChevronLeft, Loader2, Target, ClipboardList, Cpu, Package, CalendarPlus, Eye } from "lucide-react"
+import { ChevronLeft, Loader2, ClipboardList, Target, Cpu, Package, CalendarPlus, Eye } from "lucide-react"
 import { getClassById } from "@/services/classServices"
 import { getLabBySubjectId } from "@/services/labServices"
 import { Button } from "@/components/ui/button"
 import { Pagination } from "antd"
 import LabDetail from "@/components/head/lab/LabDetail"
 import GroupTab from "@/components/lecturer/group/GroupTab"
+import GradeTab from "@/components/lecturer/grade/GradeTab"
 import CreateLabBooking from "@/components/lecturer/lab/CreateLabBooking"
 
 interface ClassDetail {
@@ -92,11 +93,9 @@ export default function ClassDetailPage() {
             }
         }
 
-        // Placeholder for fetching groups (implement as needed)
         const fetchGroups = async () => {
             try {
                 // Replace with actual group fetching logic, e.g., getGroupsByClassId(classId)
-                // For now, setting an empty array
                 setGroups([])
             } catch (err) {
                 console.error("Error fetching groups:", err)
@@ -172,6 +171,12 @@ export default function ClassDetailPage() {
         )
     }
 
+    // Map groups to teams format for GradeTab
+    const teams = groups.map(group => ({
+        teamId: group.groupId,
+        teamName: group.groupName,
+    }))
+
     return (
         <div className="min-h-screen p-4">
             <div className="mb-6">
@@ -185,6 +190,7 @@ export default function ClassDetailPage() {
                     <TabsTrigger value="students">Student List</TabsTrigger>
                     <TabsTrigger value="groups">Group List</TabsTrigger>
                     <TabsTrigger value="lab">Lab</TabsTrigger>
+                    <TabsTrigger value="grades">Grades</TabsTrigger>
                 </TabsList>
                 <TabsContent value="lab">
                     <div className="space-y-6">
@@ -334,6 +340,9 @@ export default function ClassDetailPage() {
                 </TabsContent>
                 <TabsContent value="groups" className="shadow-lg">
                     <GroupTab classId={classId || ""} />
+                </TabsContent>
+                <TabsContent value="grades" className="shadow-lg">
+                    <GradeTab classId={classId || ""} />
                 </TabsContent>
             </Tabs>
         </div>

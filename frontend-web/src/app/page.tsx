@@ -56,7 +56,7 @@ export default function LoginPage() {
           router.push("/lecturer/dashboard");
           break;
         case "Student":
-          router.push("/student/dashboard");
+          router.push("/student");
           break;
         default:
           toast.error("Unknown user role");
