@@ -9,11 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/components/ui/use-toast"
 import { scheduleLab } from "@/services/labServices"
 import { Loader2 } from "lucide-react"
-import { getAllSlots } from "@/services/slotServices"
+import { getAllScheduleTypes } from "@/services/scheduleTypeServices"
 
-interface Slot {
-    slotId: number
+interface ScheduleType {
+    scheduleTypeId: number
+    scheduleTypeName: string
+    scheduleTypeDow: string
     slotName: string
+    slotStartTime: string
+    slotEndTime: string
+    scheduleTypeStatus: string
 }
 
 interface CreateLabBookingProps {
@@ -25,38 +30,38 @@ interface CreateLabBookingProps {
 
 export default function CreateLabBooking({ labId, classId, open, onClose }: CreateLabBookingProps) {
     const [formData, setFormData] = useState({
-        scheduledDate: "",
-        slotId: 1,
+        scheduleTypeId: 0,
         scheduleDescription: "",
         maxStudentsPerSession: 0,
-        lecturerNotes: ""
+        lecturerNotes: "",
+        scheduledDate: "" // Added scheduledDate field
     })
-    const [slots, setSlots] = useState<Slot[]>([])
+    const [scheduleTypes, setScheduleTypes] = useState<ScheduleType[]>([])
     const [loading, setLoading] = useState(false)
-    const [loadingSlots, setLoadingSlots] = useState(false)
-    const [errorSlots, setErrorSlots] = useState<string | null>(null)
+    const [loadingScheduleTypes, setLoadingScheduleTypes] = useState(false)
+    const [errorScheduleTypes, setErrorScheduleTypes] = useState<string | null>(null)
 
     useEffect(() => {
-        const fetchSlots = async () => {
+        const fetchScheduleTypes = async () => {
             try {
-                setLoadingSlots(true)
-                const response = await getAllSlots()
-                console.log("Res Slot", response)
-                setSlots(response)
+                setLoadingScheduleTypes(true)
+                const response = await getAllScheduleTypes()
+                const activeScheduleTypes = response.filter((scheduleType: ScheduleType) => scheduleType.scheduleTypeStatus === "Active")
+                setScheduleTypes(activeScheduleTypes)
             } catch (error) {
-                setErrorSlots("Failed to fetch slots")
+                setErrorScheduleTypes("Failed to fetch schedule types")
                 toast({
                     variant: "destructive",
                     title: "Error",
-                    description: "Failed to load available slots"
+                    description: "Failed to load available schedule types"
                 })
             } finally {
-                setLoadingSlots(false)
+                setLoadingScheduleTypes(false)
             }
         }
 
         if (open) {
-            fetchSlots()
+            fetchScheduleTypes()
         }
     }, [open])
 
@@ -71,23 +76,32 @@ export default function CreateLabBooking({ labId, classId, open, onClose }: Crea
             return
         }
 
+        if (!formData.scheduledDate) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Please select a scheduled date"
+            })
+            return
+        }
+
         try {
             setLoading(true)
             await scheduleLab(labId.toString(), {
                 classId,
-                scheduledDate: formData.scheduledDate,
-                slotId: formData.slotId,
+                scheduledDate: new Date(formData.scheduledDate).toISOString(),
+                scheduleTypeId: formData.scheduleTypeId,
                 scheduleDescription: formData.scheduleDescription,
                 maxStudentsPerSession: formData.maxStudentsPerSession,
                 lecturerNotes: formData.lecturerNotes
             })
             onClose()
             setFormData({
-                scheduledDate: "",
-                slotId: 1,
+                scheduleTypeId: 0,
                 scheduleDescription: "",
                 maxStudentsPerSession: 0,
-                lecturerNotes: ""
+                lecturerNotes: "",
+                scheduledDate: ""
             })
             toast({
                 title: "Success",
@@ -112,10 +126,10 @@ export default function CreateLabBooking({ labId, classId, open, onClose }: Crea
         }))
     }
 
-    const handleSlotChange = (value: string) => {
+    const handleScheduleTypeChange = (value: string) => {
         setFormData((prev) => ({
             ...prev,
-            slotId: parseInt(value)
+            scheduleTypeId: parseInt(value)
         }))
     }
 
@@ -139,25 +153,25 @@ export default function CreateLabBooking({ labId, classId, open, onClose }: Crea
                         />
                     </div>
                     <div>
-                        <Label htmlFor="slotId">Slot</Label>
+                        <Label htmlFor="scheduleTypeId">Schedule Type</Label>
                         <Select
-                            value={formData.slotId.toString()}
-                            onValueChange={handleSlotChange}
-                            disabled={loadingSlots || !!errorSlots}
+                            value={formData.scheduleTypeId.toString()}
+                            onValueChange={handleScheduleTypeChange}
+                            disabled={loadingScheduleTypes || !!errorScheduleTypes}
                         >
-                            <SelectTrigger id="slotId">
-                                <SelectValue placeholder={loadingSlots ? "Loading slots..." : errorSlots ? "No slots available" : "Select a slot"} />
+                            <SelectTrigger id="scheduleTypeId">
+                                <SelectValue placeholder={loadingScheduleTypes ? "Loading schedule types..." : errorScheduleTypes ? "No schedule types available" : "Select a schedule type"} />
                             </SelectTrigger>
                             <SelectContent>
-                                {slots.map((slot) => (
-                                    <SelectItem key={slot.slotId} value={slot.slotId.toString()}>
-                                        {slot.slotName}
+                                {scheduleTypes.map((scheduleType) => (
+                                    <SelectItem key={scheduleType.scheduleTypeId} value={scheduleType.scheduleTypeId.toString()}>
+                                        {`${scheduleType.scheduleTypeDow}, ${scheduleType.slotName} (${scheduleType.slotStartTime} - ${scheduleType.slotEndTime})`}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
-                        {errorSlots && (
-                            <p className="text-red-500 text-sm mt-1">{errorSlots}</p>
+                        {errorScheduleTypes && (
+                            <p className="text-red-500 text-sm mt-1">{errorScheduleTypes}</p>
                         )}
                     </div>
                     <div>
@@ -195,7 +209,7 @@ export default function CreateLabBooking({ labId, classId, open, onClose }: Crea
                         <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={loading || loadingSlots || !!errorSlots}>
+                        <Button type="submit" disabled={loading || loadingScheduleTypes || !!errorScheduleTypes}>
                             {loading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

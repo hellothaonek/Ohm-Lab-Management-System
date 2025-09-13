@@ -4,16 +4,16 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreVertical, Plus } from 'lucide-react';
 import { format } from "date-fns";
-import { Pagination } from 'antd'; // Import Ant Design Pagination
+import { Pagination } from 'antd';
 import { getSemesters } from "@/services/semesterServices";
 import CreateSemester from "@/components/admin/semester/CreateSemester";
 import EditSemester from "@/components/admin/semester/EditSemester";
 import DeleteSemester from "@/components/admin/semester/DeleteSemester";
 
-// Define the Semester type based on the provided API response structure
 interface Semester {
     semesterId: number;
     semesterName: string;
@@ -44,9 +44,9 @@ export default function AdminSemester() {
 
     const fetchSemesters = async () => {
         try {
-            const response = await getSemesters(); // Pass page and size to API
-            setSemesters(response.pageData); // Set the semesters state
-            setTotalItems(response.pageInfo.totalItem); // Update total items
+            const response = await getSemesters();
+            setSemesters(response.pageData);
+            setTotalItems(response.pageInfo.totalItem);
             console.log("Semesters fetched successfully:", response);
         } catch (error) {
             console.error("Error fetching semesters:", error);
@@ -54,11 +54,11 @@ export default function AdminSemester() {
     };
 
     useEffect(() => {
-        fetchSemesters(); // Fetch semesters when the component mounts
+        fetchSemesters();
     }, []);
 
     const handleSuccess = () => {
-        fetchSemesters(); // Refresh semesters after a create/edit/delete operation
+        fetchSemesters();
     };
 
     const handleEdit = (semester: Semester) => {
@@ -73,8 +73,8 @@ export default function AdminSemester() {
     };
 
     const handlePaginationChange = (page: number, size?: number) => {
-        setPageNum(page)
-        setPageSize(pageSize || 10)
+        setPageNum(page);
+        setPageSize(size || 10);
     };
 
     const formatDate = (dateString: string) => {
@@ -94,7 +94,7 @@ export default function AdminSemester() {
     return (
         <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold tracking-tight">Semester</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Semester Management</h1>
             </div>
 
             <div className="flex items-center justify-end gap-4">
@@ -108,51 +108,49 @@ export default function AdminSemester() {
             </div>
 
             <Card>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b">
-                                <th className="text-left p-4 bg-gray-100">Semester Name</th>
-                                <th className="text-left p-4 bg-gray-100">Start Date</th>
-                                <th className="text-left p-4 bg-gray-100">End Date</th>
-                                <th className="text-left p-4 bg-gray-100">Status</th>
-                                <th className="text-left p-4 bg-gray-100">Description</th>
-                                <th className="text-center p-4 bg-gray-100">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {semesters.map((semester) => (
-                                <tr key={semester.semesterId} className="border-b hover:bg-gray-50">
-                                    <td className="p-4 font-medium">{semester.semesterName}</td>
-                                    <td className="p-4">{formatDate(semester.semesterStartDate)}</td>
-                                    <td className="p-4">{formatDate(semester.semesterEndDate)}</td>
-                                    <td className="p-4">{getStatusBadge(semester.semesterStatus)}</td>
-                                    <td className="p-4 text-sm text-gray-600">{semester.semesterDescription}</td>
-                                    <td className="p-4 text-center">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEdit(semester)}>
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => handleDelete(semester)}
-                                                    className="text-red-600"
-                                                >
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                <Table>
+                    <TableHeader className="bg-blue-50">
+                        <TableRow>
+                            <TableHead>Semester Name</TableHead>
+                            <TableHead>Start Date</TableHead>
+                            <TableHead>End Date</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {semesters.map((semester) => (
+                            <TableRow key={semester.semesterId}>
+                                <TableCell className="font-medium">{semester.semesterName}</TableCell>
+                                <TableCell>{formatDate(semester.semesterStartDate)}</TableCell>
+                                <TableCell>{formatDate(semester.semesterEndDate)}</TableCell>
+                                <TableCell>{getStatusBadge(semester.semesterStatus)}</TableCell>
+                                <TableCell className="text-sm text-gray-600">{semester.semesterDescription}</TableCell>
+                                <TableCell>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => handleEdit(semester)}>
+                                                Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={() => handleDelete(semester)}
+                                                className="text-red-600"
+                                            >
+                                                Delete
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
             </Card>
 
             <div className="flex justify-end mt-4">

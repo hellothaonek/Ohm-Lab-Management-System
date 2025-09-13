@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import DeleteCourse from "@/components/head/courses/DeleteCourse"
 import EditCourse from "@/components/head/courses/EditCourse"
 import { Pagination } from "antd"
-import Link from "next/link" // Import Link from next/link
+import Link from "next/link"
 
 interface Subject {
     subjectId: number
@@ -109,13 +109,16 @@ export default function CoursesPage() {
                                     href={`/head/dashboard/courses/[course-detail]/${subject.subjectId}`}
                                     as={`/head/dashboard/courses/course-detail?subjectId=${subject.subjectId}`}
                                     passHref
-                                    className="block" 
+                                    className="block"
                                 >
-                                    <Card
-                                        className="hover:shadow-md transition-shadow cursor-pointer"
-                                    >
+                                    <Card className="shadow-md hover:shadow-xl transition-shadow cursor-pointer">
                                         <CardHeader className="pb-3">
-                                            <div className="flex items-start justify-between">
+                                            <img
+                                                src="https://i.pinimg.com/1200x/9f/ef/18/9fef186063141e36368d32ead5d81269.jpg"
+                                                alt={subject.subjectName}
+                                                className="w-full h-full object-cover rounded-t-lg"
+                                            />
+                                            <div className="flex items-start justify-between mt-3">
                                                 <div className="flex-1">
                                                     <CardTitle className="text-lg font-semibold">
                                                         {subject.subjectName}
@@ -130,7 +133,7 @@ export default function CoursesPage() {
                                                             variant="ghost"
                                                             size="sm"
                                                             className="h-8 w-8 p-0"
-                                                            onClick={(e) => e.stopPropagation()} 
+                                                            onClick={(e) => e.stopPropagation()}
                                                         >
                                                             <MoreVertical className="h-4 w-4" />
                                                         </Button>
@@ -165,8 +168,7 @@ export default function CoursesPage() {
                                 </Link>
                             ))}
                         </div>
-
-                        <div className="flex justify-end">
+                        <div className="flex justify-center mt-4">
                             <Pagination
                                 current={pageNum}
                                 pageSize={pageSize}

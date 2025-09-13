@@ -21,10 +21,12 @@ import {
 import { loginGoogle } from "../services/userServices";
 import config from "../config/config";
 import { Spinner } from "@/components/ui/spinner";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth(); // Lấy hàm `login` từ context
 
   const handleLogin = async (response: CredentialResponse) => {
     if (!response.credential) {
@@ -37,14 +39,20 @@ export default function LoginPage() {
 
     try {
       const apiResponse = await loginGoogle({ googleId });
+      console.log("CHECK:", apiResponse)
 
-      if (!apiResponse || !apiResponse.user) {
-        throw new Error("Invalid response from server");
-      }
+      // // Cập nhật logic kiểm tra response để phù hợp với cấu trúc data của bạn
+      // if (!apiResponse || !apiResponse.data || !apiResponse.data.token || !apiResponse.data.user) {
+      //   throw new Error("Invalid response from server");
+      // }
 
-      const userRole = apiResponse.user.userRoleName;
-      localStorage.setItem("googleId", googleId);
+      const { token, user } = apiResponse;
+      const userRole = user.userRoleName;
 
+      // Sử dụng hàm `login` từ context để lưu token và user
+      login(token, user);
+
+      // Điều hướng dựa trên vai trò
       switch (userRole) {
         case "Admin":
           router.push("/admin/dashboard");
@@ -56,7 +64,7 @@ export default function LoginPage() {
           router.push("/lecturer/dashboard");
           break;
         case "Student":
-          router.push("/student");
+          router.push("/student/dashboard");
           break;
         default:
           toast.error("Unknown user role");

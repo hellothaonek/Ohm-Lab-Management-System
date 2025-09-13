@@ -1,10 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, AlertTriangle, Eye } from "lucide-react"
+import { Search, Plus, AlertTriangle, Eye, Edit } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
     Dialog,
@@ -13,11 +15,12 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { getMyReports } from "@/services/reportServices"
-import CreateReport from "@/components/lecturer/report/CreateReport"
+import { getAllReports, updateReportStatus } from "@/services/reportServices"
+import ChangeStatus from "@/components/admin/report/ChangeStatus"
 
 // Define interfaces
 interface Report {
@@ -33,33 +36,32 @@ interface Report {
     resolutionNotes: string | null
 }
 
-export default function LecturerReportsPage() {
+export default function AdminReportsPage() {
     const [searchTerm, setSearchTerm] = useState<string>("")
     const [isViewDialogOpen, setIsViewDialogOpen] = useState<boolean>(false)
-    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false)
+    const [isChangeStatusOpen, setIsChangeStatusOpen] = useState<boolean>(false)
     const [selectedReport, setSelectedReport] = useState<Report | null>(null)
     const [reports, setReports] = useState<Report[]>([])
     const [loading, setLoading] = useState<boolean>(true)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<string>("all")
 
-    // Fetch reports on component mount and after report creation
-    const fetchReports = async () => {
-        try {
-            setLoading(true)
-            const response = await getMyReports()
-            console.log("Fetched reports:", response.reports)
-            setReports(response.reports)
-            setError(null)
-        } catch (err) {
-            setError("Failed to fetch reports. Please try again.")
-            console.error(err)
-        } finally {
-            setLoading(false)
-        }
-    }
-
+    // Fetch reports on component mount
     useEffect(() => {
+        const fetchReports = async () => {
+            try {
+                setLoading(true)
+                const response = await getAllReports()
+                console.log("Fetched reports:", response.reports)
+                setReports(response.reports)
+                setError(null)
+            } catch (err) {
+                setError("Failed to fetch reports. Please try again.")
+                console.error(err)
+            } finally {
+                setLoading(false)
+            }
+        }
         fetchReports()
     }, [])
 
@@ -68,8 +70,20 @@ export default function LecturerReportsPage() {
         setIsViewDialogOpen(true)
     }
 
-    const handleReportCreated = () => {
-        fetchReports()
+    const handleChangeStatus = (report: Report) => {
+        setSelectedReport(report)
+        setIsChangeStatusOpen(true)
+    }
+
+    const handleStatusUpdate = async () => {
+        try {
+            const response = await getAllReports()
+            setReports(response.reports)
+            setError(null)
+        } catch (err) {
+            setError("Failed to refresh reports. Please try again.")
+            console.error(err)
+        }
     }
 
     const filteredReports = reports.filter((report: Report) => {
@@ -121,21 +135,18 @@ export default function LecturerReportsPage() {
                     </TabsList>
                 </Tabs>
 
-                {/* Search Input and New Report Button */}
-                <div className="mt-4 flex items-end justify-between gap-4">
-                    <div className="relative w-2/3 max-w-xl">
+                {/* Search Input */}
+                <div className="mt-4 max-w-md">
+                    <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                             type="text"
                             placeholder="Search reports by title, or user..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 w-full"
+                            className="pl-10"
                         />
                     </div>
-                    <Button variant="default" onClick={() => setIsCreateDialogOpen(true)}>
-                        New Report
-                    </Button>
                 </div>
             </div>
 
@@ -179,9 +190,14 @@ export default function LecturerReportsPage() {
                                             <TableCell>{new Date(report.reportCreateDate).toLocaleDateString("vi-VN")}</TableCell>
                                             <TableCell>{getStatusBadge(report.reportStatus)}</TableCell>
                                             <TableCell>
-                                                <Button size="sm" variant="ghost" onClick={() => handleViewReport(report)}>
-                                                    <Eye className="h-3 w-3" />
-                                                </Button>
+                                                <div className="flex gap-2">
+                                                    <Button size="sm" variant="ghost" onClick={() => handleViewReport(report)}>
+                                                        <Eye className="h-3 w-3" />
+                                                    </Button>
+                                                    <Button size="sm" variant="ghost" onClick={() => handleChangeStatus(report)}>
+                                                        <Edit className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -209,10 +225,6 @@ export default function LecturerReportsPage() {
                                     <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Reported By</h4>
                                     <p className="text-gray-900 dark:text-white">{selectedReport.userName}</p>
                                 </div>
-                                <div>
-                                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule</h4>
-                                    <p className="text-gray-900 dark:text-white">{selectedReport.scheduleName}</p>
-                                </div>
                             </div>
                             <div>
                                 <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</h4>
@@ -238,12 +250,15 @@ export default function LecturerReportsPage() {
                 </Dialog>
             )}
 
-            {/* Create Report Dialog */}
-            <CreateReport
-                isOpen={isCreateDialogOpen}
-                onClose={() => setIsCreateDialogOpen(false)}
-                onReportCreated={handleReportCreated}
-            />
+            {/* Change Status Dialog */}
+            {selectedReport && (
+                <ChangeStatus
+                    report={selectedReport}
+                    onClose={() => setIsChangeStatusOpen(false)}
+                    onStatusUpdate={handleStatusUpdate}
+                    open={isChangeStatusOpen}
+                />
+            )}
         </div>
     )
 }

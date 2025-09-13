@@ -27,6 +27,11 @@ export const getClassByLecturerId = async (lecturerId: string) => {
     return response.data;
 };
 
+export const getClassByStudentId = async (studentId: string) => {
+    const response = await axiosWithoutLoading.get(`/api/class/student/${studentId}`);
+    return response.data;
+};
+
 export const updateClassStatus = async (id: string, status: string) => {
     const response = await defaultAxiosInstance.put(`/api/class/${id}/status`, { status });
     return response.data;

@@ -179,12 +179,6 @@ export default function ClassDetailPage() {
 
     return (
         <div className="min-h-screen p-4">
-            <div className="mb-6">
-                <Button onClick={() => router.back()} variant="outline" className="mb-4 rounded-full w-10 h-10">
-                    <ChevronLeft className="h-4 w-4" />
-                </Button>
-            </div>
-            <h2 className="text-3xl text-gray-900 dark:text-white mb-6">Details of class {classDetail.className}</h2>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="students">Student List</TabsTrigger>
@@ -194,12 +188,6 @@ export default function ClassDetailPage() {
                 </TabsList>
                 <TabsContent value="lab">
                     <div className="space-y-6">
-                        <CardHeader>
-                            <div>
-                                <CardTitle className="text-2xl font-bold">Class Labs</CardTitle>
-                                <CardDescription>Explore all labs available for this class</CardDescription>
-                            </div>
-                        </CardHeader>
                         <CardContent>
                             {loadingLabs ? (
                                 <div className="p-12 text-center text-muted-foreground">
@@ -220,10 +208,36 @@ export default function ClassDetailPage() {
                                         {labs.map((lab) => (
                                             <Card
                                                 key={lab.labId}
-                                                className="flex flex-col border shadow-md hover:shadow-xl transition rounded-2xl"
+                                                className="flex flex-col border shadow-md hover:shadow-xl transition rounded-2xl relative"
                                             >
-                                                <CardHeader>
+                                                <CardHeader className="flex flex-row justify-between items-center">
                                                     <CardTitle className="text-lg font-semibold">{lab.labName}</CardTitle>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="w-10 h-10 bg-transparent"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setSelectedLabId(lab.labId)
+                                                                setOpenBooking(true)
+                                                            }}
+                                                        >
+                                                            <CalendarPlus className="w-5 h-5 text-red-500" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="w-10 h-10 bg-transparent"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setSelectedLabId(lab.labId)
+                                                                setOpenDetail(true)
+                                                            }}
+                                                        >
+                                                            <Eye className="w-5 h-5 text-green-500" />
+                                                        </Button>
+                                                    </div>
                                                 </CardHeader>
                                                 <CardContent className="flex-grow space-y-3 text-sm">
                                                     <div className="flex items-center gap-2">
@@ -257,32 +271,6 @@ export default function ClassDetailPage() {
                                                                 ? lab.requiredKits.map((kit) => kit.kitTemplateName || kit.kitTemplateId).join(", ")
                                                                 : "None"}
                                                         </span>
-                                                    </div>
-                                                    <div className="flex justify-center gap-4 mt-4">
-                                                        <Button
-                                                            variant="outline"
-                                                            className="w-auto px-4 bg-transparent"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                setSelectedLabId(lab.labId)
-                                                                setOpenBooking(true)
-                                                            }}
-                                                        >
-                                                            <CalendarPlus className="w-4 h-4 mr-2 text-red-500" />
-                                                            Lab Booking
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            className="w-auto px-4 bg-transparent"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                setSelectedLabId(lab.labId)
-                                                                setOpenDetail(true)
-                                                            }}
-                                                        >
-                                                            <Eye className="w-4 h-4 mr-2 text-green-500" />
-                                                            View Detail
-                                                        </Button>
                                                     </div>
                                                 </CardContent>
                                             </Card>

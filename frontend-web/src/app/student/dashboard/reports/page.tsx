@@ -33,7 +33,7 @@ interface Report {
     resolutionNotes: string | null
 }
 
-export default function LecturerReportsPage() {
+export default function StudentReportsPage() {
     const [searchTerm, setSearchTerm] = useState<string>("")
     const [isViewDialogOpen, setIsViewDialogOpen] = useState<boolean>(false)
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false)
@@ -127,7 +127,7 @@ export default function LecturerReportsPage() {
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                             type="text"
-                            placeholder="Search reports by title, or user..."
+                            placeholder="Search reports by title..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-10 w-full"
@@ -151,7 +151,7 @@ export default function LecturerReportsPage() {
                             <TableHeader className="bg-blue-50">
                                 <TableRow>
                                     <TableHead>Title</TableHead>
-                                    <TableHead>Reported By</TableHead>
+                                    <TableHead>Schedule</TableHead>
                                     <TableHead>Resolution Notes</TableHead>
                                     <TableHead>Report Date</TableHead>
                                     <TableHead>Status</TableHead>
@@ -172,7 +172,7 @@ export default function LecturerReportsPage() {
                                     filteredReports.map((report: Report) => (
                                         <TableRow key={report.reportId}>
                                             <TableCell className="font-medium">{report.reportTitle}</TableCell>
-                                            <TableCell>{report.userName}</TableCell>
+                                            <TableCell>{report.scheduleName}</TableCell>
                                             <TableCell className="max-w-xs truncate">
                                                 {report.resolutionNotes || "No resolution notes"}
                                             </TableCell>
@@ -205,10 +205,6 @@ export default function LecturerReportsPage() {
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                             <div className="grid grid-cols-1 gap-4">
-                                <div>
-                                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Reported By</h4>
-                                    <p className="text-gray-900 dark:text-white">{selectedReport.userName}</p>
-                                </div>
                                 <div>
                                     <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule</h4>
                                     <p className="text-gray-900 dark:text-white">{selectedReport.scheduleName}</p>

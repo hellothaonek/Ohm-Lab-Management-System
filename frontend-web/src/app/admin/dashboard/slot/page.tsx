@@ -4,13 +4,14 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreVertical, Plus } from 'lucide-react';
 import { Pagination } from 'antd';
 import { searchSlots } from "@/services/slotServices";
+import CreateSlot from "@/components/admin/slot/CreateSlot";
 import EditSlot from "@/components/admin/slot/EditSlot";
 import DeleteSlot from "@/components/admin/slot/DeleteSlot";
-import CreateSlot from "@/components/admin/slot/CreateSlot";
 
 interface Slot {
     slotId: number;
@@ -89,7 +90,7 @@ export default function AdminSlot() {
     return (
         <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold tracking-tight">Slot</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Slot Management</h1>
             </div>
 
             <div className="flex items-center justify-end gap-4">
@@ -103,51 +104,49 @@ export default function AdminSlot() {
             </div>
 
             <Card>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b">
-                                <th className="text-left p-4 bg-gray-100">Slot Name</th>
-                                <th className="text-left p-4 bg-gray-100">Start Time</th>
-                                <th className="text-left p-4 bg-gray-100">End Time</th>
-                                <th className="text-left p-4 bg-gray-100">Status</th>
-                                <th className="text-left p-4 bg-gray-100">Description</th>
-                                <th className="text-center p-4 bg-gray-100">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {slots.map((slot) => (
-                                <tr key={slot.slotId} className="border-b hover:bg-gray-50">
-                                    <td className="p-4 font-medium">{slot.slotName}</td>
-                                    <td className="p-4">{slot.slotStartTime}</td>
-                                    <td className="p-4">{slot.slotEndTime}</td>
-                                    <td className="p-4">{getStatusBadge(slot.slotStatus)}</td>
-                                    <td className="p-4 text-sm text-gray-600">{slot.slotDescription || "N/A"}</td>
-                                    <td className="p-4 text-center">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEdit(slot)}>
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => handleDelete(slot)}
-                                                    className="text-red-600"
-                                                >
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                <Table>
+                    <TableHeader className="bg-blue-50">
+                        <TableRow>
+                            <TableHead>Slot Name</TableHead>
+                            <TableHead>Start Time</TableHead>
+                            <TableHead>End Time</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {slots.map((slot) => (
+                            <TableRow key={slot.slotId}>
+                                <TableCell className="font-medium">{slot.slotName}</TableCell>
+                                <TableCell>{slot.slotStartTime}</TableCell>
+                                <TableCell>{slot.slotEndTime}</TableCell>
+                                <TableCell>{getStatusBadge(slot.slotStatus)}</TableCell>
+                                <TableCell className="text-sm text-gray-600">{slot.slotDescription || "N/A"}</TableCell>
+                                <TableCell>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => handleEdit(slot)}>
+                                                Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={() => handleDelete(slot)}
+                                                className="text-red-600"
+                                            >
+                                                Delete
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
             </Card>
 
             <div className="flex justify-end mt-4">

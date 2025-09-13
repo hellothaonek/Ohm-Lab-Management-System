@@ -15,6 +15,10 @@ import {
   Settings,
   LogOut,
   Clock,
+  FileText,
+  BookText,
+  Package,
+  DoorOpen,
 } from "lucide-react"
 import {
   Sidebar,
@@ -84,12 +88,6 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
       roles: ["head", "lecturer", "student", "admin"],
     },
     {
-      title: "Lab Booking",
-      href: `/${role}/dashboard/lab-booking`,
-      icon: Calendar,
-      roles: ["head", "lecturer"],
-    },
-    {
       title: "Classes",
       href: `/${role}/dashboard/classes`,
       icon: Users,
@@ -108,15 +106,15 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
       roles: ["head", "lecturer"],
     },
     {
-      title: "Equipment Handover",
-      href: `/${role}/dashboard/equipment-handover`,
-      icon: ClipboardList,
-      roles: ["lecturer"],
+      title: "Kit",
+      href: `/${role}/dashboard/kit`,
+      icon: Package,
+      roles: ["head"],
     },
     {
       title: "Courses",
       href: `/${role}/dashboard/courses`,
-      icon: Database,
+      icon: BookText,
       roles: ["head"],
     },
     {
@@ -126,16 +124,10 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
       roles: ["student"],
     },
     {
-      title: "Kit",
-      href: `/${role}/dashboard/kit`,
-      icon: Plug,
-      roles: ["head"],
-    },
-    {
       title: "Reports",
       href: `/${role}/dashboard/reports`,
-      icon: BarChart3,
-      roles: ["head", "lecturer", "admin"],
+      icon: FileText,
+      roles: ["head", "lecturer", "admin", "student"],
     },
     {
       title: "User Management",
@@ -148,7 +140,7 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
   const filteredNavItems = navItems.filter((item) => item.roles.includes(role))
 
   return (
-    <Sidebar collapsible="icon" {...props} className="bg-orange-50">
+    <Sidebar collapsible="icon" {...props} className="shadow-md">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

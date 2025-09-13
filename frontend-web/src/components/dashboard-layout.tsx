@@ -1,103 +1,75 @@
+// app/dashboard/layout.tsx
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React from "react"
 import { Bell } from "lucide-react"
 import { AppSidebar } from "../components/app-sidebar"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "../components/ui/breadcrumb"
 import { Button } from "../components/ui/button"
 import { SidebarInset, SidebarProvider } from "../components/ui/sidebar"
-import { getCurrentUser } from "@/services/userServices"
 import { LoadingSkeleton } from "./loading-skeleton"
+import { useAuth } from "@/context/AuthContext"
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from "@/components/ui/breadcrumb"
+import { useBreadcrumbs } from "@/hooks/use-breadcrumbs"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
-  breadcrumbs?: Array<{ title: string; href?: string }>
 }
 
-export default function DashboardLayout({ children, breadcrumbs = [] }: DashboardLayoutProps) {
-  const [role, setRole] = useState<"head" | "lecturer" | "admin" | "student" | null>(null)
-  const [userFullName, setUserFullName] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    async function fetchUserData() {
-      try {
-        setLoading(true)
-        const userData = await getCurrentUser()
-        const userRoleName = userData.userRoleName
-
-        const roleMap: { [key: string]: "head" | "lecturer" | "admin" | "student" } = {
-          HeadOfDepartment: "head",
-          Lecturer: "lecturer",
-          Admin: "admin",
-          Student: "student",
-        }
-
-        const mappedRole = roleMap[userRoleName]
-        if (mappedRole) {
-          setRole(mappedRole)
-          setUserFullName(userData.userFullName)
-        } else {
-          setError("Invalid user role")
-        }
-      } catch (err) {
-        setError("Failed to fetch user data")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchUserData()
-  }, [])
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { user, loading } = useAuth()
+  const breadcrumbs = useBreadcrumbs()
 
   if (loading) {
     return <LoadingSkeleton />
   }
 
-  if (error || !role) {
-    return <div>Error: {error || "User role not found"}</div>
+  if (!user || !user.userRoleName) {
+    return <div>Error: Invalid user data or role not found</div>
+  }
+
+  const roleMap: { [key: string]: "head" | "lecturer" | "admin" | "student" } = {
+    HeadOfDepartment: "head",
+    Lecturer: "lecturer",
+    Admin: "admin",
+    Student: "student",
+  }
+  const role = roleMap[user.userRoleName] || null
+
+  if (!role) {
+    return <div>Error: Invalid user role</div>
   }
 
   return (
     <SidebarProvider>
-      <AppSidebar role={role} userFullName={userFullName || "Unknown User"} />
+      <AppSidebar role={role} userFullName={user.userFullName || "Unknown User"} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
-            {breadcrumbs.length > 0 && (
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href={`/${role}/dashboard`}>Dashboard</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  {breadcrumbs.map((breadcrumb, index) => (
-                    <React.Fragment key={index}>
-                      <BreadcrumbSeparator className="hidden md:block" />
-                      <BreadcrumbItem>
-                        {breadcrumb.href ? (
-                          <BreadcrumbLink href={breadcrumb.href}>{breadcrumb.title}</BreadcrumbLink>
-                        ) : (
-                          <BreadcrumbPage>{breadcrumb.title}</BreadcrumbPage>
-                        )}
-                      </BreadcrumbItem>
-                    </React.Fragment>
-                  ))}
-                </BreadcrumbList>
-              </Breadcrumb>
-            )}
-          </div>
-          <div className="ml-auto flex items-center gap-2 px-4">
-            <Button variant="ghost" size="icon" aria-label="Notifications">
-              <Bell className="h-4 w-4" />
-            </Button>
+          <div className="flex-grow pl-4">
+            <Breadcrumb>
+              <BreadcrumbList>
+                {breadcrumbs.map((item, index) => (
+                  <React.Fragment key={index}>
+                    <BreadcrumbItem>
+                      {/* Mục cuối cùng là BreadcrumbPage, các mục còn lại là BreadcrumbLink */}
+                      {index === breadcrumbs.length - 1 ? (
+                        <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                      ) : (
+                        <BreadcrumbLink href={item.href}>{item.label}</BreadcrumbLink>
+                      )}
+                    </BreadcrumbItem>
+                    {/* Thêm BreadcrumbSeparator nếu không phải là mục cuối cùng */}
+                    {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
+                  </React.Fragment>
+                ))}
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
         </header>
 

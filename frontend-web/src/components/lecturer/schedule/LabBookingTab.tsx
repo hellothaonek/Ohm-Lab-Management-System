@@ -72,7 +72,7 @@ const mockBookings: LabBooking[] = [
     },
 ]
 
-export default function LabBookingPage() {
+export default function LabBookingTab() {
     const [bookings, setBookings] = useState<LabBooking[]>(mockBookings)
     const [filteredBookings, setFilteredBookings] = useState<LabBooking[]>(mockBookings)
     const [loading, setLoading] = useState(false)
@@ -126,12 +126,11 @@ export default function LabBookingPage() {
     const paginatedBookings = filteredBookings.slice((pageNum - 1) * pageSize, pageNum * pageSize)
 
     return (
-        <div className="min-h-screen p-4">
+        <div className="mt-4">
             <div className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Lab Booking History</h1>
-                <p className="text-gray-600 dark:text-gray-400">View and manage your lab booking requests</p>
+                <h2 className="text-xl font-bold">Lab Booking History</h2>
+                <p>Track the status of lab booking requests here.</p>
             </div>
-
 
             <div className="flex flex-col sm:flex-row gap-4 mb-5">
                 <div className="flex-1">
@@ -161,10 +160,7 @@ export default function LabBookingPage() {
             </div>
 
             <Card>
-                <CardHeader>
-                    <CardDescription>Total: {filteredBookings.length} booking(s)</CardDescription>
-                </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                     {loading ? (
                         <div className="p-8 text-center">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -176,78 +172,78 @@ export default function LabBookingPage() {
                             <p>No booking requests found</p>
                         </div>
                     ) : (
-                        <>
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="bg-blue-50 dark:bg-blue-900/20">
-                                            <TableHead className="font-semibold">Lab & Class</TableHead>
-                                            <TableHead className="font-semibold">Schedule</TableHead>
-                                            <TableHead className="font-semibold">Description</TableHead>
-                                            <TableHead className="font-semibold">Students</TableHead>
-                                            <TableHead className="font-semibold">Status</TableHead>
-                                            <TableHead className="font-semibold">Submitted</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {paginatedBookings.map((booking) => (
-                                            <TableRow key={booking.bookingId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                                <TableCell>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-blue-50 dark:bg-blue-900/20">
+                                        <TableHead className="font-semibold">Lab & Class</TableHead>
+                                        <TableHead className="font-semibold">Schedule</TableHead>
+                                        <TableHead className="font-semibold">Description</TableHead>
+                                        <TableHead className="font-semibold">Students</TableHead>
+                                        <TableHead className="font-semibold">Status</TableHead>
+                                        <TableHead className="font-semibold">Submitted</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {paginatedBookings.map((booking) => (
+                                        <TableRow key={booking.bookingId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                            <TableCell>
+                                                <div>
+                                                    <p className="font-medium text-gray-900 dark:text-white">{booking.labName}</p>
+                                                    <p className="text-sm text-gray-500">{booking.className}</p>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2 text-sm">
                                                     <div>
-                                                        <p className="font-medium text-gray-900 dark:text-white">{booking.labName}</p>
-                                                        <p className="text-sm text-gray-500">{booking.className}</p>
+                                                        <p>{booking.scheduledDate}</p>
+                                                        <p className="text-gray-500">{booking.slotName}</p>
                                                     </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2 text-sm">
-                                                        <div>
-                                                            <p>{booking.scheduledDate}</p>
-                                                            <p className="text-gray-500">{booking.slotName}</p>
-                                                        </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <p className="text-sm max-w-xs truncate" title={booking.scheduleDescription}>
-                                                        {booking.scheduleDescription}
-                                                    </p>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-1 text-sm">
-                                                        <Users className="h-4 w-4 text-green-500" />
-                                                        {booking.maxStudentsPerSession}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>{getStatusBadge(booking.status)}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-1 text-sm text-gray-500">
-                                                        <Clock className="h-4 w-4" />
-                                                        {booking.submittedDate}
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-
-                            <div className="flex justify-center mt-6">
-                                <Pagination
-                                    current={pageNum}
-                                    pageSize={pageSize}
-                                    total={filteredBookings.length}
-                                    showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
-                                    onChange={handlePaginationChange}
-                                    showSizeChanger
-                                    onShowSizeChange={(current, size) => {
-                                        setPageNum(1)
-                                        setPageSize(size)
-                                    }}
-                                />
-                            </div>
-                        </>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <p className="text-sm max-w-xs truncate" title={booking.scheduleDescription}>
+                                                    {booking.scheduleDescription}
+                                                </p>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1 text-sm">
+                                                    <Users className="h-4 w-4 text-green-500" />
+                                                    {booking.maxStudentsPerSession}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{getStatusBadge(booking.status)}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1 text-sm text-gray-500">
+                                                    <Clock className="h-4 w-4" />
+                                                    {booking.submittedDate}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
                 </CardContent>
             </Card>
+
+            {filteredBookings.length > 0 && (
+                <div className="flex justify-end mt-6">
+                    <Pagination
+                        current={pageNum}
+                        pageSize={pageSize}
+                        total={filteredBookings.length}
+                        showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
+                        onChange={handlePaginationChange}
+                        showSizeChanger
+                        onShowSizeChange={(current, size) => {
+                            setPageNum(1)
+                            setPageSize(size)
+                        }}
+                    />
+                </div>
+            )}
 
             {/* Booking Detail Modal */}
             {showDetail && selectedBooking && (

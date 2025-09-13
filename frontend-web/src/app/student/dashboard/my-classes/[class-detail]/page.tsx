@@ -3,14 +3,18 @@
 import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ChevronLeft, Loader2 } from "lucide-react"
 import { getClassById } from "@/services/classServices"
 import { Button } from "@/components/ui/button"
+import GradeTab from "@/components/lecturer/grade/GradeTab"
+import GroupTab from "@/components/student/group/GroupTab"
+import LabTab from "@/components/student/lab/LabTab"
 
 interface ClassDetail {
     classId: number
     className: string
+    subjectId: number
     classUsers: {
         classUserId: number
         userName: string
@@ -19,13 +23,20 @@ interface ClassDetail {
     }[]
 }
 
-export default function ClassDetailPage() {
+interface Group {
+    groupId: number
+    groupName: string
+}
+
+export default function StudentClassDetailPage() {
     const searchParams = useSearchParams()
     const classId = searchParams.get("classId")
     const router = useRouter()
     const [classDetail, setClassDetail] = useState<ClassDetail | null>(null)
+    const [groups, setGroups] = useState<Group[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [activeTab, setActiveTab] = useState("groups")
 
     useEffect(() => {
         const fetchClassDetail = async () => {
@@ -36,12 +47,13 @@ export default function ClassDetailPage() {
                     setClassDetail({
                         classId: data.classId,
                         className: data.className,
+                        subjectId: data.subjectId,
                         classUsers: data.classUsers.map((user: any) => ({
                             classUserId: user.classUserId,
                             userName: user.userName,
                             userEmail: user.userEmail,
-                            userNumberCode: user.userNumberCode
-                        }))
+                            userNumberCode: user.userNumberCode,
+                        })),
                     })
                 }
             } catch (err) {
@@ -51,8 +63,18 @@ export default function ClassDetailPage() {
             }
         }
 
+        const fetchGroups = async () => {
+            try {
+                // Replace with actual group fetching logic, e.g., getGroupsByClassId(classId)
+                setGroups([])
+            } catch (err) {
+                console.error("Error fetching groups:", err)
+            }
+        }
+
         if (classId) {
             fetchClassDetail()
+            fetchGroups()
         }
     }, [classId])
 
@@ -80,33 +102,35 @@ export default function ClassDetailPage() {
         )
     }
 
+    const teams = groups.map(group => ({
+        teamId: group.groupId,
+        teamName: group.groupName,
+    }))
+
     return (
         <div className="min-h-screen p-4">
-            <h2 className="text-3xl text-gray-900 dark:text-white mb-6"> Student list of class {classDetail.className}</h2>
-            <Card>
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader className="bg-blue-200">
-                            <TableRow>
-                                <TableHead className="text-black font-bold">STT</TableHead>
-                                <TableHead className="text-black font-bold">Student Code</TableHead>
-                                <TableHead className="text-black font-bold">Name</TableHead>
-                                <TableHead className="text-black font-bold">Email</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {classDetail.classUsers.map((user, index) => (
-                                <TableRow key={user.classUserId}>
-                                    <TableCell>{index + 1}</TableCell>
-                                    <TableCell>{user.userNumberCode}</TableCell>
-                                    <TableCell>{user.userName}</TableCell>
-                                    <TableCell>{user.userEmail}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+            <div className="mb-6">
+                <Button onClick={() => router.back()} variant="outline" className="mb-4 rounded-full w-10 h-10">
+                    <ChevronLeft className="h-4 w-4" />
+                </Button>
+            </div>
+            <h2 className="text-3xl text-gray-900 dark:text-white mb-6">Details of class {classDetail.className}</h2>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+                <TabsList>
+                    <TabsTrigger value="groups">Group List</TabsTrigger>
+                    <TabsTrigger value="lab">Lab</TabsTrigger>
+                    <TabsTrigger value="grades">Grades</TabsTrigger>
+                </TabsList>
+                <TabsContent value="lab">
+                    <LabTab classId={classId || ""} />
+                </TabsContent>
+                <TabsContent value="groups" className="shadow-lg">
+                    <GroupTab classId={classId || ""} />
+                </TabsContent>
+                <TabsContent value="grades" className="shadow-lg">
+                    <GradeTab classId={classId || ""} />
+                </TabsContent>
+            </Tabs>
         </div>
     )
 }

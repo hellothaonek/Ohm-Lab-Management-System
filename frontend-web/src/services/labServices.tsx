@@ -17,7 +17,7 @@ export const getMyClasses = async () => {
     return response.data;
 };
 
-export const scheduleLab = async (labId: string, data: { classId: number; scheduledDate: string; slotId: number; scheduleDescription: string; maxStudentsPerSession: number; lecturerNotes: string }) => {
+export const scheduleLab = async (labId: string, data: { classId: number; scheduledDate: string; scheduleTypeId: number; scheduleDescription: string; maxStudentsPerSession: number; lecturerNotes: string }) => {
     const response = await defaultAxiosInstance.post(`/api/labs/${labId}/schedule`, data);
     toast.success("Lab scheduled successfully");
     return response.data;

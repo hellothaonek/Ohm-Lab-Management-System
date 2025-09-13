@@ -3,12 +3,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { addDays, startOfWeek, format, eachWeekOfInterval } from "date-fns";
 import { getCurrentUser } from "@/services/userServices";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScheduleSkeleton } from "@/components/loading-skeleton";
-import { getScheduleByLectureId } from "@/services/scheduleServices";
-import LabBookingTab from "@/components/lecturer/schedule/LabBookingTab";
+import { getScheduleByStudentId } from "@/services/scheduleServices";
 
 const slots = [
     "7:00 - 9:15",
@@ -24,12 +23,13 @@ interface ScheduleItem {
     scheduleDate: string;
     subjectName: string;
     className: string;
+    lecturerName: string;
     slotId: number;
     slotStartTime: string;
     slotEndTime: string;
 }
 
-export default function LecturerSchedule() {
+export default function StudentSchedule() {
     const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
     const [weeks, setWeeks] = useState<{ value: string; label: string }[]>([]);
     const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
@@ -44,7 +44,7 @@ export default function LecturerSchedule() {
                 const user = await getCurrentUser();
                 const lecturerId = user.userId;
                 if (lecturerId) {
-                    const scheduleData = await getScheduleByLectureId(lecturerId);
+                    const scheduleData = await getScheduleByStudentId(lecturerId);
                     setSchedule(scheduleData);
                 } else {
                     setError("Could not retrieve lecturer ID.");
@@ -60,7 +60,6 @@ export default function LecturerSchedule() {
         fetchSchedule();
     }, []);
 
-    // Calculate weeks and dates once, memoized
     const { weekDates, weekOptions } = useMemo(() => {
         const currentYear = new Date().getFullYear();
         const startOfYear = new Date(currentYear, 0, 1);
@@ -93,7 +92,8 @@ export default function LecturerSchedule() {
             <Card className="bg-blue-100 h-full">
                 <CardContent className="p-2 text-sm">
                     <div className="font-bold">{lesson.subjectName}</div>
-                    <div>{lesson.className}</div>
+                    <div className="text-orange-500">{lesson.className}</div>
+                    <div className="text-muted-foreground">Lec: {lesson.lecturerName}</div>
                 </CardContent>
             </Card>
         ) : (
@@ -106,62 +106,44 @@ export default function LecturerSchedule() {
     if (error) return <div className="p-4 text-red-500">{error}</div>;
 
     return (
-        <div className="p-4">
-            <Tabs defaultValue="schedule" className="w-full">
-                <TabsList className="grid w-1/2 grid-cols-2">
-                    <TabsTrigger value="schedule">Schedule</TabsTrigger>
-                    <TabsTrigger value="lab-booking">Lab Booking</TabsTrigger>
-                </TabsList>
-                <TabsContent value="schedule">
-                    <div className="mt-4">
-                        <h2 className="text-xl font-bold">Schedule</h2>
-                        <p>Lecturers view teaching schedule here.</p>
-                    </div>
-                    <div className="space-y-4 mt-4">
-                        <div className="flex items-center gap-4">
-                            <Select onValueChange={handleWeekChange}>
-                                <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder={format(selectedWeekStart, "dd/MM/yyyy")} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {weekOptions.map((week) => (
-                                        <SelectItem key={week.value} value={week.value}>
-                                            {week.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+        <div className="p-4 space-y-4">
+            <div className="flex items-center gap-4">
+                <Select onValueChange={handleWeekChange}>
+                    <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder={format(selectedWeekStart, "dd/MM/yyyy")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {weekOptions.map((week) => (
+                            <SelectItem key={week.value} value={week.value}>
+                                {week.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
 
-                        <div className="grid grid-cols-8 gap-px border rounded overflow-hidden text-center text-sm">
-                            <div className="bg-gray-100 font-bold p-2">Slot</div>
-                            {days.map((d, index) => (
-                                <div key={d} className="bg-gray-100 font-bold p-2">
-                                    <div>{d}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                        {weekDates[index] ? format(new Date(weekDates[index]), "dd/MM") : ""}
-                                    </div>
-                                </div>
-                            ))}
-
-                            {slots.map((time, slotIdx) => (
-                                <div key={`slot-${slotIdx}`} className="contents">
-                                    <div className="bg-gray-100 p-2 min-h-[80px] flex items-center justify-center">{time}</div>
-                                    {days.map((d) => (
-                                        <div key={`${d}-${slotIdx}`} className="min-h-[80px]">
-                                            {renderCell(d, slotIdx)}
-                                        </div>
-                                    ))}
-                                </div>
-                            ))}
+            <div className="grid grid-cols-8 gap-px border rounded overflow-hidden text-center text-sm">
+                <div className="bg-gray-100 font-bold p-2">Slot</div>
+                {days.map((d, index) => (
+                    <div key={d} className="bg-gray-100 font-bold p-2">
+                        <div>{d}</div>
+                        <div className="text-xs text-muted-foreground">
+                            {weekDates[index] ? format(new Date(weekDates[index]), "dd/MM") : ""}
                         </div>
                     </div>
-                </TabsContent>
-                <TabsContent value="lab-booking">
-                    <LabBookingTab />
-                </TabsContent>
-            </Tabs>
+                ))}
+
+                {slots.map((time, slotIdx) => (
+                    <div key={`slot-${slotIdx}`} className="contents">
+                        <div className="bg-gray-100 p-2 min-h-[80px] flex items-center justify-center">{time}</div>
+                        {days.map((d) => (
+                            <div key={`${d}-${slotIdx}`} className="min-h-[80px]">
+                                {renderCell(d, slotIdx)}
+                            </div>
+                        ))}
+                    </div>
+                ))}
+            </div>
         </div>
-
     );
 }
