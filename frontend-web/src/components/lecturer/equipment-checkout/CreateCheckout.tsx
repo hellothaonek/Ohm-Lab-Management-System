@@ -1,13 +1,18 @@
 "use client"
 
-import { useState } from "react"
-import { X, Calendar, User, Package, Users } from "lucide-react"
+import { useState, useEffect } from "react"
+import { X, Package, Users } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { searchEquipment } from "@/services/equipmentServices"
+import { getAllTeams } from "@/services/teamServices"
+import { useAuth } from "@/context/AuthContext"
+import { toast } from "@/components/ui/use-toast"
+import { borrowEquipment } from "@/services/teamEquipmentServices"
 
 interface CreateCheckoutProps {
     isOpen: boolean
@@ -15,39 +20,110 @@ interface CreateCheckoutProps {
     onSuccess: (checkout: any) => void
 }
 
+interface Equipment {
+    equipmentId: string
+    equipmentName: string
+    equipmentNumberSerial: string
+}
+
+interface Team {
+    teamId: string
+    teamName: string
+    className: string
+}
+
 export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateCheckoutProps) {
+    const { user } = useAuth()
     const [formData, setFormData] = useState({
         equipmentName: "",
-        equipmentCode: "",
-        borrowerName: "",
-        borrowerId: "",
+        equipmentNumberSerial: "",
         groupName: "",
-        checkoutDate: "",
-        expectedReturnDate: "",
+        borrowingGroupName: "",
         notes: ""
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [equipmentList, setEquipmentList] = useState<Equipment[]>([])
+    const [teamList, setTeamList] = useState<Team[]>([])
+    const [isLoadingEquipment, setIsLoadingEquipment] = useState(false)
+    const [isLoadingTeams, setIsLoadingTeams] = useState(false)
+
+    useEffect(() => {
+        const fetchEquipment = async () => {
+            setIsLoadingEquipment(true)
+            try {
+                const response = await searchEquipment({
+                    pageNum: 1,
+                    pageSize: 100,
+                    keyWord: "",
+                    status: ""
+                })
+                setEquipmentList(response.pageData)
+            } catch (error) {
+                console.error("Error fetching equipment:", error)
+                toast({
+                    title: "Lỗi",
+                    description: "Không thể tải danh sách thiết bị",
+                    variant: "destructive"
+                })
+            } finally {
+                setIsLoadingEquipment(false)
+            }
+        }
+
+        const fetchTeams = async () => {
+            setIsLoadingTeams(true)
+            try {
+                const response = await getAllTeams()
+                setTeamList(response)
+            } catch (error) {
+                console.error("Error fetching teams:", error)
+                toast({
+                    title: "Lỗi",
+                    description: "Không thể tải danh sách nhóm",
+                    variant: "destructive"
+                })
+                setTeamList([])
+            } finally {
+                setIsLoadingTeams(false)
+            }
+        }
+
+        if (isOpen) {
+            fetchEquipment()
+            fetchTeams()
+        }
+    }, [isOpen])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsSubmitting(true)
 
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            const selectedTeam = teamList.find(team => `${team.teamName} - ${team.className}` === formData.groupName)
+            const selectedEquipment = equipmentList.find(equipment => equipment.equipmentName === formData.equipmentName)
 
-            const newCheckout = {
-                id: Date.now().toString(),
-                ...formData,
-                status: "InUse" as const,
-                actualReturnDate: undefined
+            if (!selectedTeam || !selectedEquipment) {
+                throw new Error("Vui lòng chọn nhóm và thiết bị hợp lệ")
             }
 
-            onSuccess(newCheckout)
+            const checkoutData = {
+                teamId: selectedTeam.teamId,
+                equipmentId: selectedEquipment.equipmentId || selectedEquipment.equipmentNumberSerial,
+                teamEquipmentName: formData.borrowingGroupName,
+                teamEquipmentDescription: formData.notes
+            }
+
+            const response = await borrowEquipment(checkoutData)
+            onSuccess(response)
             handleClose()
             resetForm()
         } catch (error) {
             console.error("Error creating checkout:", error)
+            toast({
+                title: "Lỗi",
+                description: error instanceof Error ? error.message : "Không thể tạo bàn giao thiết bị",
+                variant: "destructive"
+            })
         } finally {
             setIsSubmitting(false)
         }
@@ -63,12 +139,9 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
     const resetForm = () => {
         setFormData({
             equipmentName: "",
-            equipmentCode: "",
-            borrowerName: "",
-            borrowerId: "",
+            equipmentNumberSerial: "",
             groupName: "",
-            checkoutDate: "",
-            expectedReturnDate: "",
+            borrowingGroupName: "",
             notes: ""
         })
     }
@@ -77,6 +150,22 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
         setFormData(prev => ({
             ...prev,
             [field]: value
+        }))
+    }
+
+    const handleEquipmentSelect = (value: string) => {
+        const selectedEquipment = equipmentList.find(equipment => equipment.equipmentName === value)
+        setFormData(prev => ({
+            ...prev,
+            equipmentName: value,
+            equipmentNumberSerial: selectedEquipment ? selectedEquipment.equipmentNumberSerial : prev.equipmentNumberSerial
+        }))
+    }
+
+    const handleTeamSelect = (value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            groupName: value
         }))
     }
 
@@ -95,100 +184,79 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="equipmentName">Tên thiết bị *</Label>
-                                <Input
-                                    id="equipmentName"
+                                <Select
                                     value={formData.equipmentName}
-                                    onChange={(e) => handleInputChange("equipmentName", e.target.value)}
-                                    placeholder="Nhập tên thiết bị"
-                                    required
-                                />
+                                    onValueChange={handleEquipmentSelect}
+                                    disabled={isLoadingEquipment}
+                                >
+                                    <SelectTrigger id="equipmentName">
+                                        <SelectValue placeholder={isLoadingEquipment ? "Đang tải..." : "Chọn tên thiết bị"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {equipmentList.map(equipment => (
+                                            <SelectItem key={equipment.equipmentNumberSerial} value={equipment.equipmentName}>
+                                                {equipment.equipmentName}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="equipmentCode">Mã thiết bị *</Label>
+                                <Label htmlFor="equipmentNumberSerial">Number Serial *</Label>
                                 <Input
-                                    id="equipmentCode"
-                                    value={formData.equipmentCode}
-                                    onChange={(e) => handleInputChange("equipmentCode", e.target.value)}
-                                    placeholder="Nhập mã thiết bị"
+                                    id="equipmentNumberSerial"
+                                    value={formData.equipmentNumberSerial}
+                                    onChange={(e) => handleInputChange("equipmentNumberSerial", e.target.value)}
+                                    placeholder="Nhập số seri của thiết bị"
                                     required
+                                    readOnly
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* Borrower Information */}
+                    {/* Group Information */}
                     <div className="space-y-4">
                         <h3 className="text-lg font-medium flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            Thông tin người mượn
+                            <Users className="h-4 w-4" />
+                            Thông tin nhóm
                         </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="borrowerName">Tên người mượn *</Label>
-                                <Input
-                                    id="borrowerName"
-                                    value={formData.borrowerName}
-                                    onChange={(e) => handleInputChange("borrowerName", e.target.value)}
-                                    placeholder="Nhập tên người mượn"
-                                    required
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="borrowerId">Mã người mượn *</Label>
-                                <Input
-                                    id="borrowerId"
-                                    value={formData.borrowerId}
-                                    onChange={(e) => handleInputChange("borrowerId", e.target.value)}
-                                    placeholder="Nhập mã người mượn"
-                                    required
-                                />
-                            </div>
-                        </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="groupName">Nhóm</Label>
-                            <Input
-                                id="groupName"
+                            <Select
                                 value={formData.groupName}
-                                onChange={(e) => handleInputChange("groupName", e.target.value)}
-                                placeholder="Nhập tên nhóm (nếu có)"
-                            />
+                                onValueChange={handleTeamSelect}
+                                disabled={isLoadingTeams}
+                            >
+                                <SelectTrigger id="groupName">
+                                    <SelectValue placeholder={isLoadingTeams ? "Đang tải..." : "Chọn nhóm"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {teamList.length === 0 && !isLoadingTeams && (
+                                        <SelectItem value="" disabled>
+                                            Không có nhóm nào
+                                        </SelectItem>
+                                    )}
+                                    {teamList.map(team => (
+                                        <SelectItem key={`${team.teamName}-${team.className}`} value={`${team.teamName} - ${team.className}`}>
+                                            {`${team.teamName} - ${team.className}`}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
-                    </div>
 
-                    {/* Date Information */}
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-medium flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            Thông tin thời gian
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="checkoutDate">Ngày giao *</Label>
-                                <Input
-                                    id="checkoutDate"
-                                    type="date"
-                                    value={formData.checkoutDate}
-                                    onChange={(e) => handleInputChange("checkoutDate", e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="expectedReturnDate">Ngày trả dự kiến *</Label>
-                                <Input
-                                    id="expectedReturnDate"
-                                    type="date"
-                                    value={formData.expectedReturnDate}
-                                    onChange={(e) => handleInputChange("expectedReturnDate", e.target.value)}
-                                    min={formData.checkoutDate}
-                                    required
-                                />
-                            </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="borrowingGroupName">Tên nhóm mượn thiết bị *</Label>
+                            <Input
+                                id="borrowingGroupName"
+                                value={formData.borrowingGroupName}
+                                onChange={(e) => handleInputChange("borrowingGroupName", e.target.value)}
+                                placeholder="Nhập tên nhóm mượn thiết bị"
+                                required
+                            />
                         </div>
                     </div>
 
@@ -225,4 +293,4 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
             </DialogContent>
         </Dialog>
     )
-} 
+}

@@ -12,8 +12,8 @@ export const borrowEquipment = async (data: { teamId: string; equipmentId: strin
     return response.data;
 };
 
-export const giveBackEquipment = async (data: { teamEquipment: string }) => {
-    const response = await defaultAxiosInstance.post("/api/teamequipment/givebackequipment", data);
+export const giveBackEquipment = async (teamEquipment: number) => {
+    const response = await defaultAxiosInstance.post(`/api/teamequipment/givebackequipment?teamEquipment=${teamEquipment}`);
     toast.success("Equipment returned successfully");
     return response.data;
 };
