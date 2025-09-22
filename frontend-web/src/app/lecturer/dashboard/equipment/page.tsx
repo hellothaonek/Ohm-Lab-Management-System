@@ -146,7 +146,7 @@ export default function EquipmentPage() {
                     <TableHead className="w-[50px]">STT</TableHead>
                     <TableHead>Equipment Name</TableHead>
                     <TableHead>EquipmentType</TableHead>
-                    <TableHead>Equipment Code</TableHead>
+                    <TableHead>Number Serial</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>QR Code</TableHead>
                   </TableRow>

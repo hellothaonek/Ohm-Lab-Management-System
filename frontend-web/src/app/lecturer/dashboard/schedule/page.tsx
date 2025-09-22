@@ -8,6 +8,7 @@ import { addDays, startOfWeek, format, eachWeekOfInterval } from "date-fns";
 import { getCurrentUser } from "@/services/userServices";
 import { ScheduleSkeleton } from "@/components/loading-skeleton";
 import { getScheduleByLectureId } from "@/services/scheduleServices";
+import { listRegistrationScheduleByTeacherId } from "@/services/registrationScheduleServices";
 import LabBookingTab from "@/components/lecturer/schedule/LabBookingTab";
 
 const slots = [
@@ -29,38 +30,64 @@ interface ScheduleItem {
     slotEndTime: string;
 }
 
+interface LabBookingItem {
+    registrationScheduleDate: string;
+    registrationScheduleName: string;
+    className: string;
+    labName: string; // Add this property if it's in the data
+    slotId: number;
+    slotStartTime: string;
+    slotEndTime: string;
+}
+
 export default function LecturerSchedule() {
     const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
-    const [weeks, setWeeks] = useState<{ value: string; label: string }[]>([]);
     const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
+    const [labBookings, setLabBookings] = useState<LabBookingItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch data only once on mount
     useEffect(() => {
-        const fetchSchedule = async () => {
+        const fetchAllSchedules = async () => {
             try {
                 setLoading(true);
                 const user = await getCurrentUser();
                 const lecturerId = user.userId;
                 if (lecturerId) {
-                    const scheduleData = await getScheduleByLectureId(lecturerId);
+                    const [scheduleData, labBookingResponse] = await Promise.all([
+                        getScheduleByLectureId(lecturerId),
+                        listRegistrationScheduleByTeacherId(lecturerId),
+                    ]);
+
                     setSchedule(scheduleData);
+
+                    // Nâng cao khả năng xử lý lỗi: kiểm tra dữ liệu trước khi set state
+                    if (labBookingResponse) {
+                        const acceptedBookings = labBookingResponse.filter(
+                            (booking: any) => booking.registrationScheduleStatus === "Accept"
+                        );
+                        setLabBookings(acceptedBookings);
+                    } else {
+                        // Nếu không có dữ liệu hoặc dữ liệu không đúng định dạng, set state về mảng rỗng
+                        setLabBookings([]);
+                    }
                 } else {
                     setError("Could not retrieve lecturer ID.");
                 }
             } catch (err) {
                 setError("Failed to fetch schedule. Please try again later.");
                 console.error(err);
+                // Đảm bảo state không bị undefined khi có lỗi
+                setSchedule([]);
+                setLabBookings([]);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchSchedule();
+        fetchAllSchedules();
     }, []);
 
-    // Calculate weeks and dates once, memoized
     const { weekDates, weekOptions } = useMemo(() => {
         const currentYear = new Date().getFullYear();
         const startOfYear = new Date(currentYear, 0, 1);
@@ -85,20 +112,41 @@ export default function LecturerSchedule() {
 
     const renderCell = (day: string, slotIndex: number) => {
         const date = weekDates[days.indexOf(day)];
+
+        // Find a teaching lesson for this slot
         const lesson = schedule.find((l) =>
             format(new Date(l.scheduleDate), "yyyy-MM-dd") === date && l.slotId === slotIndex + 1
         );
 
-        return lesson ? (
-            <Card className="bg-blue-100 h-full">
-                <CardContent className="p-2 text-sm">
-                    <div className="font-bold">{lesson.subjectName}</div>
-                    <div>{lesson.className}</div>
-                </CardContent>
-            </Card>
-        ) : (
-            <div className="border p-2 min-h-[80px]" />
+        // Find a lab booking for this slot
+        // Thêm kiểm tra b.slotId === slotIndex + 1 để khớp với API (1-based index)
+        const booking = labBookings.find((b) =>
+            format(new Date(b.registrationScheduleDate), "yyyy-MM-dd") === date && b.slotId === slotIndex + 1
         );
+
+        // Render the appropriate card
+        if (lesson) {
+            return (
+                <Card className="bg-blue-100 h-full">
+                    <CardContent className="p-2 text-sm">
+                        <div className="font-bold">{lesson.subjectName}</div>
+                        <div>{lesson.className}</div>
+                    </CardContent>
+                </Card>
+            );
+        } else if (booking) {
+            return (
+                <Card className="bg-green-100 h-full">
+                    <CardContent className="p-2 text-sm">
+                        {/* Hiển thị labName và className như bạn đã yêu cầu */}
+                        <div className="font-bold">{booking.labName}</div>
+                        <div>{booking.className}</div>
+                    </CardContent>
+                </Card>
+            );
+        } else {
+            return <div className="border p-2 min-h-[80px]" />;
+        }
     };
 
     if (loading) return <ScheduleSkeleton />;
@@ -162,6 +210,5 @@ export default function LecturerSchedule() {
                 </TabsContent>
             </Tabs>
         </div>
-
     );
 }

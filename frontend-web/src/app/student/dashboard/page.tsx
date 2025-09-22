@@ -1,106 +1,217 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card"
 import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
-import { Users, Database, AlertTriangle, Activity, TrendingUp, TrendingDown, Eye, Settings } from "lucide-react"
+import { Users, BookOpen, Calendar, Clock, CheckCircle, AlertCircle, Bell, Award, FileText, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { getStudentDashboard } from "@/services/studentDashboardServices" // Import hàm API
 
-export default function AdminDashboard() {
-    // Mock data - trong thực tế sẽ fetch từ API
-    const stats = {
-        totalUsers: 156,
-        activeUsers: 142,
-        totalEquipment: 89,
-        maintenanceAlerts: 7,
-        systemUptime: "99.8%",
-        storageUsed: "67%"
+// Định nghĩa lại interface dữ liệu để có thể có giá trị null
+interface StudentDashboardData {
+    studentInfo: {
+        userId: string
+        studentName: string
+        studentEmail: string
+        totalEnrolledClasses: number
+        totalTeams: number
+    }
+    upcomingSchedules: Array<{
+        scheduleId: number
+        scheduleDate: string
+        scheduleName: string
+        className: string
+        slotName: string
+        slotStartTime: string
+        slotEndTime: string
+        labName: string
+        labTarget: string
+        lecturerName: string
+        subjectName: string
+        daysUntilSchedule: number
+    }>
+    assignments: Array<{
+        gradeId: number
+        labId: number
+        labName: string
+        gradeStatus: string
+        gradeScore: number
+        submittedDate: string
+        gradedDate: string | null
+        teamName: string
+        subjectName: string
+        isOverdue: boolean
+        daysUntilDeadline: number
+    }>
+    gradeSummary: {
+        averageScore: number
+        totalAssignments: number
+        completedAssignments: number
+        pendingAssignments: number
+        overdueAssignments: number
+        completionRate: number
+        highestGradeSubject: string
+        lowestGradeSubject: string
+    }
+    recentIncidents: Array<{
+        reportId: number
+        reportTitle: string
+        reportDescription: string
+        reportCreateDate: string
+        reportStatus: string
+        scheduleName: string
+        scheduleDate: string
+        className: string
+        daysSinceIncident: number
+    }>
+    notifications: {
+        unreadNotifications: number
+        upcomingDeadlines: number
+        pendingActions: number
+        newGrades: number
+    }
+}
+
+export default function StudentDashboardPage() {
+    const [data, setData] = useState<StudentDashboardData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const apiData: StudentDashboardData = await getStudentDashboard();
+                setData(apiData);
+                setError(null);
+            } catch (err) {
+                console.error("Failed to fetch dashboard data:", err);
+                setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, []);
+
+    const studentInfo = data?.studentInfo || {
+        studentName: "Student Name",
+        studentEmail: "student@example.com",
+        totalEnrolledClasses: 0,
+        totalTeams: 0,
+    };
+
+    const gradeSummary = data?.gradeSummary || {
+        averageScore: 0,
+        totalAssignments: 0,
+        completedAssignments: 0,
+        pendingAssignments: 0,
+        overdueAssignments: 0,
+        completionRate: 0,
+        highestGradeSubject: "N/A",
+        lowestGradeSubject: "N/A",
+    };
+
+    const today = new Date().toISOString().split("T")[0];
+    const todaySchedules = (data?.upcomingSchedules || []).filter((schedule) => {
+        const scheduleDate = new Date(schedule.scheduleDate).toISOString().split("T")[0];
+        return scheduleDate === today;
+    });
+
+    const assignments = data?.assignments || [];
+    const recentIncidents = data?.recentIncidents || [];
+    const notifications = data?.notifications || {
+        unreadNotifications: 0,
+        upcomingDeadlines: 0,
+        pendingActions: 0,
+        newGrades: 0,
+    };
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        });
+    };
+
+    const formatTime = (timeString: string) => {
+        return timeString.substring(0, 5);
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+                <p className="ml-2 text-lg text-gray-600">Đang tải dữ liệu...</p>
+            </div>
+        );
     }
 
-    const recentActivities = [
-        {
-            id: 1,
-            user: "Dr. Nguyen Van A",
-            action: "Created new class",
-            time: "2 minutes ago",
-            type: "create"
-        },
-        {
-            id: 2,
-            user: "Lecturer Tran Thi B",
-            action: "Updated equipment status",
-            time: "15 minutes ago",
-            type: "update"
-        },
-        {
-            id: 3,
-            user: "System",
-            action: "Backup completed successfully",
-            time: "1 hour ago",
-            type: "system"
-        },
-        {
-            id: 4,
-            user: "Dr. Le Van C",
-            action: "Submitted maintenance request",
-            time: "2 hours ago",
-            type: "maintenance"
-        }
-    ]
-
-    const systemAlerts = [
-        {
-            id: 1,
-            message: "Server disk usage is above 80%",
-            severity: "warning",
-            time: "30 minutes ago"
-        },
-        {
-            id: 2,
-            message: "Equipment #EQ-001 requires maintenance",
-            severity: "error",
-            time: "1 hour ago"
-        },
-        {
-            id: 3,
-            message: "New user registration pending approval",
-            severity: "info",
-            time: "2 hours ago"
-        }
-    ]
+    if (error) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <AlertCircle className="h-10 w-10 text-red-500" />
+                <p className="ml-2 text-lg text-red-600">{error}</p>
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Student Dashboard</h1>
-                    <p className="text-muted-foreground">
-                        System overview and management tools
-                    </p>
-                </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" asChild>
-                        <Link href="/admin/dashboard/settings">
-                            <Settings className="h-4 w-4 mr-2" />
-                            Settings
-                        </Link>
-                    </Button>
-                </div>
-            </div>
-
-            {/* Stats Cards */}
+        <div className="space-y-6 p-6">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">Lớp học</CardTitle>
+                        <BookOpen className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalUsers}</div>
+                        <div className="text-2xl font-bold">{studentInfo.totalEnrolledClasses}</div>
+                        <p className="text-xs text-muted-foreground">Lớp đã đăng ký</p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Điểm trung bình</CardTitle>
+                        <Award className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{gradeSummary.averageScore.toFixed(2)}</div>
+                        <p className="text-xs text-muted-foreground">
+                            <span
+                                className={
+                                    gradeSummary.averageScore >= 8
+                                        ? "text-green-600"
+                                        : gradeSummary.averageScore >= 6.5
+                                            ? "text-yellow-600"
+                                            : "text-red-600"
+                                }
+                            >
+                                {gradeSummary.averageScore >= 8
+                                    ? "Xuất sắc"
+                                    : gradeSummary.averageScore >= 6.5
+                                        ? "Khá"
+                                        : "Cần cải thiện"}
+                            </span>
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Bài tập</CardTitle>
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            {gradeSummary.completedAssignments}/{gradeSummary.totalAssignments}
+                        </div>
                         <p className="text-xs text-muted-foreground">
                             <span className="text-green-600 flex items-center">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                +12% from last month
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Đã hoàn thành
                             </span>
                         </p>
                     </CardContent>
@@ -108,190 +219,146 @@ export default function AdminDashboard() {
 
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-                        <Activity className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">Thông báo</CardTitle>
+                        <Bell className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.activeUsers}</div>
+                        <div className="text-2xl font-bold">{notifications.unreadNotifications}</div>
                         <p className="text-xs text-muted-foreground">
-                            <span className="text-green-600 flex items-center">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                +8% from last week
-                            </span>
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Equipment</CardTitle>
-                        <Database className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalEquipment}</div>
-                        <p className="text-xs text-muted-foreground">
-                            <span className="text-red-600 flex items-center">
-                                <TrendingDown className="h-3 w-3 mr-1" />
-                                -2 from maintenance
-                            </span>
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">System Uptime</CardTitle>
-                        <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.systemUptime}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Last 30 days average
+                            {notifications.newGrades > 0 && <span className="text-blue-600">{notifications.newGrades} điểm mới</span>}
                         </p>
                     </CardContent>
                 </Card>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
-                {/* Recent Activities */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Recent Activities</CardTitle>
-                        <CardDescription>
-                            Latest system activities and user actions
-                        </CardDescription>
+                        <CardTitle>Lịch học hôm nay</CardTitle>
+                        <CardDescription>Các buổi học trong ngày hôm nay</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {recentActivities.map((activity) => (
-                                <div key={activity.id} className="flex items-center space-x-4">
+                            {todaySchedules.slice(0, 4).map((schedule) => (
+                                <div key={schedule.scheduleId} className="flex items-center space-x-4">
                                     <div className="flex-shrink-0">
-                                        {activity.type === "create" && (
-                                            <div className="h-2 w-2 bg-green-500 rounded-full" />
-                                        )}
-                                        {activity.type === "update" && (
-                                            <div className="h-2 w-2 bg-blue-500 rounded-full" />
-                                        )}
-                                        {activity.type === "system" && (
-                                            <div className="h-2 w-2 bg-purple-500 rounded-full" />
-                                        )}
-                                        {activity.type === "maintenance" && (
-                                            <div className="h-2 w-2 bg-orange-500 rounded-full" />
-                                        )}
+                                        <div className="h-2 w-2 bg-blue-500 rounded-full" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                            {activity.user}
+                                            {schedule.className} - {schedule.subjectName}
                                         </p>
                                         <p className="text-sm text-muted-foreground">
-                                            {activity.action}
+                                            {schedule.slotName} ({formatTime(schedule.slotStartTime)} - {formatTime(schedule.slotEndTime)})
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {schedule.lecturerName} • {schedule.labName}
                                         </p>
                                     </div>
-                                    <div className="flex-shrink-0 text-xs text-muted-foreground">
-                                        {activity.time}
-                                    </div>
+                                    <div className="flex-shrink-0 text-xs text-muted-foreground">{formatDate(schedule.scheduleDate)}</div>
                                 </div>
                             ))}
-                        </div>
-                        <div className="mt-4">
-                            <Button variant="outline" className="w-full" asChild>
-                                <Link href="/admin/dashboard/activities">
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    View All Activities
-                                </Link>
-                            </Button>
+                            {todaySchedules.length === 0 && (
+                                <p className="text-sm text-muted-foreground text-center py-4">Không có lịch học hôm nay</p>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* System Alerts */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>System Alerts</CardTitle>
-                        <CardDescription>
-                            Important notifications and warnings
-                        </CardDescription>
+                        <CardTitle>Bài tập gần đây</CardTitle>
+                        <CardDescription>Trạng thái các bài tập đã nộp</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {systemAlerts.map((alert) => (
-                                <div key={alert.id} className="flex items-start space-x-4">
+                            {assignments.slice(0, 4).map((assignment) => (
+                                <div key={assignment.gradeId} className="flex items-start space-x-4">
                                     <div className="flex-shrink-0 mt-1">
-                                        {alert.severity === "error" && (
-                                            <AlertTriangle className="h-4 w-4 text-red-500" />
-                                        )}
-                                        {alert.severity === "warning" && (
-                                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                                        )}
-                                        {alert.severity === "info" && (
-                                            <AlertTriangle className="h-4 w-4 text-blue-500" />
-                                        )}
+                                        {assignment.gradeStatus === "Submitted" && <Clock className="h-4 w-4 text-yellow-500" />}
+                                        {assignment.gradeStatus === "Graded" && <CheckCircle className="h-4 w-4 text-green-500" />}
+                                        {assignment.isOverdue && <AlertCircle className="h-4 w-4 text-red-500" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                            {alert.message}
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{assignment.labName}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {assignment.subjectName} • {assignment.teamName}
                                         </p>
                                         <div className="flex items-center gap-2 mt-1">
                                             <Badge
                                                 variant={
-                                                    alert.severity === "error" ? "destructive" :
-                                                        alert.severity === "warning" ? "secondary" : "default"
+                                                    assignment.gradeStatus === "Graded"
+                                                        ? "default"
+                                                        : assignment.gradeStatus === "Submitted"
+                                                            ? "secondary"
+                                                            : "destructive"
                                                 }
                                                 className="text-xs"
                                             >
-                                                {alert.severity.toUpperCase()}
+                                                {assignment.gradeStatus === "Submitted"
+                                                    ? "Đã nộp"
+                                                    : assignment.gradeStatus === "Graded"
+                                                        ? "Đã chấm"
+                                                        : assignment.gradeStatus}
                                             </Badge>
-                                            <span className="text-xs text-muted-foreground">
-                                                {alert.time}
-                                            </span>
+                                            {assignment.gradeStatus === "Graded" && (
+                                                <span className="text-xs font-medium">Điểm: {assignment.gradeScore}</span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                             ))}
-                        </div>
-                        <div className="mt-4">
-                            <Button variant="outline" className="w-full" asChild>
-                                <Link href="/admin/dashboard/alerts">
-                                    <AlertTriangle className="h-4 w-4 mr-2" />
-                                    View All Alerts
-                                </Link>
-                            </Button>
+                            {assignments.length === 0 && (
+                                <p className="text-sm text-muted-foreground text-center py-4">Chưa có bài tập nào</p>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Quick Actions */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
-                    <CardDescription>
-                        Common administrative tasks
-                    </CardDescription>
+                    <CardTitle>Sự cố gần đây</CardTitle>
+                    <CardDescription>Các báo cáo sự cố đã được gửi</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <Button asChild className="h-20 flex-col">
-                            <Link href="/admin/dashboard/users">
-                                <Users className="h-6 w-6 mb-2" />
-                                Manage Users
-                            </Link>
-                        </Button>
-                        <Button asChild variant="outline" className="h-20 flex-col">
-                            <Link href="/admin/dashboard/reports">
-                                <Database className="h-6 w-6 mb-2" />
-                                System Reports
-                            </Link>
-                        </Button>
-                        <Button asChild variant="outline" className="h-20 flex-col">
-                            <Link href="/admin/dashboard/settings">
-                                <Settings className="h-6 w-6 mb-2" />
-                                System Settings
-                            </Link>
-                        </Button>
+                    <div className="space-y-4">
+                        {recentIncidents.map((incident) => (
+                            <div key={incident.reportId} className="flex items-start space-x-4 p-4 border rounded-lg">
+                                <div className="flex-shrink-0 mt-1">
+                                    {incident.reportStatus === "Resolved" ? (
+                                        <CheckCircle className="h-5 w-5 text-green-500" />
+                                    ) : (
+                                        <AlertCircle className="h-5 w-5 text-yellow-500" />
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{incident.reportTitle}</p>
+                                        <Badge variant={incident.reportStatus === "Resolved" ? "default" : "secondary"} className="text-xs">
+                                            {incident.reportStatus === "Resolved" ? "Đã giải quyết" : "Đang xử lý"}
+                                        </Badge>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        {incident.className} • {incident.scheduleName}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Báo cáo ngày: {formatDate(incident.reportCreateDate)} • {incident.daysSinceIncident} ngày trước
+                                    </p>
+                                    {incident.reportDescription && (
+                                        <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                                            {incident.reportDescription.split("\n")[0]}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        {recentIncidents.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">Không có sự cố nào được báo cáo</p>
+                        )}
                     </div>
                 </CardContent>
             </Card>
         </div>
-    )
-} 
+    );
+}

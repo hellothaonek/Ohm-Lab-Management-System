@@ -160,6 +160,17 @@ const handleErrorByNotification = (errors: AxiosError<ErrorResponse>) => {
         }
         return Promise.reject(data?.errors ?? { message });
     }
+
+    // Kiểm tra lỗi 409 - Duplicate
+    else if (errors.response?.status === 409) {
+        notification.error({
+            message: "Error",
+            description: "Duplicate booked",
+            duration: 5,
+        });
+        return Promise.reject(data?.errors ?? { message });
+    }
+
     // Kiểm tra nếu message là "Cart null!" hoặc lỗi 404 thì không hiển thị thông báo
     if (message === "Request failed with status code 404") {
         return Promise.reject(data?.errors ?? { message });

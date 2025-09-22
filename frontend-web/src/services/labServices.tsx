@@ -43,7 +43,7 @@ export const getLabBySubjectId = async (subjectId: string) => {
     return response.data;
 };
 
-export const getLabByClassById = async (classId: string) => {
+export const getLabByClassById = async (classId: number) => {
     const response = await defaultAxiosInstance.get(`/api/labs/class/${classId}`);
     return response.data;
 };

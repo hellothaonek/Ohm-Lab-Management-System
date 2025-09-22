@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, BookOpen, Loader2, EllipsisVertical, CalendarPlus, UsersRound, UserPen, Trash2, Edit } from "lucide-react"
+import { Search, BookOpen, Loader2, EllipsisVertical, CalendarPlus, UsersRound, UserPen, Trash2, Edit, Filter } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -140,7 +140,7 @@ export default function HeadClassesPage() {
         <Card>
             <CardContent className="p-0">
                 <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-blue-100">
                         <TableRow>
                             <TableHead>Class Name</TableHead>
                             <TableHead>Subject</TableHead>
@@ -272,7 +272,8 @@ export default function HeadClassesPage() {
                     </div>
 
                     <Select value={selectedSemester} onValueChange={setSelectedSemester}>
-                        <SelectTrigger className="w-64">
+                        <SelectTrigger className="w-40">
+                            <Filter className="h-4 w-4" />
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -286,6 +287,7 @@ export default function HeadClassesPage() {
 
                     <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                         <SelectTrigger className="w-40">
+                            <Filter className="h-4 w-4" />
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

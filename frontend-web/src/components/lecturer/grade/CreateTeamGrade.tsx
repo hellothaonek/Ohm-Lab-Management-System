@@ -27,7 +27,7 @@ interface Team {
 interface CreateTeamGradeProps {
     labId: string
     classId: string
-    teams?: Team[] // Make teams prop optional since we'll fetch pending teams
+    teams?: Team[]
     onGradeSubmitted: () => void
 }
 
@@ -36,19 +36,18 @@ export default function CreateTeamGrade({ labId, classId, teams = [], onGradeSub
     const [grade, setGrade] = useState("")
     const [comment, setComment] = useState("")
     const [selectedTeamId, setSelectedTeamId] = useState("")
-    const [pendingTeams, setPendingTeams] = useState<Team[]>(teams) // Initialize with prop teams
+    const [pendingTeams, setPendingTeams] = useState<Team[]>(teams)
     const { toast } = useToast()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isLoadingTeams, setIsLoadingTeams] = useState(false)
 
-    // Fetch pending teams when dialog opens
     useEffect(() => {
         if (open) {
             const fetchPendingTeams = async () => {
                 setIsLoadingTeams(true)
                 try {
                     const response = await getPendingTeams(labId)
-                    setPendingTeams(response) // Assuming response is an array of { teamId, teamName }
+                    setPendingTeams(response)
                 } catch (error) {
                     console.error("Error fetching pending teams:", error)
                     toast({
@@ -68,26 +67,31 @@ export default function CreateTeamGrade({ labId, classId, teams = [], onGradeSub
         e.preventDefault()
         setIsSubmitting(true)
 
+        const gradeValue = parseFloat(grade)
+
+        // Centralized validation checks
+        if (!selectedTeamId) {
+            toast({
+                title: "Team Not Selected",
+                description: "Please select a team before submitting.",
+                variant: "destructive",
+            })
+            setIsSubmitting(false)
+            return
+        }
+
+        if (isNaN(gradeValue) || gradeValue < 0 || gradeValue > 100) {
+            toast({
+                title: "Invalid Grade",
+                description: "Please enter a valid grade between 0 and 100.",
+                variant: "destructive",
+            })
+            setIsSubmitting(false)
+            return
+        }
+
+
         try {
-            const gradeValue = parseFloat(grade)
-            if (isNaN(gradeValue) || gradeValue < 0 || gradeValue > 100) {
-                toast({
-                    title: "Invalid Grade",
-                    description: "Please enter a valid grade between 0 and 100",
-                    variant: "destructive",
-                })
-                return
-            }
-
-            if (!selectedTeamId) {
-                toast({
-                    title: "Team Not Selected",
-                    description: "Please select a team before submitting",
-                    variant: "destructive",
-                })
-                return
-            }
-
             await createTeamGrade(labId, selectedTeamId, {
                 grade: gradeValue,
                 classId: parseInt(classId),
@@ -104,13 +108,15 @@ export default function CreateTeamGrade({ labId, classId, teams = [], onGradeSub
             console.error("Error submitting grade:", error)
             toast({
                 title: "Error",
-                description: "Failed to submit grade",
+                description: "Failed to submit grade.",
                 variant: "destructive",
             })
         } finally {
             setIsSubmitting(false)
         }
     }
+
+    const isFormValid = selectedTeamId && !isNaN(parseFloat(grade)) && parseFloat(grade) >= 0 && parseFloat(grade) <= 100 && comment.trim() !== "";
 
     return (
         <Dialog open={open} onOpenChange={(open) => {
@@ -131,7 +137,7 @@ export default function CreateTeamGrade({ labId, classId, teams = [], onGradeSub
                 <DialogHeader>
                     <DialogTitle>Grade Team Lab</DialogTitle>
                     <DialogDescription>
-                        Select a team and enter the grade and comments for their lab submission.
+                        Select a team and enter the grade and comments for their lab submission. All fields are required.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
@@ -191,6 +197,7 @@ export default function CreateTeamGrade({ labId, classId, teams = [], onGradeSub
                                 onChange={(e) => setComment(e.target.value)}
                                 className="col-span-3"
                                 placeholder="Enter comments"
+                                required
                             />
                         </div>
                     </div>
@@ -198,7 +205,7 @@ export default function CreateTeamGrade({ labId, classId, teams = [], onGradeSub
                         <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting || isLoadingTeams}>
+                        <Button type="submit" disabled={!isFormValid || isSubmitting || isLoadingTeams}>
                             {isSubmitting ? "Submitting..." : "Submit"}
                         </Button>
                     </DialogFooter>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ChevronLeft, Loader2, ClipboardList, Target, Cpu, Package, CalendarPlus, Eye } from "lucide-react"
@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Pagination } from "antd"
 import LabDetail from "@/components/head/lab/LabDetail"
 import GroupTab from "@/components/lecturer/group/GroupTab"
-import GradeTab from "@/components/lecturer/grade/GradeTab"
+import { GradeTab } from "@/components/lecturer/grade/GradeTab"
+// Import the CreateLabBooking component
 import CreateLabBooking from "@/components/lecturer/lab/CreateLabBooking"
 
 interface ClassDetail {
@@ -66,7 +67,9 @@ export default function ClassDetailPage() {
     const [totalItems, setTotalItems] = useState(0)
     const [selectedLabId, setSelectedLabId] = useState<number | null>(null)
     const [openDetail, setOpenDetail] = useState(false)
-    const [openBooking, setOpenBooking] = useState(false)
+    // State for controlling CreateLabBooking dialog
+    const [openBookingDialog, setOpenBookingDialog] = useState(false)
+    const [selectedLabForBooking, setSelectedLabForBooking] = useState<number | null>(null)
 
     useEffect(() => {
         const fetchClassDetail = async () => {
@@ -95,7 +98,7 @@ export default function ClassDetailPage() {
 
         const fetchGroups = async () => {
             try {
-                // Replace with actual group fetching logic, e.g., getGroupsByClassId(classId)
+                // Replace with actual group fetching logic
                 setGroups([])
             } catch (err) {
                 console.error("Error fetching groups:", err)
@@ -147,6 +150,11 @@ export default function ClassDetailPage() {
         setPageSize(pageSize || 6)
     }
 
+    // Handle booking creation success
+    const handleBookingCreated = () => {
+        fetchLabs() // Refresh labs after booking creation
+    }
+
     if (loading) {
         return (
             <div className="min-h-screen p-4">
@@ -171,12 +179,6 @@ export default function ClassDetailPage() {
         )
     }
 
-    // Map groups to teams format for GradeTab
-    const teams = groups.map(group => ({
-        teamId: group.groupId,
-        teamName: group.groupName,
-    }))
-
     return (
         <div className="min-h-screen p-4">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -184,7 +186,7 @@ export default function ClassDetailPage() {
                     <TabsTrigger value="students">Student List</TabsTrigger>
                     <TabsTrigger value="groups">Group List</TabsTrigger>
                     <TabsTrigger value="lab">Lab</TabsTrigger>
-                    <TabsTrigger value="grades">Grades</TabsTrigger>
+                    <TabsTrigger value="grades">Grade</TabsTrigger>
                 </TabsList>
                 <TabsContent value="lab">
                     <div className="space-y-6">
@@ -219,8 +221,8 @@ export default function ClassDetailPage() {
                                                             className="w-10 h-10 bg-transparent"
                                                             onClick={(e) => {
                                                                 e.stopPropagation()
-                                                                setSelectedLabId(lab.labId)
-                                                                setOpenBooking(true)
+                                                                setSelectedLabForBooking(lab.labId)
+                                                                setOpenBookingDialog(true)
                                                             }}
                                                         >
                                                             <CalendarPlus className="w-5 h-5 text-red-500" />
@@ -278,10 +280,13 @@ export default function ClassDetailPage() {
                                     </div>
                                     <LabDetail labId={selectedLabId} open={openDetail} onClose={() => setOpenDetail(false)} />
                                     <CreateLabBooking
-                                        labId={selectedLabId}
+                                        labId={selectedLabForBooking}
                                         classId={classDetail.classId}
-                                        open={openBooking}
-                                        onClose={() => setOpenBooking(false)}
+                                        className={classDetail.className}
+                                        labName={labs.find((lab) => lab.labId === selectedLabForBooking)?.labName || null}
+                                        open={openBookingDialog}
+                                        onClose={() => setOpenBookingDialog(false)}
+                                        onBookingCreated={handleBookingCreated}
                                     />
                                     <div className="flex justify-center mt-8">
                                         <Pagination
@@ -305,7 +310,7 @@ export default function ClassDetailPage() {
                 <TabsContent value="students" className="shadow-lg">
                     <CardContent className="p-0">
                         <Table>
-                            <TableHeader className="bg-blue-200">
+                            <TableHeader className="bg-blue-100">
                                 <TableRow>
                                     <TableHead className="text-black font-bold">STT</TableHead>
                                     <TableHead className="text-black font-bold">Student Code</TableHead>

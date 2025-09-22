@@ -8,23 +8,22 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { searchEquipment } from "@/services/equipmentServices"
+import { searchKit } from "@/services/kitServices"
 import { getAllTeams } from "@/services/teamServices"
 import { useAuth } from "@/context/AuthContext"
 import { toast } from "@/components/ui/use-toast"
-import { borrowEquipment } from "@/services/teamEquipmentServices"
+import { borrowTeamKit } from "@/services/teamKitServices"
 
-interface CreateCheckoutProps {
+interface CreateCheckoutKitProps {
     isOpen: boolean
     onClose: () => void
     onSuccess: (checkout: any) => void
 }
 
-interface Equipment {
-    equipmentId: string
-    equipmentName: string
-    equipmentNumberSerial: string
-    equipmentStatus: string
+interface Kit {
+    kitId: string
+    kitName: string
+    kitStatus: string
 }
 
 interface Team {
@@ -33,44 +32,41 @@ interface Team {
     className: string
 }
 
-export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateCheckoutProps) {
+export default function CreateCheckoutKit({ isOpen, onClose, onSuccess }: CreateCheckoutKitProps) {
     const { user } = useAuth()
     const [formData, setFormData] = useState({
-        equipmentName: "",
-        equipmentNumberSerial: "",
+        kitName: "",
         groupName: "",
         borrowingGroupName: "",
         notes: ""
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const [equipmentList, setEquipmentList] = useState<Equipment[]>([])
+    const [kitList, setKitList] = useState<Kit[]>([])
     const [teamList, setTeamList] = useState<Team[]>([])
-    const [isLoadingEquipment, setIsLoadingEquipment] = useState(false)
+    const [isLoadingKits, setIsLoadingKits] = useState(false)
     const [isLoadingTeams, setIsLoadingTeams] = useState(false)
 
     useEffect(() => {
-        const fetchEquipment = async () => {
-            setIsLoadingEquipment(true)
+        const fetchKits = async () => {
+            setIsLoadingKits(true)
             try {
-                const response = await searchEquipment({
+                const response = await searchKit({
                     pageNum: 1,
                     pageSize: 100,
                     keyWord: "",
                     status: ""
                 })
-                const availableEquipment = response.pageData.filter(
-                    (equipment: Equipment) => equipment.equipmentStatus === "Available"
-                )
-                setEquipmentList(availableEquipment)
+                const validKits = response.pageData.filter((kit: Kit) => kit.kitStatus === "Valid")
+                setKitList(validKits)
             } catch (error) {
-                console.error("Error fetching equipment:", error)
+                console.error("Error fetching kits:", error)
                 toast({
                     title: "Lỗi",
-                    description: "Không thể tải danh sách thiết bị",
+                    description: "Không thể tải danh sách bộ thiết bị",
                     variant: "destructive"
                 })
             } finally {
-                setIsLoadingEquipment(false)
+                setIsLoadingKits(false)
             }
         }
 
@@ -93,7 +89,7 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
         }
 
         if (isOpen) {
-            fetchEquipment()
+            fetchKits()
             fetchTeams()
         }
     }, [isOpen])
@@ -104,25 +100,28 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
 
         try {
             const selectedTeam = teamList.find(team => `${team.teamName} - ${team.className}` === formData.groupName)
-            const selectedEquipment = equipmentList.find(equipment => equipment.equipmentName === formData.equipmentName)
+            const selectedKit = kitList.find(kit => kit.kitName === formData.kitName)
 
-
-            const checkoutData = {
-                teamId: selectedTeam!.teamId,
-                equipmentId: selectedEquipment!.equipmentId || selectedEquipment!.equipmentNumberSerial,
-                teamEquipmentName: formData.borrowingGroupName,
-                teamEquipmentDescription: formData.notes
+            if (!selectedTeam || !selectedKit) {
+                throw new Error("Vui lòng chọn nhóm và bộ thiết bị hợp lệ")
             }
 
-            const response = await borrowEquipment(checkoutData)
+            const checkoutData = {
+                teamId: Number(selectedTeam.teamId),
+                kitId: selectedKit.kitId,
+                teamKitName: formData.borrowingGroupName,
+                teamKitDescription: formData.notes
+            }
+
+            const response = await borrowTeamKit(checkoutData)
             onSuccess(response)
             handleClose()
             resetForm()
         } catch (error) {
-            console.error("Error creating checkout:", error)
+            console.error("Error creating kit checkout:", error)
             toast({
                 title: "Lỗi",
-                description: error instanceof Error ? error.message : "Không thể tạo bàn giao thiết bị",
+                description: error instanceof Error ? error.message : "Không thể tạo bàn giao bộ thiết bị",
                 variant: "destructive"
             })
         } finally {
@@ -139,8 +138,7 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
 
     const resetForm = () => {
         setFormData({
-            equipmentName: "",
-            equipmentNumberSerial: "",
+            kitName: "",
             groupName: "",
             borrowingGroupName: "",
             notes: ""
@@ -154,12 +152,10 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
         }))
     }
 
-    const handleEquipmentSelect = (value: string) => {
-        const selectedEquipment = equipmentList.find(equipment => equipment.equipmentName === value)
+    const handleKitSelect = (value: string) => {
         setFormData(prev => ({
             ...prev,
-            equipmentName: value,
-            equipmentNumberSerial: selectedEquipment ? selectedEquipment.equipmentNumberSerial : prev.equipmentNumberSerial
+            kitName: value
         }))
     }
 
@@ -176,49 +172,34 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Package className="h-5 w-5" />
-                        Bàn Giao Thiết Bị
+                        Bàn Giao Bộ Thiết Bị
                     </DialogTitle>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="equipmentName">Tên thiết bị *</Label>
+                                <Label htmlFor="kitName">Tên bộ thiết bị *</Label>
                                 <Select
-                                    value={formData.equipmentName}
-                                    onValueChange={handleEquipmentSelect}
-                                    disabled={isLoadingEquipment}
+                                    value={formData.kitName}
+                                    onValueChange={handleKitSelect}
+                                    disabled={isLoadingKits}
                                 >
-                                    <SelectTrigger id="equipmentName">
-                                        <SelectValue placeholder={isLoadingEquipment ? "Đang tải..." : "Chọn tên thiết bị"} />
+                                    <SelectTrigger id="kitName">
+                                        <SelectValue placeholder={isLoadingKits ? "Đang tải..." : "Chọn tên bộ thiết bị"} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {equipmentList.length === 0 && !isLoadingEquipment ? (
-                                            <SelectItem value="no-equipment" disabled>
-                                                No equipment available.
+                                        {kitList.map((kit, index) => (
+                                            <SelectItem
+                                                key={kit.kitId || `kit-${index}`}
+                                                value={kit.kitName}
+                                            >
+                                                {kit.kitName}
                                             </SelectItem>
-                                        ) : (
-                                            equipmentList.map(equipment => (
-                                                <SelectItem key={equipment.equipmentNumberSerial} value={equipment.equipmentName}>
-                                                    {equipment.equipmentName}
-                                                </SelectItem>
-                                            ))
-                                        )}
+                                        ))}
                                     </SelectContent>
                                 </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="equipmentNumberSerial">Number Serial *</Label>
-                                <Input
-                                    id="equipmentNumberSerial"
-                                    value={formData.equipmentNumberSerial}
-                                    onChange={(e) => handleInputChange("equipmentNumberSerial", e.target.value)}
-                                    placeholder="Nhập số seri của thiết bị"
-                                    required
-                                    readOnly
-                                />
                             </div>
                         </div>
                     </div>
@@ -242,7 +223,7 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
                                 </SelectTrigger>
                                 <SelectContent>
                                     {teamList.length === 0 && !isLoadingTeams && (
-                                        <SelectItem value="" disabled>
+                                        <SelectItem value="no-teams" disabled>
                                             Không có nhóm nào
                                         </SelectItem>
                                     )}
@@ -256,12 +237,12 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="borrowingGroupName">Tên nhóm mượn thiết bị *</Label>
+                            <Label htmlFor="borrowingGroupName">Tên nhóm mượn bộ thiết bị *</Label>
                             <Input
                                 id="borrowingGroupName"
                                 value={formData.borrowingGroupName}
                                 onChange={(e) => handleInputChange("borrowingGroupName", e.target.value)}
-                                placeholder="Nhập tên nhóm mượn thiết bị"
+                                placeholder="Nhập tên nhóm mượn bộ thiết bị"
                                 required
                             />
                         </div>
@@ -273,7 +254,7 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
                             id="notes"
                             value={formData.notes}
                             onChange={(e) => handleInputChange("notes", e.target.value)}
-                            placeholder="Nhập ghi chú về việc mượn thiết bị..."
+                            placeholder="Nhập ghi chú về việc mượn bộ thiết bị..."
                             rows={3}
                         />
                     </div>
@@ -291,7 +272,7 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
                         <Button
                             type="submit"
                             className="bg-orange-500 hover:bg-orange-600"
-                            disabled={isSubmitting || !formData.equipmentName || !formData.groupName || !formData.borrowingGroupName}
+                            disabled={isSubmitting}
                         >
                             {isSubmitting ? "Đang tạo..." : "Tạo"}
                         </Button>

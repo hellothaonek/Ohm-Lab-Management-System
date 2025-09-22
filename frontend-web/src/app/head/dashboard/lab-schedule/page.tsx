@@ -4,13 +4,16 @@ import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { FileText, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { FileText, Search, Filter } from "lucide-react"
 import { Pagination } from "antd"
-import { listRegistrationScheduleByTeacherId } from "@/services/registrationScheduleServices"
 import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AcceptBooking } from "@/components/lecturer/lab/AcceptBooking"
+import { RejectBooking } from "@/components/lecturer/lab/RejectBooking"
+import { DeleteBooking } from "@/components/lecturer/lab/DeleteBooking"
+import { searchRegistrationSchedule } from "@/services/registrationScheduleServices"
 
 interface LabBooking {
     registrationScheduleId: number
@@ -18,22 +21,31 @@ interface LabBooking {
     className: string
     registrationScheduleDate: string
     slotName: string
-    registrationScheduleNote: string
+    registrationScheduleNote: string | null
     registrationScheduleStatus: "Accept" | "Pending" | "Reject"
     teacherName: string
     slotStartTime: string
     slotEndTime: string
+    registrationScheduleCreateDate: string
 }
 
-export default function LabBookingTab() {
+interface PageInfo {
+    page: number
+    size: number
+    totalPage: number
+    totalItem: number
+}
+
+export default function RequestLabSchedule() {
     const { user } = useAuth()
     const [bookings, setBookings] = useState<LabBooking[]>([])
     const [filteredBookings, setFilteredBookings] = useState<LabBooking[]>([])
+    const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, size: 10, totalPage: 1, totalItem: 0 })
     const [loading, setLoading] = useState(true)
-    const [statusFilter, setStatusFilter] = useState<string>("all")
-    const [searchTerm, setSearchTerm] = useState("")
+    const [activeTab, setActiveTab] = useState<"Pending" | "Accept" | "Reject">("Pending")
     const [pageNum, setPageNum] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+    const [searchQuery, setSearchQuery] = useState("")
 
     const fetchBookings = async () => {
         const userId = user?.userId
@@ -45,12 +57,17 @@ export default function LabBookingTab() {
 
         setLoading(true)
         try {
-            const response = await listRegistrationScheduleByTeacherId(userId)
+            const response = await searchRegistrationSchedule({
+                pageNum,
+                pageSize,
+                keyWord: "",
+                status: "",
+            })
             if (response) {
-                setBookings(response)
-                setFilteredBookings(response)
+                setBookings(response.pageData)
+                setPageInfo(response.pageInfo)
             } else {
-                toast.error("Failed to fetch lab bookings.")
+                toast.error("Failed to fetch lab booking requests.")
             }
         } catch (error) {
             toast.error("An error occurred while fetching data.")
@@ -61,27 +78,24 @@ export default function LabBookingTab() {
 
     useEffect(() => {
         fetchBookings()
-    }, [user])
+    }, [user, pageNum, pageSize])
 
     useEffect(() => {
-        let filtered = bookings
-
-        if (statusFilter !== "all") {
-            filtered = filtered.filter((booking) => booking.registrationScheduleStatus === statusFilter)
-        }
-
-        if (searchTerm) {
-            filtered = filtered.filter(
-                (booking) =>
-                    booking.labName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    booking.className.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    booking.registrationScheduleNote?.toLowerCase().includes(searchTerm.toLowerCase()),
+        const filtered = bookings
+            .filter(booking => booking.registrationScheduleStatus === activeTab)
+            .filter(booking =>
+                booking.labName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                booking.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                booking.teacherName.toLowerCase().includes(searchQuery.toLowerCase())
             )
-        }
-
         setFilteredBookings(filtered)
+        setPageInfo(prev => ({
+            ...prev,
+            totalItem: filtered.length,
+            totalPage: Math.ceil(filtered.length / pageSize)
+        }))
         setPageNum(1)
-    }, [statusFilter, searchTerm, bookings])
+    }, [activeTab, bookings, pageSize, searchQuery])
 
     const getStatusBadge = (status: LabBooking["registrationScheduleStatus"]) => {
         switch (status) {
@@ -101,42 +115,31 @@ export default function LabBookingTab() {
         setPageSize(pageSize || 10)
     }
 
-    const paginatedBookings = filteredBookings.slice((pageNum - 1) * pageSize, pageNum * pageSize)
-
     return (
         <div className="mt-4">
             <div className="mb-6">
-                <h2 className="text-xl font-bold">Lab Booking History</h2>
-                <p>Track the status of lab booking requests here.</p>
+                <h2 className="text-xl font-bold">Lab Booking Requests</h2>
+                <p>Review and manage lab booking requests as Head of Department.</p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 mb-5">
-                <div className="flex-1">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                            placeholder="Search by lab name, class, or note..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                        />
-                    </div>
-                </div>
-                <div className="flex items-center gap-4 w-full sm:w-auto">
-                    <div className="w-full sm:w-48">
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger>
-                                <Filter className="h-4 w-4" />
-                                <SelectValue placeholder="Filter by status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Status</SelectItem>
-                                <SelectItem value="Pending">Pending</SelectItem>
-                                <SelectItem value="Accept">Accepted</SelectItem>
-                                <SelectItem value="Reject">Rejected</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+            <Tabs defaultValue="Pending" onValueChange={(value) => setActiveTab(value as "Pending" | "Accept" | "Reject")} className="ml-auto mb-5">
+                <TabsList>
+                    <TabsTrigger value="Pending">Pending</TabsTrigger>
+                    <TabsTrigger value="Accept">Accepted</TabsTrigger>
+                    <TabsTrigger value="Reject">Rejected</TabsTrigger>
+                </TabsList>
+            </Tabs>
+
+            <div className="mb-4 flex items-center gap-2">
+                <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                        type="text"
+                        placeholder="Search by lab, class, or teacher..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                    />
                 </div>
             </div>
 
@@ -145,11 +148,11 @@ export default function LabBookingTab() {
                     {loading ? (
                         <div className="p-8 text-center">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                            <p className="mt-2 text-gray-600">Loading bookings...</p>
+                            <p className="mt-2 text-gray-600">Loading booking requests...</p>
                         </div>
                     ) : filteredBookings.length === 0 ? (
                         <div className="p-8 text-center text-gray-500">
-                            <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                            <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                             <p>No booking requests found</p>
                         </div>
                     ) : (
@@ -159,19 +162,25 @@ export default function LabBookingTab() {
                                     <TableRow className="bg-blue-50 dark:bg-blue-900/20">
                                         <TableHead className="font-semibold">Lab</TableHead>
                                         <TableHead className="font-semibold">Class</TableHead>
+                                        <TableHead className="font-semibold">Teacher</TableHead>
                                         <TableHead className="font-semibold">Schedule</TableHead>
+                                        <TableHead className="font-semibold">Created At</TableHead>
                                         <TableHead className="font-semibold">Note</TableHead>
                                         <TableHead className="font-semibold">Status</TableHead>
+                                        <TableHead className="font-semibold">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {paginatedBookings.map((booking) => (
+                                    {filteredBookings.map((booking) => (
                                         <TableRow key={booking.registrationScheduleId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                             <TableCell>
                                                 <p className="font-medium text-gray-900 dark:text-white">{booking.labName}</p>
                                             </TableCell>
                                             <TableCell>
                                                 <p className="text-sm text-gray-500">{booking.className}</p>
+                                            </TableCell>
+                                            <TableCell>
+                                                <p className="text-sm text-gray-500">{booking.teacherName}</p>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2 text-sm">
@@ -182,11 +191,39 @@ export default function LabBookingTab() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
+                                                <p className="text-sm text-gray-500">
+                                                    {new Date(booking.registrationScheduleCreateDate).toLocaleString()}
+                                                </p>
+                                            </TableCell>
+                                            <TableCell>
                                                 <p className="text-sm max-w-xs truncate" title={booking.registrationScheduleNote || ''}>
                                                     {booking.registrationScheduleNote || 'N/A'}
                                                 </p>
                                             </TableCell>
                                             <TableCell>{getStatusBadge(booking.registrationScheduleStatus)}</TableCell>
+                                            <TableCell>
+                                                <div className="flex gap-2">
+                                                    {booking.registrationScheduleStatus === "Pending" && (
+                                                        <>
+                                                            <AcceptBooking
+                                                                registrationScheduleId={booking.registrationScheduleId}
+                                                                registrationScheduleNote={booking.registrationScheduleNote}
+                                                                onAcceptSuccess={fetchBookings}
+                                                            />
+                                                            <RejectBooking
+                                                                registrationScheduleId={booking.registrationScheduleId}
+                                                                onRejectSuccess={fetchBookings}
+                                                            />
+                                                        </>
+                                                    )}
+                                                    {(booking.registrationScheduleStatus === "Accept" || booking.registrationScheduleStatus === "Reject") && (
+                                                        <DeleteBooking
+                                                            registrationScheduleId={booking.registrationScheduleId}
+                                                            onDeleteSuccess={fetchBookings}
+                                                        />
+                                                    )}
+                                                </div>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -201,7 +238,7 @@ export default function LabBookingTab() {
                     <Pagination
                         current={pageNum}
                         pageSize={pageSize}
-                        total={filteredBookings.length}
+                        total={pageInfo.totalItem}
                         showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
                         onChange={handlePaginationChange}
                         showSizeChanger

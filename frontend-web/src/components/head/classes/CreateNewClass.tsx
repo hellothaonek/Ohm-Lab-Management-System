@@ -113,7 +113,8 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
         e.preventDefault()
 
         // Validate form data
-        if (!Object.values(formData).every((value) => value.trim()) || !status) {
+        // No change needed here, this is a good practice for form submission
+        if (!formData.subjectId || !formData.lecturerId || !formData.className || !status) {
             toast({
                 title: "Error",
                 description: "Please fill in all required fields",
@@ -164,6 +165,9 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
             })
         }
     }
+
+    // Check if the form is valid to enable the button
+    const isFormValid = formData.subjectId !== "" && formData.lecturerId !== "" && formData.className.trim() !== ""
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -287,9 +291,9 @@ export default function CreateNewClass({ onCreateClass }: CreateNewClassProps) {
                             <Button
                                 type="submit"
                                 className="bg-orange-500 hover:bg-orange-600"
-                                disabled={subjectsLoading || lecturersLoading || !!subjectsError || !!lecturersError}
+                                disabled={subjectsLoading || lecturersLoading || !!subjectsError || !!lecturersError || !isFormValid}
                             >
-                                Create Class
+                                Create 
                             </Button>
                         </div>
                     </form>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, Users, Calendar, BookOpen, ChevronRight } from "lucide-react"
+import { Search, Users, Calendar, BookOpen, ChevronRight, Filter } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -136,7 +136,8 @@ export default function LecturerClassesPage() {
                     </div>
 
                     <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                        <SelectTrigger className="w-64">
+                        <SelectTrigger className="w-40">
+                            <Filter className="h-4 w-4 mr-2" />
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -150,6 +151,7 @@ export default function LecturerClassesPage() {
 
                     <Select value={selectedSemester} onValueChange={setSelectedSemester}>
                         <SelectTrigger className="w-40">
+                            <Filter className="h-4 w-4 mr-2" />
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

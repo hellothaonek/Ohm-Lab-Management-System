@@ -1,21 +1,26 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Loader2, GraduationCap, ChevronDown, ChevronRight, ClipboardPen, PenLine } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { getLabByClassById } from "@/services/labServices"
-import { getGradeForLabId } from "@/services/gradeServices"
-import { getTeamsByClassId } from "@/services/teamServices" // Assuming this service exists
-import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogTrigger } from "@/components/ui/dialog"
-import CreateTeamGrade from "@/components/lecturer/grade/CreateTeamGrade"
+import { getClassGrades } from "@/services/gradeServices"
+import { GraduationCap } from "lucide-react"
 
-interface Team {
-    teamId: string
+// Type definitions based on the API response
+interface Grade {
+    labId: number
+    grade: number | null
+    gradeStatus: string
+    isTeamGrade: boolean
+    hasIndividualGrade: boolean
+}
+
+interface Student {
+    studentId: string
+    studentName: string
+    studentEmail: string
+    teamId: string | null
     teamName: string
+    grades: Grade[]
 }
 
 interface Lab {
@@ -23,287 +28,119 @@ interface Lab {
     labName: string
 }
 
-interface Member {
-    studentId: string
-    studentName: string
-    individualGrade: number
-    individualComment: string
-}
-
-interface TeamGradeData {
-    teamId: string // Changed to string to match CreateTeamGrade
-    teamName: string
-    labId: number
-    labName: string
-    teamGrade: number
-    teamComment: string
-    members: Member[]
-    gradedDate: string
-    gradeStatus: "Graded" | "Not Graded"
+interface GradeData {
+    classId: number
+    className: string
+    labs: Lab[]
+    students: Student[]
 }
 
 interface GradeTabProps {
     classId: string
 }
 
-export default function GradeTab({ classId }: GradeTabProps) {
-    const [gradesData, setGradesData] = useState<{ [key: string]: TeamGradeData }>({})
-    const [labs, setLabs] = useState<Lab[]>([])
-    const [teams, setTeams] = useState<Team[]>([])
+export function GradeTab({ classId }: GradeTabProps) {
+    const [gradeData, setGradeData] = useState<GradeData | null>(null)
     const [loading, setLoading] = useState(true)
-    const [expandedLabs, setExpandedLabs] = useState<Set<number>>(new Set())
-    const [openGradeDialog, setOpenGradeDialog] = useState(false)
-    const [selectedLabId, setSelectedLabId] = useState<number | null>(null)
-    const { toast } = useToast()
-
-    const fetchLabsAndGrades = async () => {
-        try {
-            // Fetch labs
-            const labResult = await getLabByClassById(classId)
-            console.log("GradeTab Labs:", labResult)
-            if (labResult) {
-                const fetchedLabs = labResult.pageData.map((lab: any) => ({
-                    labId: lab.labId,
-                    labName: lab.labName,
-                }))
-                setLabs(fetchedLabs)
-
-                // Fetch teams
-                try {
-                    const teamResult = await getTeamsByClassId(classId)
-                    console.log("GradeTab Teams:", teamResult)
-                    const fetchedTeams = teamResult ? teamResult.map((team: any) => ({
-                        teamId: team.teamId.toString(), // Ensure teamId is string
-                        teamName: team.teamName,
-                    })) : []
-                    setTeams(fetchedTeams)
-                } catch (error) {
-                    console.log("Error fetching teams:", error)
-                    toast({
-                        title: "Warning",
-                        description: "Failed to load teams, grading may be limited",
-                        variant: "destructive",
-                    })
-                    setTeams([])
-                }
-
-                // Fetch grades for each lab
-                const gradesPromises = fetchedLabs.map(async (lab: Lab) => {
-                    try {
-                        const gradeResult = await getGradeForLabId(lab.labId.toString())
-                        console.log(`GradeTab Grades for Lab ${lab.labId}:`, JSON.stringify(gradeResult, null, 2))
-                        if (gradeResult) {
-                            return gradeResult.map((grade: any) => ({
-                                teamId: grade.teamId.toString(), // Ensure teamId is string
-                                teamName: grade.teamName,
-                                labId: lab.labId,
-                                labName: lab.labName,
-                                teamGrade: grade.teamGrade || 0,
-                                teamComment: grade.teamComment || "",
-                                members: grade.members || [],
-                                gradedDate: grade.gradedDate || new Date().toISOString(),
-                                gradeStatus: grade.teamGrade !== undefined ? "Graded" : "Not Graded",
-                            }))
-                        }
-                        return []
-                    } catch (error) {
-                        console.log(`Error fetching grades for lab ${lab.labId}:`, error)
-                        return []
-                    }
-                })
-
-                const gradesArrays = await Promise.all(gradesPromises)
-                const allGrades = gradesArrays.flat()
-                const newGradesData: { [key: string]: TeamGradeData } = {}
-                allGrades.forEach((grade: TeamGradeData) => {
-                    const key = `${grade.teamId}-${grade.labId}`
-                    newGradesData[key] = grade
-                })
-                setGradesData(newGradesData)
-            } else {
-                throw new Error("Failed to fetch labs")
-            }
-        } catch (error) {
-            console.log("[v0] Error fetching labs, teams, or grades:", error)
-            toast({
-                title: "Error",
-                description: "Failed to load labs, teams, or grades",
-                variant: "destructive",
-            })
-        } finally {
-            setLoading(false)
-        }
-    }
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        fetchLabsAndGrades()
+        const fetchGrades = async () => {
+            try {
+                setLoading(true)
+                setError(null)
+                const data = await getClassGrades(classId)
+                setGradeData(data)
+            } catch (err) {
+                setError("Failed to fetch grades")
+                console.error("Error fetching grades:", err)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        if (classId) {
+            fetchGrades()
+        }
     }, [classId])
 
-    const toggleLabExpansion = (labId: number) => {
-        setExpandedLabs((prev) => {
-            const newSet = new Set(prev)
-            if (newSet.has(labId)) {
-                newSet.delete(labId)
-            } else {
-                newSet.add(labId)
-            }
-            return newSet
-        })
+    // Helper function to get grade for a specific student and lab
+    const getGradeForStudentLab = (student: Student, labId: number): Grade | undefined => {
+        return student.grades.find((grade) => grade.labId === labId)
     }
 
-    const handleGradeForLab = (labId: number) => {
-        if (teams.length === 0) {
-            toast({
-                title: "No Teams Available",
-                description: "Cannot grade because no teams are available for this class",
-                variant: "destructive",
-            })
-            return
+    // Helper function to render grade cell
+    const renderGradeCell = (grade: Grade | undefined) => {
+        if (!grade || grade.grade === null) {
+            return <span className="text-muted-foreground">-</span>
         }
-        setSelectedLabId(labId)
-        setOpenGradeDialog(true)
-    }
 
-    const handleGradeSubmitted = () => {
-        setOpenGradeDialog(false)
-        setSelectedLabId(null)
-        fetchLabsAndGrades() // Refresh grades data after submission
-    }
-
-    if (loading) {
         return (
-            <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-secondary mx-auto mb-4" />
-                    <p className="text-muted-foreground">Loading grades...</p>
-                </div>
+            <div className="flex flex-col items-center gap-1">
+                <span className="font-mono">{grade.grade}</span>
             </div>
         )
     }
 
-    if (!labs.length) {
+    if (loading) {
+        return <div className="text-center p-4">Loading grades...</div>
+    }
+
+    if (error || !gradeData) {
         return (
-            <Card>
-                <CardContent className="p-8 text-center">
-                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                        <GraduationCap className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-card-foreground mb-2">No Data Available</h3>
-                    <p className="text-muted-foreground">No labs available</p>
-                </CardContent>
-            </Card>
+            <div className="text-center p-4">
+                <GraduationCap className="h-8 w-8 mx-auto mb-2" />
+                {error || "No grade data available"}
+            </div>
         )
     }
 
+    const { className, labs, students } = gradeData
+
     return (
-        <div className="space-y-6">
-            {labs.map((lab) => {
-                const isExpanded = expandedLabs.has(lab.labId)
-                const labGrades = Object.values(gradesData).filter((grade) => grade.labId === lab.labId)
-                const gradedCount = labGrades.filter((grade) => grade.gradeStatus === "Graded").length
-                const totalTeams = labGrades.length
-
-                return (
-                    <div key={lab.labId}>
-                        <CardContent className="p-0">
-                            <div className="flex items-center justify-between p-6 bg-card border-b border-border bg-secondary">
-                                <div className="flex items-center gap-4">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => toggleLabExpansion(lab.labId)}
-                                        className="p-2 h-auto rounded-full hover:bg-accent/10 transition-colors"
-                                    >
-                                        {isExpanded ? (
-                                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                                        ) : (
-                                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                                        )}
-                                    </Button>
-
-                                    <div className="flex items-center gap-3">
-                                        <div>
-                                            <h3 className="text-xl font-bold text-card-foreground">{lab.labName}</h3>
-                                            <p className="text-sm text-muted-foreground mt-1">Lab Assignment Grades</p>
-                                        </div>
+        <div className="w-full">
+            <div className="overflow-x-auto border rounded-lg">
+                <Table>
+                    <TableHeader className="bg-blue-100">
+                        <TableRow>
+                            <TableHead className="text-center sticky left-0 z-10 min-w-[60px] bg-blue-100 border-r">STT</TableHead>
+                            <TableHead className="text-left sticky left-[60px] z-10 min-w-[200px] bg-blue-100 border-r">
+                                Student Name
+                            </TableHead>
+                            {labs.map((lab) => (
+                                <TableHead key={lab.labId} className="text-center min-w-[120px]">
+                                    <div className="flex flex-col gap-1">
+                                        {/* <span className="font-mono text-sm">Lab {lab.labId}</span> */}
+                                        <span className="text-xs text-muted-foreground font-normal text-pretty">{lab.labName}</span>
                                     </div>
-
-                                    <Badge variant="secondary" className="ml-2 bg-green-500">
-                                        {gradedCount} graded
-                                    </Badge>
-                                </div>
-
-                                <Dialog open={openGradeDialog && selectedLabId === lab.labId} onOpenChange={(open) => {
-                                    setOpenGradeDialog(open)
-                                    if (!open) setSelectedLabId(null)
-                                }}>
-                                    <CreateTeamGrade
-                                        labId={lab.labId.toString()}
-                                        classId={classId}
-                                        teams={teams}
-                                        onGradeSubmitted={handleGradeSubmitted}
-                                    />
-                                </Dialog>
-                            </div>
-                            {isExpanded && (
-                                <div className="p-6 bg-background">
-                                    <div className="rounded-md border overflow-x-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow className="bg-muted/50">
-                                                    <TableHead className="font-semibold">STT</TableHead>
-                                                    <TableHead className="font-semibold">Team Name</TableHead>
-                                                    <TableHead className="font-semibold text-center">Grade</TableHead>
-                                                    <TableHead className="font-semibold text-center">Comment</TableHead>
-                                                    <TableHead className="font-semibold text-center">Status</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {labGrades.length > 0 ? (
-                                                    labGrades.map((grade, index) => (
-                                                        <TableRow key={`${grade.teamId}-${grade.labId}`}>
-                                                            <TableCell className="font-medium">{index + 1}</TableCell>
-                                                            <TableCell className="font-medium">{grade.teamName}</TableCell>
-                                                            <TableCell className="text-center">{grade.teamGrade}</TableCell>
-                                                            <TableCell className="text-center">
-                                                                <span className="text-sm text-muted-foreground truncate block">
-                                                                    {grade.teamComment}
-                                                                </span>
-                                                            </TableCell>
-                                                            <TableCell className="text-center">
-                                                                <Badge
-                                                                    variant={
-                                                                        grade.gradeStatus === "Graded"
-                                                                            ? "default"
-                                                                            : "destructive"
-                                                                    }
-                                                                >
-                                                                    {grade.gradeStatus}
-                                                                </Badge>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))
-                                                ) : (
-                                                    <TableRow>
-                                                        <TableCell colSpan={5} className="text-center">
-                                                            <div className="flex flex-col items-center justify-center h-full">
-                                                                <div className="w-12 h-12 rounded-full border-2 border-muted flex items-center justify-center mb-2">
-                                                                    <ClipboardPen className="h-6 w-6 text-muted-foreground" />
-                                                                </div>
-                                                                <span className="text-muted-foreground">No grades available for this lab</span>
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                            </TableBody>
-                                        </Table>
+                                </TableHead>
+                            ))}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {students.map((student, index) => (
+                            <TableRow key={student.studentId}>
+                                <TableCell className="text-center sticky left-0 bg-background border-r font-medium">
+                                    {index + 1}
+                                </TableCell>
+                                <TableCell className="sticky left-[60px] bg-background border-r">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="font-medium">{student.studentName}</span>
+                                        {/* {student.teamName !== "Chưa có team" && (
+                                            <span className="text-xs w-fit">{student.teamName}</span>
+                                        )} */}
                                     </div>
-                                </div>
-                            )}
-                        </CardContent>
-                    </div>
-                )
-            })}
+                                </TableCell>
+                                {labs.map((lab) => (
+                                    <TableCell key={lab.labId} className="text-center">
+                                        {renderGradeCell(getGradeForStudentLab(student, lab.labId))}
+                                    </TableCell>
+                                ))}
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
         </div>
     )
 }

@@ -36,3 +36,13 @@ export const getAllGrades = async (labId: string) => {
     const response = await axiosWithoutLoading.get(`/api/grade/labs/${labId}/all-grades`);
     return response.data;
 };
+
+export const getStudentGradeLabs = async (studentId: string) => {
+    const response = await axiosWithoutLoading.get(`/api/grade/students/${studentId}/labs`);
+    return response.data;
+};
+
+export const getClassGrades = async (classId: string) => {
+    const response = await axiosWithoutLoading.get(`/api/grade/classes/${classId}/grades`);
+    return response.data;
+};

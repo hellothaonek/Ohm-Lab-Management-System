@@ -19,6 +19,7 @@ import {
   BookText,
   Package,
   DoorOpen,
+  CalendarClock,
 } from "lucide-react"
 import {
   Sidebar,
@@ -109,7 +110,7 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
       title: "Kit",
       href: `/${role}/dashboard/kit`,
       icon: Package,
-      roles: ["head"],
+      roles: ["head", "lecturer"],
     },
     {
       title: "Courses",
@@ -134,6 +135,12 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
       href: `/${role}/dashboard/users`,
       icon: Users,
       roles: ["admin"],
+    },
+    {
+      title: "Request Lab Schedule",
+      href: `/${role}/dashboard/lab-schedule`,
+      icon: CalendarClock,
+      roles: ["head"],
     },
   ]
 
