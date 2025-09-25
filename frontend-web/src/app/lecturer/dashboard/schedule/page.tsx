@@ -10,6 +10,8 @@ import { ScheduleSkeleton } from "@/components/loading-skeleton";
 import { getScheduleByLectureId } from "@/services/scheduleServices";
 import { listRegistrationScheduleByTeacherId } from "@/services/registrationScheduleServices";
 import LabBookingTab from "@/components/lecturer/schedule/LabBookingTab";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "react-toastify";
 
 const slots = [
     "7:00 - 9:15",
@@ -41,6 +43,7 @@ interface LabBookingItem {
 }
 
 export default function LecturerSchedule() {
+    const { user } = useAuth()
     const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
     const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
     const [labBookings, setLabBookings] = useState<LabBookingItem[]>([]);
@@ -49,6 +52,12 @@ export default function LecturerSchedule() {
 
     useEffect(() => {
         const fetchAllSchedules = async () => {
+            const userId = user?.userId
+            if (!userId) {
+                setLoading(false)
+                toast.error("User ID not found. Please log in again.")
+                return
+            }
             try {
                 setLoading(true);
                 const user = await getCurrentUser();
@@ -118,28 +127,24 @@ export default function LecturerSchedule() {
             format(new Date(l.scheduleDate), "yyyy-MM-dd") === date && l.slotId === slotIndex + 1
         );
 
-        // Find a lab booking for this slot
-        // Thêm kiểm tra b.slotId === slotIndex + 1 để khớp với API (1-based index)
         const booking = labBookings.find((b) =>
             format(new Date(b.registrationScheduleDate), "yyyy-MM-dd") === date && b.slotId === slotIndex + 1
         );
 
-        // Render the appropriate card
         if (lesson) {
             return (
                 <Card className="bg-blue-100 h-full">
                     <CardContent className="p-2 text-sm">
-                        <div className="font-bold">{lesson.subjectName}</div>
+                        <div className="font-bold truncate">{lesson.subjectName}</div>
                         <div>{lesson.className}</div>
                     </CardContent>
                 </Card>
             );
         } else if (booking) {
             return (
-                <Card className="bg-green-100 h-full">
+                <Card className="bg-orange-100 h-full">
                     <CardContent className="p-2 text-sm">
-                        {/* Hiển thị labName và className như bạn đã yêu cầu */}
-                        <div className="font-bold">{booking.labName}</div>
+                        <div className="font-bold truncate">{booking.labName}</div>
                         <div>{booking.className}</div>
                     </CardContent>
                 </Card>
@@ -155,16 +160,15 @@ export default function LecturerSchedule() {
 
     return (
         <div className="p-4">
+            <div className="mt-2">
+                <h1 className="text-2xl font-bold mb-5">Schedule Management</h1>
+            </div>
             <Tabs defaultValue="schedule" className="w-full">
                 <TabsList className="grid w-1/2 grid-cols-2">
                     <TabsTrigger value="schedule">Schedule</TabsTrigger>
                     <TabsTrigger value="lab-booking">Lab Booking</TabsTrigger>
                 </TabsList>
                 <TabsContent value="schedule">
-                    <div className="mt-4">
-                        <h2 className="text-xl font-bold">Schedule</h2>
-                        <p>Lecturers view teaching schedule here.</p>
-                    </div>
                     <div className="space-y-4 mt-4">
                         <div className="flex items-center gap-4">
                             <Select onValueChange={handleWeekChange}>

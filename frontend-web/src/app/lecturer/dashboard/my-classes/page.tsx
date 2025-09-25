@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { getCurrentUser } from "@/services/userServices"
 import { getClassByLecturerId } from "@/services/classServices"
 import Link from "next/link"
+import { useAuth } from "@/context/AuthContext"
+import { toast } from "react-toastify"
 
 interface ClassUser {
     classUserId: number
@@ -42,6 +44,7 @@ interface Class {
 }
 
 export default function LecturerClassesPage() {
+    const { user } = useAuth()
     const [searchTerm, setSearchTerm] = useState("")
     const [selectedSubject, setSelectedSubject] = useState("all")
     const [selectedSemester, setSelectedSemester] = useState("all")
@@ -75,9 +78,14 @@ export default function LecturerClassesPage() {
 
     useEffect(() => {
         const fetchClasses = async () => {
+            const userId = user?.userId
+            if (!userId) {
+                setLoading(false)
+                toast.error("User ID not found. Please log in again.")
+                return
+            }
             try {
                 setLoading(true)
-                const user = await getCurrentUser()
                 const lecturerId = user.userId
                 const classesData = await getClassByLecturerId(lecturerId)
                 const activeClasses = classesData.filter((classItem: Class) => classItem.classStatus === "Active")

@@ -105,11 +105,6 @@ export default function LabBookingTab() {
 
     return (
         <div className="mt-4">
-            <div className="mb-6">
-                <h2 className="text-xl font-bold">Lab Booking History</h2>
-                <p>Track the status of lab booking requests here.</p>
-            </div>
-
             <div className="flex flex-col sm:flex-row gap-4 mb-5">
                 <div className="flex-1">
                     <div className="relative">

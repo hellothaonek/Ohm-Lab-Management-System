@@ -55,3 +55,8 @@ export const listSlotEmptyByDate = async (date: string) => {
     const response = await defaultAxiosInstance.post(`/api/registrationschedule/listslotemptybydate/${date}`);
     return response.data;
 };
+
+export const getRegistrationScheduleByStudentId = async (studentId: string) => {
+    const response = await axiosWithoutLoading.get(`/api/registrationschedule/student/${studentId}`);
+    return response.data;
+};

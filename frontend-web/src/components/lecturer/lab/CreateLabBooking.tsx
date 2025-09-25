@@ -65,14 +65,14 @@ export default function CreateLabBooking({ labId, classId, className, labName, o
     }, [formData.registrationScheduleDate])
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+        e.preventDefault();
         if (!user?.userId) {
-            toast.error("User ID not found. Please log in again.")
-            return
+            toast.error("User ID not found. Please log in again.");
+            return;
         }
         if (!formData.labId || !formData.classId || !formData.slotId || !formData.registrationScheduleDate) {
-            toast.error("Please fill in all required fields.")
-            return
+            toast.error("Please fill in all required fields.");
+            return;
         }
 
         try {
@@ -84,8 +84,9 @@ export default function CreateLabBooking({ labId, classId, className, labName, o
                 slotId: parseInt(formData.slotId),
                 registrationScheduleDate: formData.registrationScheduleDate,
                 registrationScheduleDescription: formData.registrationScheduleDescription,
-            })
-            onClose()
+            });
+
+            onClose();
             setFormData({
                 registrationScheduleName: "",
                 classId: classId.toString(),
@@ -93,13 +94,16 @@ export default function CreateLabBooking({ labId, classId, className, labName, o
                 slotId: "",
                 registrationScheduleDate: "",
                 registrationScheduleDescription: "",
-            })
-            if (onBookingCreated) onBookingCreated()
-            toast.success("Lab booking created successfully.")
+            });
+            if (onBookingCreated) {
+                onBookingCreated();
+            }
+
         } catch (error) {
-            toast.error("Failed to create lab booking.")
+            console.error("Error during booking creation:", error);
+            toast.error("Failed to create lab booking. An unexpected error occurred.");
         }
-    }
+    };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target

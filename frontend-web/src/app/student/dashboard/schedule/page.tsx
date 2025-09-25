@@ -8,6 +8,8 @@ import { getCurrentUser } from "@/services/userServices";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScheduleSkeleton } from "@/components/loading-skeleton";
 import { getScheduleByStudentId } from "@/services/scheduleServices";
+import { getRegistrationScheduleByStudentId } from "@/services/registrationScheduleServices";
+import { useAuth } from "@/context/AuthContext";
 
 const slots = [
     "7:00 - 9:15",
@@ -29,35 +31,60 @@ interface ScheduleItem {
     slotEndTime: string;
 }
 
+interface LabScheduleItem {
+    registrationScheduleId: number;
+    registrationScheduleName: string;
+    teacherId: string;
+    teacherName: string;
+    teacherRollNumber: string;
+    classId: number;
+    className: string;
+    labId: number;
+    labName: string;
+    slotId: number;
+    slotName: string;
+    slotStartTime: string;
+    slotEndTime: string;
+    registrationScheduleDate: string;
+    registrationScheduleCreateDate: string;
+    registrationScheduleDescription: string;
+    registrationScheduleNote: string;
+    registrationScheduleStatus: string;
+}
+
 export default function StudentSchedule() {
+    const { user } = useAuth()
     const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
     const [weeks, setWeeks] = useState<{ value: string; label: string }[]>([]);
     const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
+    const [labSchedule, setLabSchedule] = useState<LabScheduleItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch data only once on mount
     useEffect(() => {
-        const fetchSchedule = async () => {
+        const fetchSchedules = async () => {
             try {
                 setLoading(true);
-                const user = await getCurrentUser();
-                const lecturerId = user.userId;
-                if (lecturerId) {
-                    const scheduleData = await getScheduleByStudentId(lecturerId);
+                const studentId = user?.userId;
+                if (studentId) {
+                    const [scheduleData, labScheduleData] = await Promise.all([
+                        getScheduleByStudentId(studentId),
+                        getRegistrationScheduleByStudentId(studentId),
+                    ]);
                     setSchedule(scheduleData);
+                    setLabSchedule(labScheduleData);
                 } else {
-                    setError("Could not retrieve lecturer ID.");
+                    setError("Could not retrieve student ID.");
                 }
             } catch (err) {
-                setError("Failed to fetch schedule. Please try again later.");
+                setError("Failed to fetch schedules. Please try again later.");
                 console.error(err);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchSchedule();
+        fetchSchedules();
     }, []);
 
     const { weekDates, weekOptions } = useMemo(() => {
@@ -87,18 +114,33 @@ export default function StudentSchedule() {
         const lesson = schedule.find((l) =>
             format(new Date(l.scheduleDate), "yyyy-MM-dd") === date && l.slotId === slotIndex + 1
         );
-
-        return lesson ? (
-            <Card className="bg-blue-100 h-full">
-                <CardContent className="p-2 text-sm">
-                    <div className="font-bold">{lesson.subjectName}</div>
-                    <div className="text-orange-500">{lesson.className}</div>
-                    <div className="text-muted-foreground">Lec: {lesson.lecturerName}</div>
-                </CardContent>
-            </Card>
-        ) : (
-            <div className="border p-2 min-h-[80px]" />
+        const labLesson = labSchedule.find((l) =>
+            format(new Date(l.registrationScheduleDate), "yyyy-MM-dd") === date && l.slotId === slotIndex + 1
         );
+
+        if (lesson) {
+            return (
+                <Card className="bg-blue-100 h-full">
+                    <CardContent className="p-2 text-sm">
+                        <div className="font-bold">{lesson.subjectName}</div>
+                        <div className="text-orange-500">{lesson.className}</div>
+                        <div className="text-muted-foreground">Lec: {lesson.lecturerName}</div>
+                    </CardContent>
+                </Card>
+            );
+        } else if (labLesson) {
+            return (
+                <Card className="bg-orange-100 h-full">
+                    <CardContent className="p-2 text-sm">
+                        <div className="text-muted-foreground truncate">{labLesson.labName}</div>
+                        <div className="text-orange-500">{labLesson.className}</div>
+                        <div className="text-muted-foreground">Lec: {labLesson.teacherName}</div>
+                    </CardContent>
+                </Card>
+            );
+        } else {
+            return <div className="border p-2 min-h-[80px]" />;
+        }
     };
 
     if (loading) return <ScheduleSkeleton />;
