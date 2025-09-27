@@ -67,7 +67,6 @@ export default function ClassDetailPage() {
     const [totalItems, setTotalItems] = useState(0)
     const [selectedLabId, setSelectedLabId] = useState<number | null>(null)
     const [openDetail, setOpenDetail] = useState(false)
-    // State for controlling CreateLabBooking dialog
     const [openBookingDialog, setOpenBookingDialog] = useState(false)
     const [selectedLabForBooking, setSelectedLabForBooking] = useState<number | null>(null)
 

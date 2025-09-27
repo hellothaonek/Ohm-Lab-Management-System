@@ -21,6 +21,7 @@ import {
 import { createScheduleType } from "@/services/scheduleTypeServices";
 import { getAllSlots } from "@/services/slotServices";
 import { useState, useEffect } from "react";
+import { toast } from "react-toastify";
 
 interface Slot {
     slotId: number;
@@ -43,7 +44,7 @@ export default function CreateScheduleType({
         scheduleTypeName: "",
         scheduleTypeDescription: "",
         scheduleTypeDow: "",
-        scheduleTypeStatus: "active",
+        scheduleTypeStatus: "Active",
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -81,10 +82,10 @@ export default function CreateScheduleType({
                 scheduleTypeName: "",
                 scheduleTypeDescription: "",
                 scheduleTypeDow: "",
-                scheduleTypeStatus: "active",
+                scheduleTypeStatus: "Active",
             });
         } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to create schedule type");
+            toast.error(err.response?.data?.message || "Failed to create schedule type");
         } finally {
             setIsSubmitting(false);
         }
@@ -167,8 +168,8 @@ export default function CreateScheduleType({
                                 onChange={handleChange}
                                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                             >
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
                             </select>
                         </div>
                         {error && <div className="text-red-500 text-sm">{error}</div>}

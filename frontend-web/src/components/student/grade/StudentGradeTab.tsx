@@ -1,143 +1,127 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Loader2 } from "lucide-react"
+import { GraduationCap, User } from "lucide-react"
 
-interface StudentLabGrade {
+// Type definitions based on the API response
+interface Grade {
+    labId: number
+    grade: number | null
+    gradeStatus: string
+    isTeamGrade: boolean
+    hasIndividualGrade: boolean
+}
+
+interface Lab {
     labId: number
     labName: string
-    grade?: number
-    comment?: string
-    gradeDate?: Date
-    status: "Not Submitted" | "Submitted" | "Graded"
+}
+
+interface StudentGradeData {
+    classId: number
+    className: string
+    studentId: string
+    studentName: string
+    studentEmail: string
+    teamId: string | null
+    teamName: string
+    labs: Lab[]
+    grades: Grade[]
 }
 
 interface StudentGradeTabProps {
-    studentId: string
     classId: string
+    studentId: string
 }
 
-export default function StudentGradeTab({ studentId, classId }: StudentGradeTabProps) {
-    const [labGrades, setLabGrades] = useState<StudentLabGrade[]>([])
-    const [loading, setLoading] = useState(true)
+export function StudentGradeTab({ classId, studentId }: StudentGradeTabProps) {
+    // Hardcoded data
+    const gradeData: StudentGradeData = {
+        classId: parseInt(classId) || 1,
+        className: "Introduction to Programming",
+        studentId: studentId || "STU001",
+        studentName: "Nguyen Van A",
+        studentEmail: "nguyenvana@example.com",
+        teamId: "TEAM001",
+        teamName: "Group Alpha",
+        labs: [
+            { labId: 1, labName: "Lab 1: Variables and Data Types" },
+            { labId: 2, labName: "Lab 2: Control Structures" },
+            { labId: 3, labName: "Lab 3: Functions" },
+        ],
+        grades: [
+            { labId: 1, grade: 8.5, gradeStatus: "Graded", isTeamGrade: false, hasIndividualGrade: true },
+            { labId: 2, grade: 7.0, gradeStatus: "Graded", isTeamGrade: true, hasIndividualGrade: false },
+            { labId: 3, grade: null, gradeStatus: "Pending", isTeamGrade: false, hasIndividualGrade: false },
+        ],
+    }
 
-    useEffect(() => {
-        const mockGrades: StudentLabGrade[] = [
-            {
-                labId: 1,
-                labName: "Lab 1: Introduction to React",
-                grade: 8.5,
-                comment: "Good work on component structure. Consider improving state management.",
-                gradeDate: new Date("2024-01-15"),
-                status: "Graded",
-            },
-            {
-                labId: 2,
-                labName: "Lab 2: State Management with Hooks",
-                grade: 9.0,
-                comment: "Excellent understanding of useState and useEffect hooks.",
-                gradeDate: new Date("2024-01-22"),
-                status: "Graded",
-            },
-            {
-                labId: 3,
-                labName: "Lab 3: API Integration",
-                grade: 7.5,
-                comment: "API calls implemented correctly, but error handling needs improvement.",
-                gradeDate: new Date("2024-01-29"),
-                status: "Graded",
-            },
-            {
-                labId: 4,
-                labName: "Lab 4: Advanced Components",
-                status: "Submitted",
-            },
-            {
-                labId: 5,
-                labName: "Lab 5: Testing and Deployment",
-                status: "Not Submitted",
-            },
-        ]
+    const getGradeForLab = (labId: number): Grade | undefined => {
+        return gradeData.grades.find((grade) => grade.labId === labId)
+    }
 
-        setLabGrades(mockGrades)
-        setLoading(false)
-    }, [studentId, classId])
-
-    const getStatusBadgeVariant = (status: string) => {
-        switch (status) {
-            case "Graded":
-                return "default"
-            case "Submitted":
-                return "secondary"
-            default:
-                return "outline"
+    const renderGradeCell = (grade: Grade | undefined) => {
+        if (!grade || grade.grade === null) {
+            return (
+                <div className="flex flex-col items-center gap-1">
+                    <span className="text-muted-foreground">-</span>
+                </div>
+            )
         }
-    }
 
-    const formatDate = (date: Date) => {
-        return date.toLocaleDateString("vi-VN", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-        })
-    }
+        const getGradeColor = (score: number) => {
+            return score < 5.0 ? "text-red-600" : "text-black"
+        }
 
-    if (loading) {
         return (
-            <Card>
-                <CardContent className="p-8 text-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-4" />
-                    <p>Loading your lab grades...</p>
-                </CardContent>
-            </Card>
+            <div className="flex flex-col items-center gap-1">
+                <span className={`font-mono text-lg font-semibold ${getGradeColor(grade.grade)}`}>{grade.grade}</span>
+            </div>
         )
     }
 
+    if (!gradeData) {
+        return (
+            <div className="text-center p-4">
+                <GraduationCap className="h-8 w-8 mx-auto mb-2" />
+                No grade data available
+            </div>
+        )
+    }
+
+    const { className, studentName, studentEmail, teamName, labs } = gradeData
+
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="text-2xl font-bold">My Lab Grades</CardTitle>
-                <p className="text-muted-foreground">View your lab assignment grades, comments, and submission status.</p>
-            </CardHeader>
-            <CardContent>
-                <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-muted/50">
-                                <TableHead className="font-semibold">Lab Name</TableHead>
-                                <TableHead className="font-semibold text-center">Grade</TableHead>
-                                <TableHead className="font-semibold">Comment</TableHead>
-                                <TableHead className="font-semibold text-center">Grade Date</TableHead>
-                                <TableHead className="font-semibold text-center">Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {labGrades.map((lab) => (
-                                <TableRow key={lab.labId}>
-                                    <TableCell className="font-medium">{lab.labName}</TableCell>
-                                    <TableCell className="text-center">
-                                        <span className="font-semibold text-lg">
-                                            {lab.grade !== undefined ? lab.grade.toFixed(1) : "-"}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell className="max-w-xs">
-                                        <span className="text-sm text-muted-foreground">{lab.comment || "-"}</span>
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        <span className="text-sm">{lab.gradeDate ? formatDate(lab.gradeDate) : "-"}</span>
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        <Badge variant={getStatusBadgeVariant(lab.status)}>{lab.status}</Badge>
-                                    </TableCell>
+        <div className="w-full space-y-6">
+            <Card>
+                <CardContent className="pt-6">
+                    <div className="w-full overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="text-center min-w-[60px]">STT</TableHead>
+                                    <TableHead className="text-left min-w-[200px]">Tên bài lab</TableHead>
+                                    <TableHead className="text-center min-w-[120px]">Điểm</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-        </Card>
+                            </TableHeader>
+                            <TableBody>
+                                {labs.map((lab, index) => {
+                                    const grade = getGradeForLab(lab.labId)
+                                    return (
+                                        <TableRow key={lab.labId}>
+                                            <TableCell className="text-center font-medium">{index + 1}</TableCell>
+                                            <TableCell className="font-medium">{lab.labName}</TableCell>
+                                            <TableCell className="text-center">{renderGradeCell(grade)}</TableCell>
+                                        </TableRow>
+                                    )
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
     )
 }

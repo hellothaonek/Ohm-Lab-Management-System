@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { getClassGrades } from "@/services/gradeServices"
-import { GraduationCap } from "lucide-react"
+import { GraduationCap, Plus, Filter, Save, Edit, Edit2 } from "lucide-react"
 
 // Type definitions based on the API response
 interface Grade {
@@ -43,6 +46,9 @@ export function GradeTab({ classId }: GradeTabProps) {
     const [gradeData, setGradeData] = useState<GradeData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [selectedStudent, setSelectedStudent] = useState<string>("all")
+    const [isEditing, setIsEditing] = useState(false)
+    const [editedGrades, setEditedGrades] = useState<{ [key: string]: number }>({})
 
     useEffect(() => {
         const fetchGrades = async () => {
@@ -64,15 +70,44 @@ export function GradeTab({ classId }: GradeTabProps) {
         }
     }, [classId])
 
-    // Helper function to get grade for a specific student and lab
     const getGradeForStudentLab = (student: Student, labId: number): Grade | undefined => {
         return student.grades.find((grade) => grade.labId === labId)
     }
 
-    // Helper function to render grade cell
-    const renderGradeCell = (grade: Grade | undefined) => {
+    const renderGradeCell = (grade: Grade | undefined, student: Student, labId: number) => {
+        const gradeKey = `${student.studentId}-${labId}`
+        const currentGrade = editedGrades[gradeKey] !== undefined ? editedGrades[gradeKey] : grade?.grade || 0
+
         if (!grade || grade.grade === null) {
+            if (isEditing) {
+                return (
+                    <Input
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="0.1"
+                        value={editedGrades[gradeKey] || ""}
+                        onChange={(e) => handleGradeChange(gradeKey, e.target.value)}
+                        className="w-16 h-8 text-center"
+                        placeholder="0"
+                    />
+                )
+            }
             return <span className="text-muted-foreground">-</span>
+        }
+
+        if (isEditing) {
+            return (
+                <Input
+                    type="number"
+                    min="0"
+                    max="10"
+                    step="0.1"
+                    value={currentGrade}
+                    onChange={(e) => handleGradeChange(gradeKey, e.target.value)}
+                    className="w-16 h-8 text-center"
+                />
+            )
         }
 
         return (
@@ -80,6 +115,46 @@ export function GradeTab({ classId }: GradeTabProps) {
                 <span className="font-mono">{grade.grade}</span>
             </div>
         )
+    }
+
+    const filteredStudents =
+        gradeData?.students.filter((student) => {
+            if (selectedStudent === "all") return true
+            return student.studentId === selectedStudent
+        }) || []
+
+    const handleGradeInput = () => {
+        if (isEditing) {
+            console.log("[v0] Saving all grades:", editedGrades)
+            setIsEditing(false)
+            setEditedGrades({})
+        } else {
+            setIsEditing(true)
+            const initialGrades: { [key: string]: number } = {}
+            gradeData?.students.forEach((student) => {
+                student.grades.forEach((grade) => {
+                    if (grade.grade !== null) {
+                        initialGrades[`${student.studentId}-${grade.labId}`] = grade.grade
+                    }
+                })
+            })
+            setEditedGrades(initialGrades)
+        }
+    }
+
+    const handleGradeChange = (gradeKey: string, value: string) => {
+        const numValue = Number.parseFloat(value)
+        if (!isNaN(numValue) && numValue >= 0 && numValue <= 10) {
+            setEditedGrades((prev) => ({
+                ...prev,
+                [gradeKey]: numValue,
+            }))
+        } else if (value === "") {
+            setEditedGrades((prev) => ({
+                ...prev,
+                [gradeKey]: 0,
+            }))
+        }
     }
 
     if (loading) {
@@ -98,10 +173,41 @@ export function GradeTab({ classId }: GradeTabProps) {
     const { className, labs, students } = gradeData
 
     return (
-        <div className="w-full">
-            <div className="overflow-x-auto border rounded-lg">
-                <Table>
-                    <TableHeader className="bg-blue-100">
+        <div className="w-full space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                <div className="flex items-center gap-2 flex-1 max-w-sm">
+                    <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+                        <SelectTrigger className="flex-1">
+                            <Filter className="h-4 w-4 text-muted-foreground" />
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Students</SelectItem>
+                            {gradeData?.students.map((student) => (
+                                <SelectItem key={student.studentId} value={student.studentId}>
+                                    {student.studentName}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button onClick={handleGradeInput} className="flex items-center gap-2">
+                    {isEditing ? (
+                        <>
+                            Save All
+                        </>
+                    ) : (
+                        <>
+                            <Edit2 className="h-4 w-4" />
+                            Update Grade
+                        </>
+                    )}
+                </Button>
+            </div>
+
+            <div className="w-full overflow-x-auto">
+                <Table className="min-w-full">
+                    <TableHeader className="bg-blue-100 sticky top-0">
                         <TableRow>
                             <TableHead className="text-center sticky left-0 z-10 min-w-[60px] bg-blue-100 border-r">STT</TableHead>
                             <TableHead className="text-left sticky left-[60px] z-10 min-w-[200px] bg-blue-100 border-r">
@@ -110,7 +216,6 @@ export function GradeTab({ classId }: GradeTabProps) {
                             {labs.map((lab) => (
                                 <TableHead key={lab.labId} className="text-center min-w-[120px]">
                                     <div className="flex flex-col gap-1">
-                                        {/* <span className="font-mono text-sm">Lab {lab.labId}</span> */}
                                         <span className="text-xs text-muted-foreground font-normal text-pretty">{lab.labName}</span>
                                     </div>
                                 </TableHead>
@@ -118,7 +223,7 @@ export function GradeTab({ classId }: GradeTabProps) {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {students.map((student, index) => (
+                        {filteredStudents.map((student, index) => (
                             <TableRow key={student.studentId}>
                                 <TableCell className="text-center sticky left-0 bg-background border-r font-medium">
                                     {index + 1}
@@ -126,18 +231,22 @@ export function GradeTab({ classId }: GradeTabProps) {
                                 <TableCell className="sticky left-[60px] bg-background border-r">
                                     <div className="flex flex-col gap-1">
                                         <span className="font-medium">{student.studentName}</span>
-                                        {/* {student.teamName !== "Chưa có team" && (
-                                            <span className="text-xs w-fit">{student.teamName}</span>
-                                        )} */}
                                     </div>
                                 </TableCell>
                                 {labs.map((lab) => (
                                     <TableCell key={lab.labId} className="text-center">
-                                        {renderGradeCell(getGradeForStudentLab(student, lab.labId))}
+                                        {renderGradeCell(getGradeForStudentLab(student, lab.labId), student, lab.labId)}
                                     </TableCell>
                                 ))}
                             </TableRow>
                         ))}
+                        {filteredStudents.length === 0 && selectedStudent !== "all" && (
+                            <TableRow>
+                                <TableCell colSpan={labs.length + 2} className="text-center py-8 text-muted-foreground">
+                                    Không tìm thấy sinh viên được chọn
+                                </TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </div>

@@ -7,9 +7,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ChevronLeft, Loader2 } from "lucide-react"
 import { getClassById } from "@/services/classServices"
 import { Button } from "@/components/ui/button"
-import GradeTab from "@/components/lecturer/grade/GradeTab"
 import GroupTab from "@/components/student/group/GroupTab"
 import LabTab from "@/components/student/lab/LabTab"
+import { StudentGradeTab } from "@/components/student/grade/StudentGradeTab"
 
 interface ClassDetail {
     classId: number
@@ -128,7 +128,7 @@ export default function StudentClassDetailPage() {
                     <GroupTab classId={classId || ""} />
                 </TabsContent>
                 <TabsContent value="grades" className="shadow-lg">
-                    <GradeTab classId={classId || ""} />
+                    <StudentGradeTab classId={classId || ""} studentId={classDetail.classUsers[0]?.userNumberCode || ""} />
                 </TabsContent>
             </Tabs>
         </div>
