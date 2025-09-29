@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { searchKit } from "@/services/kitServices"
-import { getAllTeams } from "@/services/teamServices"
+import { getTeamsByClassId } from "@/services/teamServices"
+import { getClassByLecturerId } from "@/services/classServices"
 import { useAuth } from "@/context/AuthContext"
 import { toast } from "@/components/ui/use-toast"
 import { borrowTeamKit } from "@/services/teamKitServices"
@@ -32,21 +33,31 @@ interface Team {
     className: string
 }
 
+interface Class {
+    classId: string
+    className: string
+    classStatus: string
+}
+
 export default function CreateCheckoutKit({ isOpen, onClose, onSuccess }: CreateCheckoutKitProps) {
     const { user } = useAuth()
     const [formData, setFormData] = useState({
         kitName: "",
+        classId: "",
         groupName: "",
-        borrowingGroupName: "",
+        borrowingGroupName: "Checkout Kit",
         notes: ""
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [kitList, setKitList] = useState<Kit[]>([])
     const [teamList, setTeamList] = useState<Team[]>([])
+    const [classList, setClassList] = useState<Class[]>([])
     const [isLoadingKits, setIsLoadingKits] = useState(false)
+    const [isLoadingClasses, setIsLoadingClasses] = useState(false)
     const [isLoadingTeams, setIsLoadingTeams] = useState(false)
 
     useEffect(() => {
+        const lecturerId = user?.userId
         const fetchKits = async () => {
             setIsLoadingKits(true)
             try {
@@ -61,8 +72,8 @@ export default function CreateCheckoutKit({ isOpen, onClose, onSuccess }: Create
             } catch (error) {
                 console.error("Error fetching kits:", error)
                 toast({
-                    title: "Lỗi",
-                    description: "Không thể tải danh sách bộ thiết bị",
+                    title: "Error",
+                    description: "Failed to load kit list",
                     variant: "destructive"
                 })
             } finally {
@@ -70,40 +81,76 @@ export default function CreateCheckoutKit({ isOpen, onClose, onSuccess }: Create
             }
         }
 
-        const fetchTeams = async () => {
-            setIsLoadingTeams(true)
-            try {
-                const response = await getAllTeams()
-                setTeamList(response)
-            } catch (error) {
-                console.error("Error fetching teams:", error)
+        const fetchClasses = async () => {
+            if (!lecturerId) {
                 toast({
-                    title: "Lỗi",
-                    description: "Không thể tải danh sách nhóm",
+                    title: "Error",
+                    description: "User ID not found",
                     variant: "destructive"
                 })
-                setTeamList([])
+                setClassList([])
+                return
+            }
+            setIsLoadingClasses(true)
+            try {
+                const response = await getClassByLecturerId(lecturerId)
+                const activeClasses = response.filter((cls: Class) => cls.classStatus === "Active")
+                setClassList(activeClasses)
+            } catch (error) {
+                console.error("Error fetching classes:", error)
+                toast({
+                    title: "Error",
+                    description: "Failed to load class list",
+                    variant: "destructive"
+                })
+                setClassList([])
             } finally {
-                setIsLoadingTeams(false)
+                setIsLoadingClasses(false)
             }
         }
 
         if (isOpen) {
             fetchKits()
-            fetchTeams()
+            fetchClasses()
         }
-    }, [isOpen])
+    }, [isOpen, user])
+
+    useEffect(() => {
+        const fetchTeams = async () => {
+            if (formData.classId) {
+                setIsLoadingTeams(true)
+                try {
+                    const response = await getTeamsByClassId(formData.classId)
+                    setTeamList(response)
+                } catch (error) {
+                    console.error("Error fetching teams:", error)
+                    toast({
+                        title: "Error",
+                        description: "Failed to load team list",
+                        variant: "destructive"
+                    })
+                    setTeamList([])
+                } finally {
+                    setIsLoadingTeams(false)
+                }
+            } else {
+                setTeamList([])
+            }
+        }
+
+        fetchTeams()
+    }, [formData.classId])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsSubmitting(true)
 
         try {
-            const selectedTeam = teamList.find(team => `${team.teamName} - ${team.className}` === formData.groupName)
+            const selectedTeam = teamList.find(team => team.teamName === formData.groupName)
             const selectedKit = kitList.find(kit => kit.kitName === formData.kitName)
 
             if (!selectedTeam || !selectedKit) {
-                throw new Error("Vui lòng chọn nhóm và bộ thiết bị hợp lệ")
+                throw new Error("Please select a valid team and kit")
             }
 
             const checkoutData = {
@@ -120,8 +167,8 @@ export default function CreateCheckoutKit({ isOpen, onClose, onSuccess }: Create
         } catch (error) {
             console.error("Error creating kit checkout:", error)
             toast({
-                title: "Lỗi",
-                description: error instanceof Error ? error.message : "Không thể tạo bàn giao bộ thiết bị",
+                title: "Error",
+                description: error instanceof Error ? error.message : "Failed to create kit checkout",
                 variant: "destructive"
             })
         } finally {
@@ -139,10 +186,12 @@ export default function CreateCheckoutKit({ isOpen, onClose, onSuccess }: Create
     const resetForm = () => {
         setFormData({
             kitName: "",
+            classId: "",
             groupName: "",
-            borrowingGroupName: "",
+            borrowingGroupName: "Checkout Kit",
             notes: ""
         })
+        setTeamList([])
     }
 
     const handleInputChange = (field: string, value: string) => {
@@ -159,6 +208,14 @@ export default function CreateCheckoutKit({ isOpen, onClose, onSuccess }: Create
         }))
     }
 
+    const handleClassSelect = (value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            classId: value,
+            groupName: "" // Reset team selection when class changes
+        }))
+    }
+
     const handleTeamSelect = (value: string) => {
         setFormData(prev => ({
             ...prev,
@@ -172,7 +229,7 @@ export default function CreateCheckoutKit({ isOpen, onClose, onSuccess }: Create
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Package className="h-5 w-5" />
-                        Bàn Giao Bộ Thiết Bị
+                        Create Kit Checkout
                     </DialogTitle>
                 </DialogHeader>
 
@@ -180,81 +237,103 @@ export default function CreateCheckoutKit({ isOpen, onClose, onSuccess }: Create
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="kitName">Tên bộ thiết bị *</Label>
+                                <Label htmlFor="kitName">Kit Name *</Label>
                                 <Select
                                     value={formData.kitName}
                                     onValueChange={handleKitSelect}
                                     disabled={isLoadingKits}
                                 >
                                     <SelectTrigger id="kitName">
-                                        <SelectValue placeholder={isLoadingKits ? "Đang tải..." : "Chọn tên bộ thiết bị"} />
+                                        <SelectValue placeholder={isLoadingKits ? "Loading..." : "Select kit name"} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {kitList.map((kit, index) => (
-                                            <SelectItem
-                                                key={kit.kitId || `kit-${index}`}
-                                                value={kit.kitName}
-                                            >
-                                                {kit.kitName}
+                                        {kitList.length === 0 && !isLoadingKits ? (
+                                            <SelectItem value="no-kits" disabled>
+                                                No kits available
                                             </SelectItem>
-                                        ))}
+                                        ) : (
+                                            kitList.map((kit, index) => (
+                                                <SelectItem
+                                                    key={kit.kitId || `kit-${index}`}
+                                                    value={kit.kitName}
+                                                >
+                                                    {kit.kitName}
+                                                </SelectItem>
+                                            ))
+                                        )}
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
                     </div>
 
-                    {/* Group Information */}
+                    {/* Team Information */}
                     <div className="space-y-4">
                         <h3 className="text-lg font-medium flex items-center gap-2">
                             <Users className="h-4 w-4" />
-                            Thông tin nhóm
+                            Team Information
                         </h3>
 
                         <div className="space-y-2">
-                            <Label htmlFor="groupName">Nhóm</Label>
+                            <Label htmlFor="classId">Class *</Label>
                             <Select
-                                value={formData.groupName}
-                                onValueChange={handleTeamSelect}
-                                disabled={isLoadingTeams}
+                                value={formData.classId}
+                                onValueChange={handleClassSelect}
+                                disabled={isLoadingClasses}
                             >
-                                <SelectTrigger id="groupName">
-                                    <SelectValue placeholder={isLoadingTeams ? "Đang tải..." : "Chọn nhóm"} />
+                                <SelectTrigger id="classId">
+                                    <SelectValue placeholder={isLoadingClasses ? "Loading..." : "Select class"} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {teamList.length === 0 && !isLoadingTeams && (
-                                        <SelectItem value="no-teams" disabled>
-                                            Không có nhóm nào
+                                    {classList.length === 0 && !isLoadingClasses ? (
+                                        <SelectItem value="no-classes" disabled>
+                                            No classes available
                                         </SelectItem>
+                                    ) : (
+                                        classList.map(cls => (
+                                            <SelectItem key={cls.classId} value={cls.classId}>
+                                                {cls.className}
+                                            </SelectItem>
+                                        ))
                                     )}
-                                    {teamList.map(team => (
-                                        <SelectItem key={`${team.teamName}-${team.className}`} value={`${team.teamName} - ${team.className}`}>
-                                            {`${team.teamName} - ${team.className}`}
-                                        </SelectItem>
-                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="borrowingGroupName">Tên nhóm mượn bộ thiết bị *</Label>
-                            <Input
-                                id="borrowingGroupName"
-                                value={formData.borrowingGroupName}
-                                onChange={(e) => handleInputChange("borrowingGroupName", e.target.value)}
-                                placeholder="Nhập tên nhóm mượn bộ thiết bị"
-                                required
-                            />
+                            <Label htmlFor="groupName">Team</Label>
+                            <Select
+                                value={formData.groupName}
+                                onValueChange={handleTeamSelect}
+                                disabled={isLoadingTeams || !formData.classId}
+                            >
+                                <SelectTrigger id="groupName">
+                                    <SelectValue placeholder={isLoadingTeams ? "Loading..." : formData.classId ? "Select team" : "Select a class first"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {teamList.length === 0 && !isLoadingTeams ? (
+                                        <SelectItem value="no-teams" disabled>
+                                            No teams available
+                                        </SelectItem>
+                                    ) : (
+                                        teamList.map(team => (
+                                            <SelectItem key={team.teamId} value={team.teamName}>
+                                                {team.teamName}
+                                            </SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="notes">Ghi chú</Label>
+                        <Label htmlFor="notes">Notes</Label>
                         <Textarea
                             id="notes"
                             value={formData.notes}
                             onChange={(e) => handleInputChange("notes", e.target.value)}
-                            placeholder="Nhập ghi chú về việc mượn bộ thiết bị..."
+                            placeholder="Enter notes about the kit borrowing..."
                             rows={3}
                         />
                     </div>
@@ -267,14 +346,14 @@ export default function CreateCheckoutKit({ isOpen, onClose, onSuccess }: Create
                             onClick={handleClose}
                             disabled={isSubmitting}
                         >
-                            Hủy
+                            Cancel
                         </Button>
                         <Button
                             type="submit"
                             className="bg-orange-500 hover:bg-orange-600"
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || !formData.kitName || !formData.groupName || !formData.classId}
                         >
-                            {isSubmitting ? "Đang tạo..." : "Tạo"}
+                            {isSubmitting ? "Creating..." : "Create"}
                         </Button>
                     </div>
                 </form>

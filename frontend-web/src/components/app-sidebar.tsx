@@ -20,6 +20,7 @@ import {
   Package,
   DoorOpen,
   CalendarClock,
+  FileClock,
 } from "lucide-react"
 import {
   Sidebar,
@@ -113,17 +114,23 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
       roles: ["head", "lecturer"],
     },
     {
+      title: "Checkout/Return History",
+      href: `/${role}/dashboard/checkout-return-history`,
+      icon: FileClock,
+      roles: ["head", "lecturer", "admin"],
+    },
+    {
       title: "Courses",
       href: `/${role}/dashboard/courses`,
       icon: BookText,
       roles: ["head"],
     },
-    {
-      title: "My Courses",
-      href: `/${role}/dashboard/courses`,
-      icon: Database,
-      roles: ["student"],
-    },
+    // {
+    //   title: "My Courses",
+    //   href: `/${role}/dashboard/courses`,
+    //   icon: Database,
+    //   roles: ["student"],
+    // },
     {
       title: "Reports",
       href: `/${role}/dashboard/reports`,

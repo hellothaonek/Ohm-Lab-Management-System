@@ -6,6 +6,11 @@ export const searchTeamKit = async (data: { pageNum: number; pageSize: number; k
     return response.data;
 };
 
+export const searchTeamKitByLecturerId = async (data: { pageNum: number; pageSize: number; lecturerId: string; keyWord: string; status: string }) => {
+    const response = await defaultAxiosInstance.post("/api/teamkit/searchbylecturerid", data);
+    return response.data;
+};
+
 export const borrowTeamKit = async (data: { teamId: number; kitId: string; teamKitName: string; teamKitDescription: string }) => {
     const response = await defaultAxiosInstance.post("/api/teamkit/borrowkit", data);
     toast.success("Kit borrowed successfully");
@@ -39,3 +44,4 @@ export const deleteTeamKit = async (id: string) => {
     toast.success("Kit deleted successfully");
     return response.data;
 };
+

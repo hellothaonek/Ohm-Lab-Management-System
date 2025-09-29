@@ -6,6 +6,11 @@ export const searchTeamEquipment = async (data: { pageNum: number; pageSize: num
     return response.data;
 };
 
+export const searchTeamEquipmentByLecturerId = async (data: { pageNum: number; pageSize: number; lecturerId: string }) => {
+    const response = await defaultAxiosInstance.post("/api/teamequipment/searchbylecturerid", data);
+    return response.data;
+};
+
 export const borrowEquipment = async (data: { teamId: string; equipmentId: string; teamEquipmentName: string; teamEquipmentDescription: string }) => {
     const response = await defaultAxiosInstance.post("/api/teamequipment/borrowequipment", data);
     toast.success("Equipment borrowed successfully");

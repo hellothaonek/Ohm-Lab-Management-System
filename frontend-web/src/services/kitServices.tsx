@@ -11,8 +11,8 @@ export const searchKit = async (data: { pageNum: number; pageSize: number; keyWo
     return response.data;
 };
 
-export const searchKitByKitTemplateId = async (data: { pageNum: number; pageSize: number; keyWord: string; kitTemplateId: string; status: string }) => {
-    const response = await defaultAxiosInstance.post("/api/kit/searchbykittemplateid", data);
+export const searchKitByKitTemplateId = async (kitTemplateId: string) => {
+    const response = await defaultAxiosInstance.post(`/api/kit/searchbykittemplateid/${kitTemplateId}`);
     return response.data;
 };
 

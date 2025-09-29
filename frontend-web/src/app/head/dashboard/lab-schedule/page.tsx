@@ -40,11 +40,11 @@ export default function RequestLabSchedule() {
     const { user } = useAuth()
     const [bookings, setBookings] = useState<LabBooking[]>([])
     const [filteredBookings, setFilteredBookings] = useState<LabBooking[]>([])
-    const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, size: 10, totalPage: 1, totalItem: 0 })
+    const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, size: 100, totalPage: 1, totalItem: 0 })
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState<"Pending" | "Accept" | "Reject">("Pending")
     const [pageNum, setPageNum] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
+    const [pageSize, setPageSize] = useState(100) //check
     const [searchQuery, setSearchQuery] = useState("")
 
     const fetchBookings = async () => {

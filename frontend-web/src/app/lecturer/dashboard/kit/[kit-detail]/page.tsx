@@ -2,29 +2,18 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Filter, EllipsisVertical, Eye } from "lucide-react"
+import { Search, Filter } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { Pagination } from "antd"
-import { QRCodeCanvas } from "qrcode.react"
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog"
-import { SelectValue } from "@radix-ui/react-select"
-import { searchKit } from "@/services/kitServices"
-import CheckoutKit from "./CheckoutKit" // Adjust the import path as needed
-
-interface KitTemplateTabProps {
-    setShowReportDialog: (value: boolean) => void
-}
+import { searchKitByKitTemplateId } from "@/services/kitServices"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import CheckoutKit from "@/components/lecturer/kit/CheckoutKit"
+import { useSearchParams } from "next/navigation"
+import { Card } from "@/components/ui/card"
 
 interface Kit {
     kitId: string
@@ -38,7 +27,9 @@ interface Kit {
     kitStatus: string
 }
 
-export default function LecturerKitTab({ setShowReportDialog }: KitTemplateTabProps) {
+export default function KitDetail() {
+    const searchParams = useSearchParams()
+    const kitTemplateId = searchParams.get('kitTemplateId') || ''
     const [kitSearch, setKitSearch] = useState("")
     const [kitStatusFilter, setKitStatusFilter] = useState("all")
     const [kits, setKits] = useState<Kit[]>([])
@@ -46,30 +37,27 @@ export default function LecturerKitTab({ setShowReportDialog }: KitTemplateTabPr
     const [pageNum, setPageNum] = useState(1)
     const [pageSize, setPageSize] = useState(10)
     const [totalItems, setTotalItems] = useState(0)
-    const [isCheckoutOpen, setIsCheckoutOpen] = useState(false) // State for dialog
-    const [selectedKit, setSelectedKit] = useState<Kit | null>(null) // State for selected kit
+    const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+    const [selectedKit, setSelectedKit] = useState<Kit | null>(null)
 
     const fetchKits = useCallback(async () => {
         setLoading(true)
         try {
-            const response = await searchKit({
-                pageNum,
-                pageSize,
-                keyWord: kitSearch,
-                status: kitStatusFilter === "all" ? "" : kitStatusFilter,
-            })
-            setKits(response.pageData)
-            setTotalItems(response.pageInfo.totalItem)
+            const response = await searchKitByKitTemplateId(kitTemplateId)
+            console.log("Check KitID:", kitTemplateId)
+            setKits(response) 
         } catch (error) {
             console.error("Failed to fetch kits:", error)
         } finally {
             setLoading(false)
         }
-    }, [kitSearch, kitStatusFilter, pageNum, pageSize])
+    }, [kitTemplateId])
 
     useEffect(() => {
-        fetchKits()
-    }, [fetchKits])
+        if (kitTemplateId) {
+            fetchKits()
+        }
+    }, [fetchKits, kitTemplateId])
 
     const getStatusBadge = (status: string) => {
         switch (status.toLowerCase()) {
@@ -83,20 +71,14 @@ export default function LecturerKitTab({ setShowReportDialog }: KitTemplateTabPr
     }
 
     const handleCheckout = (kit: Kit) => {
-        setSelectedKit(kit) // Set the selected kit
-        setIsCheckoutOpen(true) // Open the dialog
+        setSelectedKit(kit)
+        setIsCheckoutOpen(true)
     }
 
-    const handlePaginationChange = (page: number, size?: number) => {
-        setPageNum(page)
-        if (size && size !== pageSize) {
-            setPageSize(size)
-            setPageNum(1)
-        }
-    }
 
     return (
         <div className="space-y-6">
+            <h1 className="text-3xl font-bold tracking-tight">Kit Details</h1>
             <div className="flex gap-4 mb-4 justify-start">
                 <div className="relative w-[350px]">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -144,7 +126,7 @@ export default function LecturerKitTab({ setShowReportDialog }: KitTemplateTabPr
                         ) : kits.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center text-muted-foreground">
-                                    No kits found matching your filters.
+                                    No kits available.
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -176,23 +158,9 @@ export default function LecturerKitTab({ setShowReportDialog }: KitTemplateTabPr
                 isOpen={isCheckoutOpen}
                 onOpenChange={setIsCheckoutOpen}
                 kit={selectedKit}
-                onSuccess={fetchKits} // Refresh the kit list on successful checkout
+                onSuccess={fetchKits}
             />
 
-            <div className="mt-4 flex justify-end">
-                <Pagination
-                    current={pageNum}
-                    pageSize={pageSize}
-                    total={totalItems}
-                    showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
-                    onChange={handlePaginationChange}
-                    showSizeChanger
-                    onShowSizeChange={(current, size) => {
-                        setPageNum(1)
-                        setPageSize(size)
-                    }}
-                />
-            </div>
         </div>
     )
 }

@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { searchEquipment } from "@/services/equipmentServices"
-import { getAllTeams } from "@/services/teamServices"
+import { getTeamsByClassId } from "@/services/teamServices"
+import { getClassByLecturerId } from "@/services/classServices"
 import { useAuth } from "@/context/AuthContext"
 import { toast } from "@/components/ui/use-toast"
 import { borrowEquipment } from "@/services/teamEquipmentServices"
@@ -33,22 +34,32 @@ interface Team {
     className: string
 }
 
+interface Class {
+    classId: string
+    className: string
+    classStatus: string
+}
+
 export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateCheckoutProps) {
     const { user } = useAuth()
     const [formData, setFormData] = useState({
         equipmentName: "",
         equipmentNumberSerial: "",
+        classId: "",
         groupName: "",
-        borrowingGroupName: "",
+        borrowingGroupName: "Checkout Equipment",
         notes: ""
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [equipmentList, setEquipmentList] = useState<Equipment[]>([])
     const [teamList, setTeamList] = useState<Team[]>([])
+    const [classList, setClassList] = useState<Class[]>([])
     const [isLoadingEquipment, setIsLoadingEquipment] = useState(false)
+    const [isLoadingClasses, setIsLoadingClasses] = useState(false)
     const [isLoadingTeams, setIsLoadingTeams] = useState(false)
 
     useEffect(() => {
+        const lecturerId = user?.userId
         const fetchEquipment = async () => {
             setIsLoadingEquipment(true)
             try {
@@ -65,8 +76,8 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
             } catch (error) {
                 console.error("Error fetching equipment:", error)
                 toast({
-                    title: "Lỗi",
-                    description: "Không thể tải danh sách thiết bị",
+                    title: "Error",
+                    description: "Failed to load equipment list",
                     variant: "destructive"
                 })
             } finally {
@@ -74,42 +85,81 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
             }
         }
 
-        const fetchTeams = async () => {
-            setIsLoadingTeams(true)
-            try {
-                const response = await getAllTeams()
-                setTeamList(response)
-            } catch (error) {
-                console.error("Error fetching teams:", error)
+        const fetchClasses = async () => {
+            if (!lecturerId) {
                 toast({
-                    title: "Lỗi",
-                    description: "Không thể tải danh sách nhóm",
+                    title: "Error",
+                    description: "User ID not found",
                     variant: "destructive"
                 })
-                setTeamList([])
+                setClassList([])
+                return
+            }
+            setIsLoadingClasses(true)
+            try {
+                const response = await getClassByLecturerId(lecturerId)
+                const activeClasses = response.filter((cls: Class) => cls.classStatus === "Active")
+                setClassList(activeClasses)
+            } catch (error) {
+                console.error("Error fetching classes:", error)
+                toast({
+                    title: "Error",
+                    description: "Failed to load class list",
+                    variant: "destructive"
+                })
+                setClassList([])
             } finally {
-                setIsLoadingTeams(false)
+                setIsLoadingClasses(false)
             }
         }
 
         if (isOpen) {
             fetchEquipment()
-            fetchTeams()
+            fetchClasses()
         }
-    }, [isOpen])
+    }, [isOpen, user])
+
+    useEffect(() => {
+        const fetchTeams = async () => {
+            if (formData.classId) {
+                setIsLoadingTeams(true)
+                try {
+                    const response = await getTeamsByClassId(formData.classId)
+                    setTeamList(response)
+                } catch (error) {
+                    console.error("Error fetching teams:", error)
+                    toast({
+                        title: "Error",
+                        description: "Failed to load team list",
+                        variant: "destructive"
+                    })
+                    setTeamList([])
+                } finally {
+                    setIsLoadingTeams(false)
+                }
+            } else {
+                setTeamList([])
+            }
+        }
+
+        fetchTeams()
+    }, [formData.classId])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsSubmitting(true)
 
         try {
-            const selectedTeam = teamList.find(team => `${team.teamName} - ${team.className}` === formData.groupName)
+            const selectedTeam = teamList.find(team => team.teamName === formData.groupName)
             const selectedEquipment = equipmentList.find(equipment => equipment.equipmentName === formData.equipmentName)
 
+            if (!selectedTeam || !selectedEquipment) {
+                throw new Error("Please select a valid team and equipment")
+            }
 
             const checkoutData = {
-                teamId: selectedTeam!.teamId,
-                equipmentId: selectedEquipment!.equipmentId || selectedEquipment!.equipmentNumberSerial,
+                teamId: selectedTeam.teamId,
+                equipmentId: selectedEquipment.equipmentId || selectedEquipment.equipmentNumberSerial,
                 teamEquipmentName: formData.borrowingGroupName,
                 teamEquipmentDescription: formData.notes
             }
@@ -121,8 +171,8 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
         } catch (error) {
             console.error("Error creating checkout:", error)
             toast({
-                title: "Lỗi",
-                description: error instanceof Error ? error.message : "Không thể tạo bàn giao thiết bị",
+                title: "Error",
+                description: error instanceof Error ? error.message : "Failed to create equipment checkout",
                 variant: "destructive"
             })
         } finally {
@@ -141,8 +191,9 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
         setFormData({
             equipmentName: "",
             equipmentNumberSerial: "",
+            classId: "",
             groupName: "",
-            borrowingGroupName: "",
+            borrowingGroupName: "Checkout Equipment",
             notes: ""
         })
     }
@@ -163,6 +214,14 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
         }))
     }
 
+    const handleClassSelect = (value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            classId: value,
+            groupName: "" 
+        }))
+    }
+
     const handleTeamSelect = (value: string) => {
         setFormData(prev => ({
             ...prev,
@@ -176,7 +235,7 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Package className="h-5 w-5" />
-                        Bàn Giao Thiết Bị
+                        Create Equipment Checkout
                     </DialogTitle>
                 </DialogHeader>
 
@@ -184,19 +243,19 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="equipmentName">Tên thiết bị *</Label>
+                                <Label htmlFor="equipmentName">Equipment Name *</Label>
                                 <Select
                                     value={formData.equipmentName}
                                     onValueChange={handleEquipmentSelect}
                                     disabled={isLoadingEquipment}
                                 >
                                     <SelectTrigger id="equipmentName">
-                                        <SelectValue placeholder={isLoadingEquipment ? "Đang tải..." : "Chọn tên thiết bị"} />
+                                        <SelectValue placeholder={isLoadingEquipment ? "Loading..." : "Select equipment name"} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {equipmentList.length === 0 && !isLoadingEquipment ? (
                                             <SelectItem value="no-equipment" disabled>
-                                                No equipment available.
+                                                No equipment available
                                             </SelectItem>
                                         ) : (
                                             equipmentList.map(equipment => (
@@ -210,12 +269,12 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="equipmentNumberSerial">Number Serial *</Label>
+                                <Label htmlFor="equipmentNumberSerial">Serial Number *</Label>
                                 <Input
                                     id="equipmentNumberSerial"
                                     value={formData.equipmentNumberSerial}
                                     onChange={(e) => handleInputChange("equipmentNumberSerial", e.target.value)}
-                                    placeholder="Nhập số seri của thiết bị"
+                                    placeholder="Enter equipment serial number"
                                     required
                                     readOnly
                                 />
@@ -223,57 +282,73 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
                         </div>
                     </div>
 
-                    {/* Group Information */}
+                    {/* Team Information */}
                     <div className="space-y-4">
                         <h3 className="text-lg font-medium flex items-center gap-2">
                             <Users className="h-4 w-4" />
-                            Thông tin nhóm
+                            Team Information
                         </h3>
 
                         <div className="space-y-2">
-                            <Label htmlFor="groupName">Nhóm</Label>
+                            <Label htmlFor="classId">Class *</Label>
                             <Select
-                                value={formData.groupName}
-                                onValueChange={handleTeamSelect}
-                                disabled={isLoadingTeams}
+                                value={formData.classId}
+                                onValueChange={handleClassSelect}
+                                disabled={isLoadingClasses}
                             >
-                                <SelectTrigger id="groupName">
-                                    <SelectValue placeholder={isLoadingTeams ? "Đang tải..." : "Chọn nhóm"} />
+                                <SelectTrigger id="classId">
+                                    <SelectValue placeholder={isLoadingClasses ? "Loading..." : "Select class"} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {teamList.length === 0 && !isLoadingTeams && (
-                                        <SelectItem value="" disabled>
-                                            Không có nhóm nào
+                                    {classList.length === 0 && !isLoadingClasses ? (
+                                        <SelectItem value="no-classes" disabled>
+                                            No classes available
                                         </SelectItem>
+                                    ) : (
+                                        classList.map(cls => (
+                                            <SelectItem key={cls.classId} value={cls.classId}>
+                                                {cls.className}
+                                            </SelectItem>
+                                        ))
                                     )}
-                                    {teamList.map(team => (
-                                        <SelectItem key={`${team.teamName}-${team.className}`} value={`${team.teamName} - ${team.className}`}>
-                                            {`${team.teamName} - ${team.className}`}
-                                        </SelectItem>
-                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="borrowingGroupName">Tên nhóm mượn thiết bị *</Label>
-                            <Input
-                                id="borrowingGroupName"
-                                value={formData.borrowingGroupName}
-                                onChange={(e) => handleInputChange("borrowingGroupName", e.target.value)}
-                                placeholder="Nhập tên nhóm mượn thiết bị"
-                                required
-                            />
+                            <Label htmlFor="groupName">Team</Label>
+                            <Select
+                                value={formData.groupName}
+                                onValueChange={handleTeamSelect}
+                                disabled={isLoadingTeams || !formData.classId}
+                            >
+                                <SelectTrigger id="groupName">
+                                    <SelectValue placeholder={isLoadingTeams ? "Loading..." : formData.classId ? "Select team" : "Select a class first"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {teamList.length === 0 && !isLoadingTeams ? (
+                                        <SelectItem value="no-teams" disabled>
+                                            No teams available
+                                        </SelectItem>
+                                    ) : (
+                                        teamList.map(team => (
+                                            <SelectItem key={team.teamId} value={team.teamName}>
+                                                {team.teamName}
+                                            </SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="notes">Ghi chú</Label>
+                        <Label htmlFor="notes">Notes</Label>
                         <Textarea
                             id="notes"
                             value={formData.notes}
                             onChange={(e) => handleInputChange("notes", e.target.value)}
-                            placeholder="Nhập ghi chú về việc mượn thiết bị..."
+                            placeholder="Enter notes about the equipment borrowing..."
                             rows={3}
                         />
                     </div>
@@ -286,14 +361,14 @@ export default function CreateCheckout({ isOpen, onClose, onSuccess }: CreateChe
                             onClick={handleClose}
                             disabled={isSubmitting}
                         >
-                            Hủy
+                            Cancel
                         </Button>
                         <Button
                             type="submit"
                             className="bg-orange-500 hover:bg-orange-600"
-                            disabled={isSubmitting || !formData.equipmentName || !formData.groupName || !formData.borrowingGroupName}
+                            disabled={isSubmitting || !formData.equipmentName || !formData.groupName || !formData.classId}
                         >
-                            {isSubmitting ? "Đang tạo..." : "Tạo"}
+                            {isSubmitting ? "Creating..." : "Create"}
                         </Button>
                     </div>
                 </form>

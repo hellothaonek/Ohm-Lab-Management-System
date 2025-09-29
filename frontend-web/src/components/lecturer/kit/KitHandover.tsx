@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button"
 import { Pagination } from 'antd'
 import { useClientOnly } from "@/hooks/useClientOnly"
 import { toast } from "@/components/ui/use-toast"
-import { searchTeamKit, giveBackTeamKit } from "@/services/teamKitServices"
+import { searchTeamKitByLecturerId, giveBackTeamKit } from "@/services/teamKitServices"
 import CreateCheckoutKit from "./CreateCheckoutKit"
+import { useAuth } from "@/context/AuthContext"
 
 interface KitHandoverProps {
     setShowBorrowDialog: (value: boolean) => void
@@ -31,8 +32,8 @@ interface KitCheckoutItem {
 
 const statusOptions = [
     { value: "all", label: "All Statuses" },
-    { value: "Paid", label: "Paid" },
-    { value: "AreBorrowing", label: "Are Borrowing" },
+    { value: "Paid", label: "Returned" },
+    { value: "AreBorrowing", label: "Borrowing" },
 ]
 
 export default function KitHandover({ setShowBorrowDialog }: KitHandoverProps) {
@@ -43,14 +44,20 @@ export default function KitHandover({ setShowBorrowDialog }: KitHandoverProps) {
     const [pageInfo, setPageInfo] = useState({ page: 1, size: 10, totalItems: 0 })
     const [showCheckoutDialog, setShowCheckoutDialog] = useState(false)
     const hasMounted = useClientOnly()
+    const { user } = useAuth()
 
     const fetchKitCheckoutData = async () => {
         setIsLoading(true)
         try {
-            const response = await searchTeamKit({
+            if (!user?.userId) {
+                throw new Error("User ID not found")
+            }
+            const response = await searchTeamKitByLecturerId({
                 pageNum: pageInfo.page,
                 pageSize: pageInfo.size,
+                lecturerId: user.userId,
                 keyWord: searchTerm,
+                status: selectedStatus !== "all" ? selectedStatus : "",
             })
             if (response.pageData) {
                 const mappedData: KitCheckoutItem[] = response.pageData.map((item: any) => ({
@@ -153,9 +160,9 @@ export default function KitHandover({ setShowBorrowDialog }: KitHandoverProps) {
     const getStatusLabel = (status: string) => {
         switch (status) {
             case "Paid":
-                return "Paid"
+                return "Returned"
             case "AreBorrowing":
-                return "Are Borrowing"
+                return "Borrowing"
             default:
                 return status
         }

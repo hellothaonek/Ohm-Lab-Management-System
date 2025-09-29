@@ -13,15 +13,14 @@ import { searchEquipment } from "@/services/equipmentServices"
 import { QRCodeCanvas } from "qrcode.react"
 import { Button } from "@/components/ui/button"
 import { Pagination } from 'antd'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import EquipmentHandover from "@/components/lecturer/equipment-checkout/EquipmentHandover"
+import CheckoutEquipment from "@/components/lecturer/equipment/CheckoutEquipment"
 
 interface Equipment {
-  equipmentId: number;
-  equipmentName: string;
-  equipmentCode: string;
-  equipmentNumberSerial: string;
-  equipmentStatus: string;
+  equipmentId: number
+  equipmentName: string
+  equipmentCode: string
+  equipmentNumberSerial: string
+  equipmentStatus: string
   equipmentQr: string
 }
 
@@ -35,6 +34,8 @@ export default function EquipmentPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedQrCode, setSelectedQrCode] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
+  const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false)
+  const [selectedEquipment, setSelectedEquipment] = useState<{ equipmentId: number; equipmentName: string; equipmentNumberSerial: string } | null>(null)
 
   const statusOptions = [
     { value: "all", label: "All Statuses" },
@@ -85,6 +86,15 @@ export default function EquipmentPage() {
     }
   }
 
+  const handleCheckout = (equipment: Equipment) => {
+    setSelectedEquipment({
+      equipmentId: equipment.equipmentId,
+      equipmentName: equipment.equipmentName,
+      equipmentNumberSerial: equipment.equipmentNumberSerial,
+    })
+    setIsCheckoutDialogOpen(true)
+  }
+
   const handlePaginationChange = (page: number, pageSize?: number) => {
     setPageNum(page)
     setPageSize(pageSize || 10)
@@ -95,136 +105,143 @@ export default function EquipmentPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Equipment Management</h1>
       </div>
-      <Tabs defaultValue="equipment" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="equipment">Equipment</TabsTrigger>
-          <TabsTrigger value="borrow-return">Borrow/Return</TabsTrigger>
-        </TabsList>
-        <TabsContent value="equipment">
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between gap-4">
-              <div className="flex gap-2">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Search equipment by name..."
-                    className="pl-8 w-full sm:w-[200px] md:w-[300px]"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value)
-                      setPageNum(1)
-                    }}
-                  />
-                </div>
-                <Select
-                  value={selectedStatus}
-                  onValueChange={(value) => {
-                    setSelectedStatus(value)
-                    setPageNum(1)
-                  }}
-                >
-                  <SelectTrigger className="w-48">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>
-                        {status.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <Card>
-              <Table>
-                <TableHeader className="bg-blue-50">
-                  <TableRow>
-                    <TableHead className="w-[50px]">STT</TableHead>
-                    <TableHead>Equipment Name</TableHead>
-                    <TableHead>EquipmentType</TableHead>
-                    <TableHead>Number Serial</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>QR Code</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="p-4 text-center text-muted-foreground">
-                        Loading equipment...
-                      </TableCell>
-                    </TableRow>
-                  ) : error ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="p-4 text-center text-red-500">
-                        {error}
-                      </TableCell>
-                    </TableRow>
-                  ) : equipmentItems.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="p-4 text-center text-muted-foreground">
-                        No equipment found matching your filters.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    equipmentItems.map((item: Equipment, index: number) => (
-                      <TableRow key={item.equipmentId ?? `fallback-${index}`} className="border-b">
-                        <TableCell>{(pageNum - 1) * pageSize + index + 1}</TableCell>
-                        <TableCell className="font-medium">{item.equipmentName}</TableCell>
-                        <TableCell>{item.equipmentCode}</TableCell>
-                        <TableCell>{item.equipmentNumberSerial}</TableCell>
-                        <TableCell>{getStatusBadge(item.equipmentStatus)}</TableCell>
-                        <TableCell>
-                          {item.equipmentQr ? (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="link" onClick={() => setSelectedQrCode(item.equipmentQr!)}>
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Mã QR Của {item.equipmentName}</DialogTitle>
-                                </DialogHeader>
-                                <div className="flex justify-center p-4">
-                                  <QRCodeCanvas value={selectedQrCode || ''} size={256} />
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          ) : (
-                            <span className="text-muted-foreground">No QR</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </Card>
-            <div className="flex justify-end p-4">
-              <Pagination
-                current={pageNum}
-                pageSize={pageSize}
-                total={totalItems}
-                showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
-                onChange={handlePaginationChange}
-                showSizeChanger
-                onShowSizeChange={(current, size) => {
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between gap-4">
+          <div className="flex gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search equipment by name..."
+                className="pl-8 w-full sm:w-[200px] md:w-[300px]"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
                   setPageNum(1)
-                  setPageSize(size)
                 }}
               />
             </div>
+            <Select
+              value={selectedStatus}
+              onValueChange={(value) => {
+                setSelectedStatus(value)
+                setPageNum(1)
+              }}
+            >
+              <SelectTrigger className="w-48">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </TabsContent>
-        <TabsContent value="borrow-return">
-          <EquipmentHandover />
-        </TabsContent>
-      </Tabs>
+        </div>
+
+        <Card>
+          <Table>
+            <TableHeader className="bg-blue-50">
+              <TableRow>
+                <TableHead className="w-[50px]">STT</TableHead>
+                <TableHead>Equipment Name</TableHead>
+                <TableHead>EquipmentType</TableHead>
+                <TableHead>Number Serial</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>QR Code</TableHead>
+                <TableHead>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="p-4 text-center text-muted-foreground">
+                    Loading equipment...
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="p-4 text-center text-red-500">
+                    {error}
+                  </TableCell>
+                </TableRow>
+              ) : equipmentItems.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="p-4 text-center text-muted-foreground">
+                    No equipment found matching your filters.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                equipmentItems.map((item: Equipment, index: number) => (
+                  <TableRow key={item.equipmentId ?? `fallback-${index}`} className="border-b">
+                    <TableCell>{(pageNum - 1) * pageSize + index + 1}</TableCell>
+                    <TableCell className="font-medium">{item.equipmentName}</TableCell>
+                    <TableCell>{item.equipmentCode}</TableCell>
+                    <TableCell>{item.equipmentNumberSerial}</TableCell>
+                    <TableCell>{getStatusBadge(item.equipmentStatus)}</TableCell>
+                    <TableCell>
+                      {item.equipmentQr ? (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="link" onClick={() => setSelectedQrCode(item.equipmentQr!)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Mã QR Của {item.equipmentName}</DialogTitle>
+                            </DialogHeader>
+                            <div className="flex justify-center p-4">
+                              <QRCodeCanvas value={selectedQrCode || ''} size={256} />
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ) : (
+                        <span className="text-muted-foreground">No QR</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCheckout(item)}
+                        disabled={item.equipmentStatus.toLowerCase() !== "available"}
+                      >
+                        Checkout
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </Card>
+        <div className="flex justify-end p-4">
+          <Pagination
+            current={pageNum}
+            pageSize={pageSize}
+            total={totalItems}
+            showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
+            onChange={handlePaginationChange}
+            showSizeChanger
+            onShowSizeChange={(current, size) => {
+              setPageNum(1)
+              setPageSize(size)
+            }}
+          />
+        </div>
+      </div>
+
+      <CheckoutEquipment
+        isOpen={isCheckoutDialogOpen}
+        onOpenChange={setIsCheckoutDialogOpen}
+        equipment={selectedEquipment}
+        onSuccess={fetchEquipment}
+      />
     </div>
   )
 }

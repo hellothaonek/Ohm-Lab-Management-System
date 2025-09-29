@@ -9,10 +9,11 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { useClientOnly } from "@/hooks/useClientOnly"
-import { searchTeamEquipment, giveBackEquipment } from "@/services/teamEquipmentServices"
+import { searchTeamEquipmentByLecturerId, giveBackEquipment } from "@/services/teamEquipmentServices"
 import { Pagination } from 'antd'
 import CreateCheckout from "@/components/lecturer/equipment-checkout/CreateCheckout"
 import { toast } from "@/components/ui/use-toast"
+import { useAuth } from "@/context/AuthContext"
 
 interface CheckoutItem {
     teamEquipmentId: number
@@ -27,8 +28,8 @@ interface CheckoutItem {
 
 const statusOptions = [
     { value: "all", label: "All Statuses" },
-    { value: "Paid", label: "Paid" },
-    { value: "AreBorrowing", label: "Are Borrowing" },
+    { value: "Paid", label: "Returned" },
+    { value: "AreBorrowing", label: "Borrowing" },
 ]
 
 export default function EquipmentHandover() {
@@ -39,15 +40,19 @@ export default function EquipmentHandover() {
     const [pageInfo, setPageInfo] = useState({ page: 1, size: 10, totalItems: 0 })
     const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false)
     const hasMounted = useClientOnly()
-    const [isGivingBack, setIsGivingBack] = useState<number | null>(null);
+    const [isGivingBack, setIsGivingBack] = useState<number | null>(null)
+    const { user } = useAuth()
 
     const fetchCheckoutData = async () => {
         setIsLoading(true)
         try {
-            const response = await searchTeamEquipment({
+            if (!user?.userId) {
+                throw new Error("User ID not found")
+            }
+            const response = await searchTeamEquipmentByLecturerId({
                 pageNum: pageInfo.page,
                 pageSize: pageInfo.size,
-                keyWord: searchTerm,
+                lecturerId: user.userId,
             })
             if (response.pageData) {
                 const mappedData: CheckoutItem[] = response.pageData.map((item: any) => ({
@@ -143,9 +148,9 @@ export default function EquipmentHandover() {
     const getStatusLabel = (status: string) => {
         switch (status) {
             case "Paid":
-                return "Paid"
+                return "Returned"
             case "AreBorrowing":
-                return "Are Borrowing"
+                return "Borrowing"
             default:
                 return status
         }
@@ -253,7 +258,7 @@ export default function EquipmentHandover() {
                             {statusOptions.map((status) => (
                                 <SelectItem key={status.value} value={status.value}>
                                     {status.label}
-                                </SelectItem> 
+                                </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>

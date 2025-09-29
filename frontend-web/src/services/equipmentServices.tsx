@@ -6,7 +6,7 @@ export const getEquipmentById = async (id: string) => {
     return response.data;
 };
 
-export const createEquipment = async (data: { equipmentName: string; equipmentCode: string; equipmentNumberSerial: string; equipmentDescription: string; equipmentTypeUrlImg: string }) => {
+export const createEquipment = async (data: { equipmentTypeId: string; equipmentName: string; equipmentNumberSerial: string; equipmentDescription: string; equipmentTypeUrlImg: string }) => {
     const response = await defaultAxiosInstance.post("/api/equipment/equipment", data);
     toast.success("Equipment created successfully");
     return response.data;

@@ -157,7 +157,7 @@ export default function HeadClassesPage() {
                         {filteredClasses.map((classItem) => (
                             <TableRow key={classItem.classId}>
                                 <TableCell>
-                                    <Link href={`/head/dashboard/classes/[class-detail]?classId=${classItem.classId}`} as={`/head/dashboard/classes/class-detail?classId=${classItem.classId}`} className="font-medium text-orange-500 hover:underline">
+                                    <Link href={`/head/dashboard/classes/[class-detail]?classId=${classItem.classId}`} as={`/head/dashboard/classes/class-detail?classId=${classItem.classId}`} className="font-medium hover:text-orange-500">
                                         {classItem.className}
                                     </Link>
                                 </TableCell>

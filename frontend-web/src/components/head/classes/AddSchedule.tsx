@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react"
 import { getAllScheduleTypes } from "@/services/scheduleTypeServices"
 import { addScheduleForClass } from "@/services/classServices"
+import { toast } from "react-toastify"
 
 interface ScheduleType {
     scheduleTypeId: number
@@ -72,8 +73,10 @@ export default function AddSchedule({ open, onClose, onAddSchedule, classId, cla
                 setSelectedDow("")
                 setSelectedScheduleTypeId("")
                 onClose()
-            } catch (err) {
-                setError("Failed to add schedule")
+            } catch (err: any) {
+                const errorMessage = err.response?.data?.message
+                toast.error(errorMessage)
+                onClose() 
             } finally {
                 setLoading(false)
             }
@@ -100,7 +103,7 @@ export default function AddSchedule({ open, onClose, onAddSchedule, classId, cla
                                     value={selectedDow}
                                     onValueChange={(value) => {
                                         setSelectedDow(value)
-                                        setSelectedScheduleTypeId("") 
+                                        setSelectedScheduleTypeId("")
                                     }}
                                 >
                                     <SelectTrigger>
