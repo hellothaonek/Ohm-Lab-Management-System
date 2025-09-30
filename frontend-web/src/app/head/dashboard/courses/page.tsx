@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { SearchIcon, Loader2, MoreVertical } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +13,8 @@ import DeleteCourse from "@/components/head/courses/DeleteCourse"
 import EditCourse from "@/components/head/courses/EditCourse"
 import Link from "next/link"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { Pagination } from 'antd'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Subject {
     subjectId: number
@@ -22,62 +24,141 @@ interface Subject {
     subjectStatus: string
 }
 
+const statusOptions = [
+    { value: "all", label: "All Statuses" },
+    { value: "Active", label: "Active" },
+    { value: "Inactive", label: "Inactive" },
+]
+
 export default function CoursesPage() {
+    const [rawSubjects, setRawSubjects] = useState<Subject[]>([])
     const [subjects, setSubjects] = useState<Subject[]>([])
+
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [searchTerm, setSearchTerm] = useState("")
+    const [selectedStatus, setSelectedStatus] = useState("all")
+
+    const [pageNum, setPageNum] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
 
     const fetchSubjects = useCallback(async () => {
         try {
             setIsLoading(true)
             setError(null)
             const response = await getSubjects()
-            console.log("Full API response:", response)
-            if (response) {
-                setSubjects(response.pageData)
+            const subjectData = response.pageData
+
+            if (subjectData) {
+                setRawSubjects(subjectData)
+            } else {
+                setRawSubjects([])
+                console.warn("API response structure is unexpected.")
             }
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || err.message || "Failed to fetch subjects"
             setError(errorMessage)
             console.error("Error fetching subjects:", err)
-            setSubjects([])
+            setRawSubjects([])
         } finally {
             setIsLoading(false)
         }
-    }, [searchTerm])
+    }, [])
 
     useEffect(() => {
         fetchSubjects()
     }, [fetchSubjects])
 
+    const filteredAndPaginatedData = useMemo(() => {
+        const lowerCaseSearchTerm = searchTerm.toLowerCase().trim()
+
+        const filtered = rawSubjects.filter(subject => {
+            const matchesSearch =
+                subject.subjectName.toLowerCase().includes(lowerCaseSearchTerm) ||
+                subject.subjectCode.toLowerCase().includes(lowerCaseSearchTerm)
+
+            const matchesStatus =
+                selectedStatus === "all" || subject.subjectStatus === selectedStatus
+
+            return matchesSearch && matchesStatus
+        })
+
+        const startIndex = (pageNum - 1) * pageSize
+        const endIndex = startIndex + pageSize
+        const paginated = filtered.slice(startIndex, endIndex)
+
+        setSubjects(paginated)
+
+        return filtered.length
+
+    }, [rawSubjects, searchTerm, selectedStatus, pageNum, pageSize])
+
+    const totalFilteredItems = filteredAndPaginatedData
+
+    const handlePaginationChange = (page: number, size: number) => {
+        setPageNum(page)
+        if (size !== pageSize) {
+            setPageSize(size)
+            setPageNum(1)
+        }
+    }
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value)
+        setPageNum(1)
+    }
+
+    const handleStatusChange = (value: string) => {
+        setSelectedStatus(value)
+        setPageNum(1)
+    }
+
+    const getStatusBadge = (status: string) => {
+        switch (status) {
+            case "Active":
+                return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
+            case "Inactive":
+                return <Badge className="bg-red-500 hover:bg-red-600">Inactive</Badge>
+            default:
+                return <Badge variant="secondary">{status}</Badge>
+        }
+    }
+
     return (
         <div className="space-y-6">
             <CardHeader>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <CardTitle>Subjects Management</CardTitle>
-                        <CardDescription>View and manage all available subjects</CardDescription>
+                <CardTitle>Subjects Management</CardTitle>
+            </CardHeader>
+            <div className="px-6">
+                <div className="mb-6 flex gap-4 items-center justify-between">
+                    <div className="flex gap-4 items-center">
+                        <div className="relative w-full sm:w-80">
+                            <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search subjects..."
+                                value={searchTerm}
+                                onChange={handleSearchChange}
+                                className="pl-8 w-full"
+                            />
+                        </div>
+
+                        <Select value={selectedStatus} onValueChange={handleStatusChange}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Select Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {statusOptions.map((status) => (
+                                    <SelectItem key={status.value} value={status.value}>
+                                        {status.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <CreateCourse onSubjectCreated={fetchSubjects} />
                 </div>
-            </CardHeader>
-            <div className="px-6">
-                <div className="mb-6">
-                    <div className="relative w-full sm:w-80">
-                        <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search subjects..."
-                            value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value)
-                            }}
-                            className="pl-8 w-full sm:w-80"
-                        />
-                    </div>
-                </div>
 
-                {isLoading ? (
+                {isLoading && rawSubjects.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
                         <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto mb-4" />
                         <p>Loading subjects...</p>
@@ -86,9 +167,9 @@ export default function CoursesPage() {
                     <div className="p-8 text-center text-red-500">
                         <p>{error}</p>
                     </div>
-                ) : subjects.length === 0 ? (
+                ) : subjects.length === 0 && !isLoading ? (
                     <div className="p-8 text-center text-muted-foreground">
-                        <p>No subjects found.</p>
+                        <p>No subjects found matching your search criteria.</p>
                     </div>
                 ) : (
                     <Card>
@@ -108,20 +189,17 @@ export default function CoursesPage() {
                                         <TableRow key={subject.subjectId}>
                                             <TableCell>
                                                 <Link
-                                                    href={`/head/dashboard/courses/[course-detail]/${subject.subjectId}`}
-                                                    as={`/head/dashboard/courses/course-detail?subjectId=${subject.subjectId}`}
+                                                    href={`/head/dashboard/courses/course-detail?subjectId=${subject.subjectId}`}
                                                     className="text-blue-600 hover:underline"
                                                 >
                                                     {subject.subjectName}
                                                 </Link>
                                             </TableCell>
-                                            <TableCell>
-                                                <Badge variant="secondary" className="bg-green-500">
-                                                    {subject.subjectCode}
-                                                </Badge>
-                                            </TableCell>
+                                            <TableCell>{subject.subjectCode}</TableCell>
                                             <TableCell>{subject.subjectDescription}</TableCell>
-                                            <TableCell>{subject.subjectStatus}</TableCell>
+                                            <TableCell>
+                                                {getStatusBadge(subject.subjectStatus)}
+                                            </TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
@@ -159,6 +237,20 @@ export default function CoursesPage() {
                             </Table>
                         </CardContent>
                     </Card>
+                )}
+            </div>
+
+            <div className="flex justify-end p-6">
+                {totalFilteredItems > 0 && (
+                    <Pagination
+                        current={pageNum}
+                        pageSize={pageSize}
+                        total={totalFilteredItems}
+                        showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
+                        onChange={handlePaginationChange}
+                        showSizeChanger
+                        onShowSizeChange={handlePaginationChange}
+                    />
                 )}
             </div>
         </div>

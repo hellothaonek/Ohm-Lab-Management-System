@@ -7,8 +7,8 @@ export const createClass = async (data: { subjectId: number; lecturerId: string;
     return response.data;
 };
 
-export const getAllClasses = async (status: string) => {
-    const response = await axiosWithoutLoading.get(`/api/class?status=${status}`);
+export const getAllClasses = async () => {
+    const response = await axiosWithoutLoading.get(`/api/class`);
     return response.data;
 };
 

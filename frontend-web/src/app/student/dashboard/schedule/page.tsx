@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { addDays, startOfWeek, format, eachWeekOfInterval } from "date-fns";
 import { getCurrentUser } from "@/services/userServices";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ScheduleSkeleton } from "@/components/loading-skeleton";
 import { getScheduleByStudentId } from "@/services/scheduleServices";
 import { getRegistrationScheduleByStudentId } from "@/services/registrationScheduleServices";
@@ -55,7 +54,7 @@ interface LabScheduleItem {
 export default function StudentSchedule() {
     const { user } = useAuth()
     const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
-    const [weeks, setWeeks] = useState<{ value: string; label: string }[]>([]);
+    const [weeks, setWeeks] = useState<{ value: string; label: string }[]>([]); // Weeks state is unused but kept for now
     const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
     const [labSchedule, setLabSchedule] = useState<LabScheduleItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -63,29 +62,39 @@ export default function StudentSchedule() {
 
     useEffect(() => {
         const fetchSchedules = async () => {
+            const studentId = user?.userId;
+            if (!studentId) {
+                setLoading(false);
+                setError("User ID not found. Please log in again.");
+                return;
+            }
             try {
                 setLoading(true);
-                const studentId = user?.userId;
-                if (studentId) {
-                    const [scheduleData, labScheduleData] = await Promise.all([
-                        getScheduleByStudentId(studentId),
-                        getRegistrationScheduleByStudentId(studentId),
-                    ]);
-                    setSchedule(scheduleData);
-                    setLabSchedule(labScheduleData);
-                } else {
-                    setError("Could not retrieve student ID.");
-                }
+
+                const [scheduleData, labScheduleData] = await Promise.all([
+                    getScheduleByStudentId(studentId),
+                    getRegistrationScheduleByStudentId(studentId),
+                ]);
+
+                setSchedule(scheduleData);
+                // Chỉ lấy lịch đăng ký lab có trạng thái là "Accept"
+                const acceptedLabSchedule = labScheduleData.filter(
+                    (item: LabScheduleItem) => item.registrationScheduleStatus === "Accept"
+                );
+                setLabSchedule(acceptedLabSchedule);
+
             } catch (err) {
                 setError("Failed to fetch schedules. Please try again later.");
                 console.error(err);
+                setSchedule([]);
+                setLabSchedule([]);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchSchedules();
-    }, []);
+    }, [user]); // Thêm 'user' vào dependency array
 
     const { weekDates, weekOptions } = useMemo(() => {
         const currentYear = new Date().getFullYear();
@@ -109,22 +118,35 @@ export default function StudentSchedule() {
         setSelectedWeekStart(new Date(value));
     };
 
+    /**
+     * Sửa logic tìm kiếm:
+     * Sử dụng slotStartTime thay vì slotId để đảm bảo lịch hiển thị đúng vị trí giờ.
+     */
     const renderCell = (day: string, slotIndex: number) => {
         const date = weekDates[days.indexOf(day)];
+
+        // Lấy thời gian bắt đầu mong muốn của ô hiện tại (vd: "15:00")
+        const expectedSlotTime = slots[slotIndex].split(" - ")[0];
+
+        // 1. Tìm kiếm lịch học (ScheduleItem) bằng slotStartTime
         const lesson = schedule.find((l) =>
-            format(new Date(l.scheduleDate), "yyyy-MM-dd") === date && l.slotId === slotIndex + 1
+            format(new Date(l.scheduleDate), "yyyy-MM-dd") === date &&
+            l.slotStartTime === expectedSlotTime
         );
+
+        // 2. Tìm kiếm lịch đăng ký lab (LabScheduleItem) bằng slotStartTime
         const labLesson = labSchedule.find((l) =>
-            format(new Date(l.registrationScheduleDate), "yyyy-MM-dd") === date && l.slotId === slotIndex + 1
+            format(new Date(l.registrationScheduleDate), "yyyy-MM-dd") === date &&
+            l.slotStartTime === expectedSlotTime
         );
 
         if (lesson) {
             return (
                 <Card className="bg-blue-100 h-full">
                     <CardContent className="p-2 text-sm">
-                        <div className="font-bold">{lesson.subjectName}</div>
-                        <div className="text-orange-500">{lesson.className}</div>
-                        <div className="text-muted-foreground">Lec: {lesson.lecturerName}</div>
+                        <div className="font-bold truncate">{lesson.subjectName}</div>
+                        <div className="text-orange-500 truncate">{lesson.className}</div>
+                        <div className="text-muted-foreground truncate">Lec: {lesson.lecturerName}</div>
                     </CardContent>
                 </Card>
             );
@@ -133,8 +155,8 @@ export default function StudentSchedule() {
                 <Card className="bg-orange-100 h-full">
                     <CardContent className="p-2 text-sm">
                         <div className="text-muted-foreground truncate">{labLesson.labName}</div>
-                        <div className="text-orange-500">{labLesson.className}</div>
-                        <div className="text-muted-foreground">Lec: {labLesson.teacherName}</div>
+                        <div className="text-orange-500 truncate">{labLesson.className}</div>
+                        <div className="text-muted-foreground truncate">Lec: {labLesson.teacherName}</div>
                     </CardContent>
                 </Card>
             );

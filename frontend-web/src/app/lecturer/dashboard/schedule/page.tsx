@@ -60,8 +60,8 @@ export default function LecturerSchedule() {
             }
             try {
                 setLoading(true);
-                const user = await getCurrentUser();
-                const lecturerId = user.userId;
+                // Dùng user.userId từ useAuth để tránh gọi getCurrentUser lần nữa
+                const lecturerId = userId;
                 if (lecturerId) {
                     const [scheduleData, labBookingResponse] = await Promise.all([
                         getScheduleByLectureId(lecturerId),
@@ -70,14 +70,12 @@ export default function LecturerSchedule() {
 
                     setSchedule(scheduleData);
 
-                    // Nâng cao khả năng xử lý lỗi: kiểm tra dữ liệu trước khi set state
                     if (labBookingResponse) {
                         const acceptedBookings = labBookingResponse.filter(
                             (booking: any) => booking.registrationScheduleStatus === "Accept"
                         );
                         setLabBookings(acceptedBookings);
                     } else {
-                        // Nếu không có dữ liệu hoặc dữ liệu không đúng định dạng, set state về mảng rỗng
                         setLabBookings([]);
                     }
                 } else {
@@ -86,7 +84,6 @@ export default function LecturerSchedule() {
             } catch (err) {
                 setError("Failed to fetch schedule. Please try again later.");
                 console.error(err);
-                // Đảm bảo state không bị undefined khi có lỗi
                 setSchedule([]);
                 setLabBookings([]);
             } finally {
@@ -94,8 +91,11 @@ export default function LecturerSchedule() {
             }
         };
 
-        fetchAllSchedules();
-    }, []);
+        // Bỏ qua việc gọi getCurrentUser nếu đã có user.userId
+        if (user?.userId) {
+            fetchAllSchedules();
+        }
+    }, [user]); // Thêm 'user' vào dependency array
 
     const { weekDates, weekOptions } = useMemo(() => {
         const currentYear = new Date().getFullYear();
@@ -119,16 +119,28 @@ export default function LecturerSchedule() {
         setSelectedWeekStart(new Date(value));
     };
 
+    /**
+     * Sửa logic tìm kiếm:
+     * Thay vì so sánh l.slotId === slotIndex + 1 (bị lỗi do data API),
+     * ta so sánh trực tiếp bằng slotStartTime (thời gian bắt đầu) để đảm bảo đúng vị trí.
+     */
     const renderCell = (day: string, slotIndex: number) => {
         const date = weekDates[days.indexOf(day)];
 
-        // Find a teaching lesson for this slot
+        // 1. Lấy thời gian bắt đầu mong muốn của ô hiện tại
+        // Ví dụ: slots[3] = "15:00 - 17:15" -> expectedStartTime = "15:00"
+        const expectedSlotTime = slots[slotIndex].split(" - ")[0];
+
+        // 2. Tìm kiếm lịch giảng
         const lesson = schedule.find((l) =>
-            format(new Date(l.scheduleDate), "yyyy-MM-dd") === date && l.slotId === slotIndex + 1
+            format(new Date(l.scheduleDate), "yyyy-MM-dd") === date &&
+            l.slotStartTime === expectedSlotTime // Sửa lỗi so sánh bằng thời gian
         );
 
+        // 3. Tìm kiếm đặt phòng lab
         const booking = labBookings.find((b) =>
-            format(new Date(b.registrationScheduleDate), "yyyy-MM-dd") === date && b.slotId === slotIndex + 1
+            format(new Date(b.registrationScheduleDate), "yyyy-MM-dd") === date &&
+            b.slotStartTime === expectedSlotTime // Sửa lỗi so sánh bằng thời gian
         );
 
         if (lesson) {

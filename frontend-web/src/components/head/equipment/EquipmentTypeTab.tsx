@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react" // 👈 Import useMemo
+import { useState, useEffect, useMemo } from "react" 
 import { Search, EllipsisVertical } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -53,7 +53,6 @@ export default function EquipmentTypeTab() {
 
     const [pageNum, setPageNum] = useState(1)
     const [pageSize, setPageSize] = useState(10)
-    // Giữ nguyên tổng số item (trước khi lọc cục bộ)
     const [totalTypeItems, setTotalTypeItems] = useState(0)
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false)
     const [isEditTypeModalOpen, setIsEditTypeModalOpen] = useState(false)
@@ -91,13 +90,11 @@ export default function EquipmentTypeTab() {
         const lowerCaseSearch = searchQuery.toLowerCase().trim();
 
         return rawEquipmentTypeItems.filter(item => {
-            // Lọc theo từ khóa tìm kiếm: Name hoặc Code
             const matchesSearch =
                 lowerCaseSearch === "" ||
                 item.equipmentTypeName.toLowerCase().includes(lowerCaseSearch) ||
                 item.equipmentTypeCode.toLowerCase().includes(lowerCaseSearch)
 
-            // Lọc theo trạng thái
             const matchesStatus =
                 selectedStatus === "all" || item.equipmentTypeStatus === selectedStatus
 
@@ -121,23 +118,18 @@ export default function EquipmentTypeTab() {
     }
 
     const handlePaginationChange = (page: number, pageSize: number | undefined) => {
-        // Khi phân trang thay đổi, reset filter/search nếu bạn muốn
         setSearchQuery("");
         setSelectedStatus("all");
         setPageNum(page)
         setPageSize(pageSize || 10)
     }
 
-    // Xử lý thay đổi search
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value)
-        // KHÔNG CẦN setPageNum(1) vì ta lọc trên dữ liệu của trang hiện tại
     }
 
-    // Xử lý thay đổi trạng thái
     const handleStatusChange = (value: string) => {
         setSelectedStatus(value)
-        // KHÔNG CẦN setPageNum(1) vì ta lọc trên dữ liệu của trang hiện tại
     }
 
     return (
@@ -152,7 +144,7 @@ export default function EquipmentTypeTab() {
                                 placeholder="Search equipment types..."
                                 className="pl-8 w-full"
                                 value={searchQuery}
-                                onChange={handleSearchChange} // 👈 Sử dụng hàm mới
+                                onChange={handleSearchChange} 
                             />
                         </div>
                         <Select value={selectedStatus} onValueChange={handleStatusChange}>
@@ -203,14 +195,14 @@ export default function EquipmentTypeTab() {
                                         Loading...
                                     </TableCell>
                                 </TableRow>
-                            ) : filteredEquipmentTypeItems.length === 0 ? ( // 👈 SỬ DỤNG filteredEquipmentTypeItems
+                            ) : filteredEquipmentTypeItems.length === 0 ? ( 
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center text-muted-foreground">
                                         No equipment types found matching your filters.
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                filteredEquipmentTypeItems.map((item: EquipmentType, index: number) => ( // 👈 SỬ DỤNG filteredEquipmentTypeItems
+                                filteredEquipmentTypeItems.map((item: EquipmentType, index: number) => ( 
                                     <TableRow key={item.equipmentTypeId ?? `fallback-type-${index}`}>
                                         <TableCell>
                                             <div className="font-medium">{item.equipmentTypeName}</div>

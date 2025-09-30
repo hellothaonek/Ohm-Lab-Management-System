@@ -109,11 +109,6 @@ export default function StudentClassDetailPage() {
 
     return (
         <div className="min-h-screen p-4">
-            <div className="mb-6">
-                <Button onClick={() => router.back()} variant="outline" className="mb-4 rounded-full w-10 h-10">
-                    <ChevronLeft className="h-4 w-4" />
-                </Button>
-            </div>
             <h2 className="text-3xl text-gray-900 dark:text-white mb-6">Details of class {classDetail.className}</h2>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                 <TabsList>

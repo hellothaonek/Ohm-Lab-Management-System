@@ -42,7 +42,7 @@ export default function AdminSchedule() {
     const fetchScheduleTypes = async () => {
         try {
             const response = await getAllScheduleTypes();
-            console.log(">>> Schedule Types:", response);
+            // console.log(">>> Schedule Types:", response);
             setScheduleTypes(response);
         } catch (error) {
             console.error("Error fetching schedule types:", error);

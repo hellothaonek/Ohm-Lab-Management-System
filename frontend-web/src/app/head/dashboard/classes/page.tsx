@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
-import { Search, BookOpen, Loader2, EllipsisVertical, CalendarPlus, UsersRound, UserPen, Trash2, Edit, Filter } from "lucide-react"
+import { useState, useMemo, useEffect, useCallback } from "react"
+import { Search, BookOpen, Loader2, EllipsisVertical, CalendarPlus, UsersRound, Trash2, Edit } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,13 +9,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { getAllClasses } from "@/services/classServices"
 import CreateNewClass from "@/components/head/classes/CreateNewClass"
 import DeleteClass from "@/components/head/classes/DeleteClass"
 import EditClass from "@/components/head/classes/EditClass"
 import AddSchedule from "@/components/head/classes/AddSchedule"
 import AddStudent from "@/components/head/classes/AddStudent"
 import Link from "next/link"
+import { getAllClasses } from "@/services/classServices"
+import { Pagination } from 'antd'
+
+interface ClassUser {
+    classUserId: number;
+    classId: number;
+    userId: string;
+    className: string;
+    userName: string;
+    userEmail: string;
+    userRole: string;
+    userNumberCode: string;
+    subjectId: number;
+    subjectName: string;
+    subjectCode: string;
+    subjectDescription: string;
+    subjectStatus: string;
+    semesterName: string | null;
+    semesterStartDate: string | null;
+    semesterEndDate: string | null;
+    classUserStatus: string;
+}
 
 interface ClassItem {
     classId: number
@@ -27,8 +48,8 @@ interface ClassItem {
     classStatus: string
     subjectName: string
     lecturerName: string | null
-    classUsers: any[]
-    semesterName: string
+    classUsers: ClassUser[]
+    semesterName: string | null
     scheduleTypeDow?: string
     slotStartTime?: string
     slotEndTime?: string
@@ -36,9 +57,9 @@ interface ClassItem {
 
 export default function HeadClassesPage() {
     const [searchTerm, setSearchTerm] = useState("")
-    const [selectedSemester, setSelectedSemester] = useState("all")
-    const [selectedStatus, setSelectedStatus] = useState("all")
-    const [classes, setClasses] = useState<ClassItem[]>([])
+    const [statusFilter, setStatusFilter] = useState("all") // New state for status filter
+    const [rawClassesData, setRawClassesData] = useState<ClassItem[]>([])
+    const [allClassesData, setAllClassesData] = useState<ClassItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [editingClass, setEditingClass] = useState<ClassItem | null>(null)
@@ -48,92 +69,111 @@ export default function HeadClassesPage() {
     const [isAddScheduleModalOpen, setIsAddScheduleModalOpen] = useState(false)
     const [addingStudentClass, setAddingStudentClass] = useState<ClassItem | null>(null)
     const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false)
+    const [pageNum, setPageNum] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
 
-    const fetchClasses = async () => {
+    const fetchClasses = useCallback(async () => {
+        setLoading(true)
+        setError(null)
         try {
-            setLoading(true)
-            const response = await getAllClasses("active")
-            setClasses(response.pageData)
+            const response = await getAllClasses()
+            const filteredData = response.pageData.filter((classItem: ClassItem) => {
+                const status = classItem.classStatus?.toLowerCase()
+                return status === 'active' || status === 'inactive'
+            })
+            setRawClassesData(filteredData)
+            setPageNum(1)
         } catch (err) {
-            setError("Failed to fetch classes")
+            console.error("Failed to fetch classes:", err)
+            setError("Failed to load classes. Please try again.")
+            setRawClassesData([])
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
     useEffect(() => {
         fetchClasses()
-    }, [])
+    }, [fetchClasses])
 
-    const semesters = useMemo(() => {
-        const semesterMap = new Map<string, { value: string; label: string }>()
-        classes.forEach((classItem) => {
-            semesterMap.set(classItem.semesterName, {
-                value: classItem.semesterName,
-                label: classItem.semesterName,
-            })
+    const filteredAndPaginatedData = useMemo(() => {
+        const lowerCaseSearchTerm = searchTerm.toLowerCase().trim()
+
+        // 1. Filtering: Lọc trên TẤT CẢ dữ liệu
+        const filtered = rawClassesData.filter((classItem) => {
+            const matchesSearch = (
+                classItem.className.toLowerCase().includes(lowerCaseSearchTerm) ||
+                classItem.subjectName.toLowerCase().includes(lowerCaseSearchTerm) ||
+                classItem.lecturerName?.toLowerCase().includes(lowerCaseSearchTerm) ||
+                classItem.semesterName?.toLowerCase().includes(lowerCaseSearchTerm)
+            )
+
+            const matchesStatus = statusFilter === "all" ||
+                classItem.classStatus.toLowerCase() === statusFilter.toLowerCase()
+
+            return matchesSearch && matchesStatus
         })
-        return [
-            { value: "all", label: "All Semesters" },
-            ...Array.from(semesterMap.values()),
-        ]
-    }, [classes])
 
-    const statusOptions = useMemo(() => {
-        const uniqueStatuses = [...new Set(classes.map((classItem) => classItem.classStatus))]
-        return [
-            { value: "all", label: "All Status" },
-            ...uniqueStatuses.map((status) => ({ value: status, label: status.charAt(0).toUpperCase() + status.slice(1) })),
-        ]
-    }, [classes])
+        // 2. Pagination: Cắt lát dữ liệu đã lọc
+        const startIndex = (pageNum - 1) * pageSize
+        const endIndex = startIndex + pageSize
+        const paginated = filtered.slice(startIndex, endIndex)
 
-    const filteredClasses = useMemo(() => {
-        return classes.filter((classItem) => {
-            const matchesSearch =
-                classItem.className.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                classItem.subjectName.toLowerCase().includes(searchTerm.toLowerCase())
-            const matchesSemester = selectedSemester === "all" || classItem.semesterName === selectedSemester
-            const matchesStatus = selectedStatus === "all" || classItem.classStatus === selectedStatus
+        setAllClassesData(paginated)
+        return filtered.length
+    }, [rawClassesData, searchTerm, statusFilter, pageNum, pageSize])
 
-            return matchesSearch && matchesSemester && matchesStatus
-        })
-    }, [searchTerm, selectedSemester, selectedStatus, classes])
+    const totalFilteredItems = filteredAndPaginatedData
 
-    const getStatusVariant = (status: string) => {
-        switch (status.toLowerCase()) {
-            case "valid":
-                return "default"
-            default:
-                return "outline"
+    const handlePaginationChange = (page: number, size: number) => {
+        setPageNum(page)
+        if (size !== pageSize) {
+            setPageSize(size)
+            setPageNum(1)
         }
     }
 
-    const handleCreateClass = (newClass: ClassItem) => {
-        setClasses((prev) => [...prev, {
-            ...newClass,
-            subjectName: newClass.subjectName || "-",
-            lecturerName: newClass.lecturerName || "-",
-            semesterName: newClass.semesterName || "-",
-            scheduleTypeDow: newClass.scheduleTypeDow || "-",
-            slotStartTime: newClass.slotStartTime || "-",
-            slotEndTime: newClass.slotEndTime || "-",
-            classUsers: newClass.classUsers || [],
-        }])
-    }
-
+    const handleCreateClass = () => { fetchClasses() }
     const handleDeleteClass = () => {
+        setIsDeleteModalOpen(false)
+        setDeletingClass(null)
+        fetchClasses()
+    }
+    const handleAddSchedule = () => {
+        setIsAddScheduleModalOpen(false)
+        setAddingScheduleClass(null)
+        fetchClasses()
+    }
+    const handleAddStudents = () => {
+        setIsAddStudentModalOpen(false)
+        setAddingStudentClass(null)
+        fetchClasses()
+    }
+    const handleUpdateClass = () => {
+        setEditingClass(null)
         fetchClasses()
     }
 
-    const handleAddSchedule = (schedule: { scheduleTypeId: number; classId: number }) => {
-        fetchClasses()
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value)
+        setPageNum(1)
     }
 
-    const handleAddStudents = (classId: number, file: File) => {
-        // In a real implementation, you would make an API call to upload the file
-        // and process the student data, then refresh the classes
-        console.log(`Uploading file for class ${classId}:`, file.name)
-        fetchClasses()
+    const handleStatusFilterChange = (value: string) => {
+        setStatusFilter(value)
+        setPageNum(1)
+    }
+
+    const getStatusVariant = (status: string) => {
+        switch (status.toLowerCase()) {
+            case "active":
+            case "valid":
+                return "default"
+            case "inactive":
+                return "secondary"
+            default:
+                return "outline"
+        }
     }
 
     const renderTableView = () => (
@@ -154,7 +194,7 @@ export default function HeadClassesPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredClasses.map((classItem) => (
+                        {allClassesData.map((classItem) => (
                             <TableRow key={classItem.classId}>
                                 <TableCell>
                                     <Link href={`/head/dashboard/classes/[class-detail]?classId=${classItem.classId}`} as={`/head/dashboard/classes/class-detail?classId=${classItem.classId}`} className="font-medium hover:text-orange-500">
@@ -230,6 +270,7 @@ export default function HeadClassesPage() {
                 <Card>
                     <CardContent className="p-8 text-center">
                         <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Loading classes...</h3>
                     </CardContent>
                 </Card>
             </div>
@@ -241,63 +282,63 @@ export default function HeadClassesPage() {
             <div className="min-h-screen p-4">
                 <Card>
                     <CardContent className="p-8 text-center">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{error}</h3>
+                        <h3 className="text-lg font-medium text-red-500 mb-2">Error</h3>
+                        <p className="text-gray-600 dark:text-gray-400">{error}</p>
+                        <Button onClick={fetchClasses} className="mt-4">
+                            Try Again
+                        </Button>
                     </CardContent>
                 </Card>
             </div>
         )
     }
 
+    let noContentMessage = null
+    const isSearchActive = searchTerm.trim() !== "" || statusFilter !== "all"
+
+    if (totalFilteredItems === 0 && isSearchActive) {
+        noContentMessage = {
+            icon: <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />,
+            heading: `No classes found matching your criteria`,
+            paragraph: "Try adjusting your search or status filter.",
+        }
+    } else if (rawClassesData.length === 0 && !isSearchActive) {
+        noContentMessage = {
+            icon: <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />,
+            heading: "No classes available",
+            paragraph: "Create a new class to get started.",
+        }
+    }
+
     return (
         <div className="min-h-screen p-4">
             <div className="mb-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Classes</h1>
-                    </div>
-                    <CreateNewClass onCreateClass={handleCreateClass} />
-                </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="flex gap-2 flex-1">
-                    <div className="relative flex-1">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Classes</h1>
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="relative flex-1 max-w-md">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" aria-label="Search icon" />
                         <Input
-                            placeholder="Search by class name or subject..."
+                            placeholder="Search by class name, subject, or lecturer..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={handleSearchChange}
                             className="pl-10"
                         />
                     </div>
-
-                    <Select value={selectedSemester} onValueChange={setSelectedSemester}>
-                        <SelectTrigger className="w-40">
-                            <Filter className="h-4 w-4" />
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {semesters.map((semester) => (
-                                <SelectItem key={semester.value} value={semester.value}>
-                                    {semester.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-
-                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                        <SelectTrigger className="w-40">
-                            <Filter className="h-4 w-4" />
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {statusOptions.map((status) => (
-                                <SelectItem key={status.value} value={status.value}>
-                                    {status.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <div className="w-full sm:w-40">
+                        <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Filter by status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="inactive">Inactive</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="sm:ml-auto">
+                        <CreateNewClass onCreateClass={handleCreateClass} />
+                    </div>
                 </div>
             </div>
 
@@ -306,17 +347,7 @@ export default function HeadClassesPage() {
                     classItem={editingClass}
                     open={!!editingClass}
                     onClose={() => setEditingClass(null)}
-                    onUpdate={(updatedClass) => {
-                        setClasses((prev) =>
-                            prev.map((c) => (c.classId === updatedClass.classId ? {
-                                ...c,
-                                ...updatedClass,
-                                classUsers: c.classUsers,
-                                semesterName: c.semesterName,
-                            } : c))
-                        )
-                        setEditingClass(null)
-                    }}
+                    onUpdate={handleUpdateClass}
                 />
             )}
 
@@ -359,18 +390,36 @@ export default function HeadClassesPage() {
                 />
             )}
 
-            {filteredClasses.length === 0 ? (
+            {noContentMessage ? (
                 <Card>
                     <CardContent className="p-8 text-center">
-                        <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No classes found</h3>
+                        {noContentMessage.icon}
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                            {noContentMessage.heading}
+                        </h3>
                         <p className="text-gray-600 dark:text-gray-400">
-                            Try adjusting your search criteria.
+                            {noContentMessage.paragraph}
                         </p>
                     </CardContent>
                 </Card>
             ) : (
-                renderTableView()
+                <>
+                    {renderTableView()}
+                    {totalFilteredItems > 0 && (
+                        <div className="mt-6 flex justify-end">
+                            <Pagination
+                                current={pageNum}
+                                pageSize={pageSize}
+                                total={totalFilteredItems}
+                                showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} classes`}
+                                onChange={handlePaginationChange}
+                                showSizeChanger
+                                onShowSizeChange={handlePaginationChange}
+                                pageSizeOptions={['10', '20', '50', '100']}
+                            />
+                        </div>
+                    )}
+                </>
             )}
         </div>
     )

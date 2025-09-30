@@ -39,7 +39,7 @@ export default function LabDetail({ labId, open, onClose }: LabDetailProps) {
                     setLoading(true)
                     setError(null)
                     const res = await getLabById(String(labId))
-                    setLab(res) // API trả về { code, success, message, data } → lấy res.data
+                    setLab(res) 
                 } catch (err: any) {
                     setError(err.message || "Failed to fetch lab detail")
                 } finally {

@@ -1,12 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { FileText, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Pagination } from "antd"
 import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -14,6 +13,9 @@ import { AcceptBooking } from "@/components/lecturer/lab/AcceptBooking"
 import { RejectBooking } from "@/components/lecturer/lab/RejectBooking"
 import { DeleteBooking } from "@/components/lecturer/lab/DeleteBooking"
 import { searchRegistrationSchedule } from "@/services/registrationScheduleServices"
+import { Pagination } from 'antd'
+
+type BookingStatus = "All" | "Pending" | "Accept" | "Reject"
 
 interface LabBooking {
     registrationScheduleId: number
@@ -38,16 +40,15 @@ interface PageInfo {
 
 export default function RequestLabSchedule() {
     const { user } = useAuth()
-    const [bookings, setBookings] = useState<LabBooking[]>([])
-    const [filteredBookings, setFilteredBookings] = useState<LabBooking[]>([])
-    const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, size: 100, totalPage: 1, totalItem: 0 })
+    const [allBookings, setAllBookings] = useState<LabBooking[]>([])
+    const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, size: 10, totalPage: 1, totalItem: 0 })
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState<"Pending" | "Accept" | "Reject">("Pending")
-    const [pageNum, setPageNum] = useState(1)
-    const [pageSize, setPageSize] = useState(100) //check
+    const [activeTab, setActiveTab] = useState<BookingStatus>("All")
     const [searchQuery, setSearchQuery] = useState("")
 
-    const fetchBookings = async () => {
+    const { page: pageNum, size: pageSize } = pageInfo
+
+    const fetchAllBookings = useCallback(async () => {
         const userId = user?.userId
         if (!userId) {
             setLoading(false)
@@ -58,44 +59,92 @@ export default function RequestLabSchedule() {
         setLoading(true)
         try {
             const response = await searchRegistrationSchedule({
-                pageNum,
-                pageSize,
+                pageNum: 1,
+                pageSize: 1000,
                 keyWord: "",
                 status: "",
             })
+
             if (response) {
-                setBookings(response.pageData)
-                setPageInfo(response.pageInfo)
+                setAllBookings(response.pageData)
+                setPageInfo(prev => ({
+                    ...prev,
+                    totalItem: (response.pageData).length
+                }))
             } else {
                 toast.error("Failed to fetch lab booking requests.")
+                setAllBookings([])
             }
         } catch (error) {
+            console.error("Fetch error:", error)
             toast.error("An error occurred while fetching data.")
+            setAllBookings([])
         } finally {
             setLoading(false)
         }
+    }, [user?.userId])
+
+    useEffect(() => {
+        if (user?.userId) {
+            fetchAllBookings()
+        }
+    }, [fetchAllBookings, user?.userId])
+
+    const filteredAndSearchedBookings = useMemo(() => {
+        let filtered = allBookings.filter(booking => {
+            if (activeTab === "All") return true
+            return booking.registrationScheduleStatus === activeTab
+        })
+
+        const search = searchQuery.toLowerCase().trim()
+        if (search) {
+            filtered = filtered.filter(booking =>
+                booking.labName.toLowerCase().includes(search) ||
+                booking.className.toLowerCase().includes(search) ||
+                booking.teacherName.toLowerCase().includes(search)
+            )
+        }
+
+        setPageInfo(prev => {
+            const newTotalItem = filtered.length;
+            const newTotalPage = Math.ceil(newTotalItem / prev.size)
+            const newPage = (prev.page > newTotalPage && newTotalPage > 0) ? 1 : prev.page;
+
+            return {
+                ...prev,
+                page: prev.totalItem !== newTotalItem ? 1 : newPage,
+                totalItem: newTotalItem,
+            };
+        });
+
+        return filtered
+    }, [allBookings, activeTab, searchQuery])
+
+    const startIndex = (pageNum - 1) * pageSize
+    const endIndex = startIndex + pageSize
+    const currentBookings = filteredAndSearchedBookings.slice(startIndex, endIndex)
+
+    const { totalItem } = pageInfo
+
+    const handleTabChange = (value: string) => {
+        setActiveTab(value as BookingStatus)
     }
 
-    useEffect(() => {
-        fetchBookings()
-    }, [user, pageNum, pageSize])
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value)
+    }
 
-    useEffect(() => {
-        const filtered = bookings
-            .filter(booking => booking.registrationScheduleStatus === activeTab)
-            .filter(booking =>
-                booking.labName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                booking.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                booking.teacherName.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-        setFilteredBookings(filtered)
+    const handlePaginationChange = (page: number, newPageSize: number) => {
         setPageInfo(prev => ({
             ...prev,
-            totalItem: filtered.length,
-            totalPage: Math.ceil(filtered.length / pageSize)
+            page: page,
+            size: newPageSize
         }))
-        setPageNum(1)
-    }, [activeTab, bookings, pageSize, searchQuery])
+    }
+
+    const handleActionSuccess = () => {
+        fetchAllBookings()
+    }
 
     const getStatusBadge = (status: LabBooking["registrationScheduleStatus"]) => {
         switch (status) {
@@ -110,20 +159,19 @@ export default function RequestLabSchedule() {
         }
     }
 
-    const handlePaginationChange = (page: number, pageSize: number | undefined) => {
-        setPageNum(page)
-        setPageSize(pageSize || 10)
-    }
-
     return (
         <div className="mt-4">
             <div className="mb-6">
-                <h2 className="text-xl font-bold">Lab Booking Requests</h2>
-                <p>Review and manage lab booking requests as Head of Department.</p>
+                <h1 className="text-3xl font-bold">Lab Booking Requests</h1>
             </div>
 
-            <Tabs defaultValue="Pending" onValueChange={(value) => setActiveTab(value as "Pending" | "Accept" | "Reject")} className="ml-auto mb-5">
+            <Tabs
+                value={activeTab}
+                onValueChange={handleTabChange}
+                className="ml-auto mb-5"
+            >
                 <TabsList>
+                    <TabsTrigger value="All">All</TabsTrigger>
                     <TabsTrigger value="Pending">Pending</TabsTrigger>
                     <TabsTrigger value="Accept">Accepted</TabsTrigger>
                     <TabsTrigger value="Reject">Rejected</TabsTrigger>
@@ -137,7 +185,7 @@ export default function RequestLabSchedule() {
                         type="text"
                         placeholder="Search by lab, class, or teacher..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={handleSearchChange}
                         className="pl-10"
                     />
                 </div>
@@ -145,15 +193,15 @@ export default function RequestLabSchedule() {
 
             <Card>
                 <CardContent className="p-0">
-                    {loading ? (
+                    {loading && allBookings.length === 0 ? (
                         <div className="p-8 text-center">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                            <p className="mt-2 text-gray-600">Loading booking requests...</p>
+                            <p className="mt-2 text-gray-600">Loading all booking requests...</p>
                         </div>
-                    ) : filteredBookings.length === 0 ? (
+                    ) : currentBookings.length === 0 ? (
                         <div className="p-8 text-center text-gray-500">
                             <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                            <p>No booking requests found</p>
+                            <p>No booking requests found in the **{activeTab}** status matching the search.</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
@@ -171,7 +219,7 @@ export default function RequestLabSchedule() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredBookings.map((booking) => (
+                                    {currentBookings.map((booking) => (
                                         <TableRow key={booking.registrationScheduleId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                             <TableCell>
                                                 <p className="font-medium text-gray-900 dark:text-white">{booking.labName}</p>
@@ -208,18 +256,18 @@ export default function RequestLabSchedule() {
                                                             <AcceptBooking
                                                                 registrationScheduleId={booking.registrationScheduleId}
                                                                 registrationScheduleNote={booking.registrationScheduleNote}
-                                                                onAcceptSuccess={fetchBookings}
+                                                                onAcceptSuccess={handleActionSuccess}
                                                             />
                                                             <RejectBooking
                                                                 registrationScheduleId={booking.registrationScheduleId}
-                                                                onRejectSuccess={fetchBookings}
+                                                                onRejectSuccess={handleActionSuccess}
                                                             />
                                                         </>
                                                     )}
                                                     {(booking.registrationScheduleStatus === "Accept" || booking.registrationScheduleStatus === "Reject") && (
                                                         <DeleteBooking
                                                             registrationScheduleId={booking.registrationScheduleId}
-                                                            onDeleteSuccess={fetchBookings}
+                                                            onDeleteSuccess={handleActionSuccess}
                                                         />
                                                     )}
                                                 </div>
@@ -233,19 +281,17 @@ export default function RequestLabSchedule() {
                 </CardContent>
             </Card>
 
-            {filteredBookings.length > 0 && (
-                <div className="flex justify-end mt-6">
+            {!loading && totalItem > 0 && (
+                <div className="flex justify-end p-4">
                     <Pagination
                         current={pageNum}
                         pageSize={pageSize}
-                        total={pageInfo.totalItem}
+                        total={totalItem}
                         showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
                         onChange={handlePaginationChange}
+                        onShowSizeChange={handlePaginationChange}
                         showSizeChanger
-                        onShowSizeChange={(current, size) => {
-                            setPageNum(1)
-                            setPageSize(size)
-                        }}
+                        pageSizeOptions={['10', '20', '50']}
                     />
                 </div>
             )}
