@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react" // Thêm useCallback
 import { Search, Plus, Filter } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -39,26 +39,35 @@ const statusOptions = [
 export default function KitHandover({ setShowBorrowDialog }: KitHandoverProps) {
     const [searchTerm, setSearchTerm] = useState("")
     const [selectedStatus, setSelectedStatus] = useState("all")
-    const [kitCheckoutData, setKitCheckoutData] = useState<KitCheckoutItem[]>([])
+
+    // **CLIENT-SIDE CHANGE:** State mới để lưu toàn bộ dữ liệu gốc
+    const [initialKitCheckoutData, setInitialKitCheckoutData] = useState<KitCheckoutItem[]>([])
+
     const [isLoading, setIsLoading] = useState(false)
+
+    // **CLIENT-SIDE CHANGE:** pageInfo giờ chỉ quản lý trạng thái phân trang, totalItems sẽ được tính toán client-side
     const [pageInfo, setPageInfo] = useState({ page: 1, size: 10, totalItems: 0 })
+
     const [showCheckoutDialog, setShowCheckoutDialog] = useState(false)
     const hasMounted = useClientOnly()
     const { user } = useAuth()
 
-    const fetchKitCheckoutData = async () => {
+    // **CLIENT-SIDE CHANGE:** Hàm fetch chỉ lấy toàn bộ dữ liệu ban đầu
+    const fetchKitCheckoutData = useCallback(async () => {
         setIsLoading(true)
         try {
             if (!user?.userId) {
                 throw new Error("User ID not found")
             }
+            // Gọi API với pageSize lớn để lấy tất cả dữ liệu, không truyền keyword/status
             const response = await searchTeamKitByLecturerId({
-                pageNum: pageInfo.page,
-                pageSize: pageInfo.size,
+                pageNum: 1,
+                pageSize: 9999, // Lấy toàn bộ data
                 lecturerId: user.userId,
-                keyWord: searchTerm,
-                status: selectedStatus !== "all" ? selectedStatus : "",
+                keyWord: "", // Không tìm kiếm ở server
+                status: "", // Không lọc trạng thái ở server
             })
+
             if (response.pageData) {
                 const mappedData: KitCheckoutItem[] = response.pageData.map((item: any) => ({
                     teamKitId: item.teamKitId,
@@ -70,12 +79,9 @@ export default function KitHandover({ setShowBorrowDialog }: KitHandoverProps) {
                     teamKitDateGiveBack: item.teamKitDateGiveBack || "",
                     status: item.teamKitStatus,
                 }))
-                setKitCheckoutData(mappedData)
-                setPageInfo({
-                    page: response.pageInfo.page,
-                    size: response.pageInfo.size,
-                    totalItems: response.pageInfo.totalItem,
-                })
+                // Lưu toàn bộ dữ liệu vào state gốc
+                setInitialKitCheckoutData(mappedData)
+
             }
         } catch (error) {
             console.error("Error fetching kit checkout data:", error)
@@ -84,30 +90,68 @@ export default function KitHandover({ setShowBorrowDialog }: KitHandoverProps) {
                 description: "Không thể tải danh sách bàn giao bộ kit",
                 variant: "destructive"
             })
+            setInitialKitCheckoutData([])
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [user?.userId])
 
+    // **CLIENT-SIDE CHANGE:** useEffect chỉ gọi fetchKitCheckoutData 1 lần
     useEffect(() => {
-        if (hasMounted) {
+        if (hasMounted && user?.userId) {
             fetchKitCheckoutData()
         }
-    }, [hasMounted, pageInfo.page, pageInfo.size, searchTerm, selectedStatus])
+    }, [hasMounted, user?.userId, fetchKitCheckoutData])
 
-    const filteredKitCheckoutData = useMemo(() => {
-        return kitCheckoutData.filter(item => {
-            const matchesSearch = searchTerm === "" ||
-                item.kitName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.kitNumberSerial.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.teamKitName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.className.toLowerCase().includes(searchTerm.toLowerCase())
+    // **CLIENT-SIDE CHANGE:** useMemo để lọc và phân trang client-side
+    const { displayedKitCheckoutData, totalFilteredItems } = useMemo(() => {
+        let filteredItems = initialKitCheckoutData
 
-            const matchesStatus = selectedStatus === "all" || item.status === selectedStatus
+        // 1. Lọc theo Trạng thái (selectedStatus)
+        if (selectedStatus !== "all") {
+            filteredItems = filteredItems.filter(item =>
+                item.status === selectedStatus
+            )
+        }
 
-            return matchesSearch && matchesStatus
-        })
-    }, [kitCheckoutData, searchTerm, selectedStatus])
+        // 2. Lọc theo Tìm kiếm (searchTerm)
+        if (searchTerm) {
+            const lowerCaseQuery = searchTerm.toLowerCase().trim()
+            filteredItems = filteredItems.filter(item => {
+                return item.kitName.toLowerCase().includes(lowerCaseQuery) ||
+                    item.kitNumberSerial.toLowerCase().includes(lowerCaseQuery) ||
+                    item.teamKitName.toLowerCase().includes(lowerCaseQuery) ||
+                    item.className.toLowerCase().includes(lowerCaseQuery)
+            })
+        }
+
+        const totalItems = filteredItems.length
+
+        // Cập nhật totalItems cho Pagination
+        setPageInfo(prev => ({ ...prev, totalItems }))
+
+        // 3. Phân trang
+        const startIndex = (pageInfo.page - 1) * pageInfo.size
+        const endIndex = startIndex + pageInfo.size
+
+        return {
+            displayedKitCheckoutData: filteredItems.slice(startIndex, endIndex),
+            totalFilteredItems: totalItems
+        }
+
+    }, [initialKitCheckoutData, searchTerm, selectedStatus, pageInfo.page, pageInfo.size]) // Phụ thuộc vào dữ liệu gốc và các tham số lọc/phân trang
+
+    // Handler mới cho tìm kiếm: Reset trang về 1
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value)
+        setPageInfo(prev => ({ ...prev, page: 1 }))
+    }
+
+    // Handler mới cho lọc trạng thái: Reset trang về 1
+    const handleStatusChange = (value: string) => {
+        setSelectedStatus(value)
+        setPageInfo(prev => ({ ...prev, page: 1 }))
+    }
 
     const handlePaginationChange = (page: number, pageSize?: number) => {
         setPageInfo(prev => ({
@@ -122,7 +166,8 @@ export default function KitHandover({ setShowBorrowDialog }: KitHandoverProps) {
         setShowBorrowDialog(true)
     }
 
-    const handleCheckoutSuccess = (checkout: any) => {
+    const handleCheckoutSuccess = () => {
+        // Sau khi Checkout thành công, ta cần gọi lại fetchKitCheckoutData để lấy dữ liệu mới
         fetchKitCheckoutData()
         toast({
             title: "Thành công",
@@ -135,7 +180,13 @@ export default function KitHandover({ setShowBorrowDialog }: KitHandoverProps) {
     const handleReturnClick = async (teamKitId: number) => {
         try {
             await giveBackTeamKit(teamKitId)
-            await fetchKitCheckoutData() // Refresh data after return
+            // Sau khi trả kit thành công, gọi lại fetchKitCheckoutData để refresh data
+            await fetchKitCheckoutData()
+            toast({
+                title: "Thành công",
+                description: "Trả bộ kit thành công",
+                variant: "default"
+            })
         } catch (error) {
             console.error("Error returning kit:", error)
             toast({
@@ -196,14 +247,14 @@ export default function KitHandover({ setShowBorrowDialog }: KitHandoverProps) {
                                     Loading...
                                 </TableCell>
                             </TableRow>
-                        ) : filteredKitCheckoutData.length === 0 ? (
+                        ) : displayedKitCheckoutData.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={9} className="text-center py-4">
                                     No kit checkouts found.
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredKitCheckoutData.map((kitCheckout, index) => (
+                            displayedKitCheckoutData.map((kitCheckout, index) => (
                                 <TableRow key={kitCheckout.teamKitId}>
                                     <TableCell>{(pageInfo.page - 1) * pageInfo.size + index + 1}</TableCell>
                                     <TableCell className="font-medium">{kitCheckout.kitName || "-"}</TableCell>
@@ -256,11 +307,11 @@ export default function KitHandover({ setShowBorrowDialog }: KitHandoverProps) {
                         <Input
                             placeholder="Search by kit name, code, team, or class..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={handleSearchChange}
                             className="pl-10"
                         />
                     </div>
-                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <Select value={selectedStatus} onValueChange={handleStatusChange}> 
                         <SelectTrigger className="w-48">
                             <Filter className="h-4 w-4" />
                             <SelectValue />
@@ -288,7 +339,7 @@ export default function KitHandover({ setShowBorrowDialog }: KitHandoverProps) {
                 onSuccess={handleCheckoutSuccess}
             />
 
-            {filteredKitCheckoutData.length === 0 && !isLoading ? (
+            {totalFilteredItems === 0 && !isLoading ? (
                 <Card>
                     <CardContent className="p-8 text-center">
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
@@ -306,16 +357,12 @@ export default function KitHandover({ setShowBorrowDialog }: KitHandoverProps) {
                         <Pagination
                             current={pageInfo.page}
                             pageSize={pageInfo.size}
-                            total={pageInfo.totalItems}
+                            total={pageInfo.totalItems} // Sử dụng totalItems đã được tính toán client-side
                             showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
                             onChange={handlePaginationChange}
                             showSizeChanger
                             onShowSizeChange={(current, size) => {
-                                setPageInfo(prev => ({
-                                    ...prev,
-                                    page: 1,
-                                    size,
-                                }))
+                                handlePaginationChange(1, size)
                             }}
                         />
                     </div>

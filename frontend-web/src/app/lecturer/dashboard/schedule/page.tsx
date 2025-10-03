@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { addDays, startOfWeek, format, eachWeekOfInterval } from "date-fns";
 import { getCurrentUser } from "@/services/userServices";
 import { ScheduleSkeleton } from "@/components/loading-skeleton";
@@ -36,14 +36,14 @@ interface LabBookingItem {
     registrationScheduleDate: string;
     registrationScheduleName: string;
     className: string;
-    labName: string; // Add this property if it's in the data
+    labName: string;
     slotId: number;
     slotStartTime: string;
     slotEndTime: string;
 }
 
 export default function LecturerSchedule() {
-    const { user } = useAuth()
+    const { user } = useAuth();
     const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
     const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
     const [labBookings, setLabBookings] = useState<LabBookingItem[]>([]);
@@ -52,15 +52,14 @@ export default function LecturerSchedule() {
 
     useEffect(() => {
         const fetchAllSchedules = async () => {
-            const userId = user?.userId
+            const userId = user?.userId;
             if (!userId) {
-                setLoading(false)
-                toast.error("User ID not found. Please log in again.")
-                return
+                setLoading(false);
+                toast.error("User ID not found. Please log in again.");
+                return;
             }
             try {
                 setLoading(true);
-                // Dùng user.userId từ useAuth để tránh gọi getCurrentUser lần nữa
                 const lecturerId = userId;
                 if (lecturerId) {
                     const [scheduleData, labBookingResponse] = await Promise.all([
@@ -91,17 +90,17 @@ export default function LecturerSchedule() {
             }
         };
 
-        // Bỏ qua việc gọi getCurrentUser nếu đã có user.userId
         if (user?.userId) {
             fetchAllSchedules();
         }
-    }, [user]); // Thêm 'user' vào dependency array
+    }, [user]);
 
     const { weekDates, weekOptions } = useMemo(() => {
         const currentYear = new Date().getFullYear();
         const startOfYear = new Date(currentYear, 0, 1);
-        const endOfYear = new Date(currentYear, 11, 31);
-        const weekStarts = eachWeekOfInterval({ start: startOfYear, end: endOfYear }, { weekStartsOn: 1 });
+        const endOfNextYear = new Date(currentYear + 1, 11, 31);
+
+        const weekStarts = eachWeekOfInterval({ start: startOfYear, end: endOfNextYear }, { weekStartsOn: 1 });
 
         const weekOptions = weekStarts.map((weekStart) => ({
             value: format(weekStart, "yyyy-MM-dd"),
@@ -119,28 +118,18 @@ export default function LecturerSchedule() {
         setSelectedWeekStart(new Date(value));
     };
 
-    /**
-     * Sửa logic tìm kiếm:
-     * Thay vì so sánh l.slotId === slotIndex + 1 (bị lỗi do data API),
-     * ta so sánh trực tiếp bằng slotStartTime (thời gian bắt đầu) để đảm bảo đúng vị trí.
-     */
     const renderCell = (day: string, slotIndex: number) => {
         const date = weekDates[days.indexOf(day)];
-
-        // 1. Lấy thời gian bắt đầu mong muốn của ô hiện tại
-        // Ví dụ: slots[3] = "15:00 - 17:15" -> expectedStartTime = "15:00"
         const expectedSlotTime = slots[slotIndex].split(" - ")[0];
 
-        // 2. Tìm kiếm lịch giảng
         const lesson = schedule.find((l) =>
             format(new Date(l.scheduleDate), "yyyy-MM-dd") === date &&
-            l.slotStartTime === expectedSlotTime // Sửa lỗi so sánh bằng thời gian
+            l.slotStartTime === expectedSlotTime
         );
 
-        // 3. Tìm kiếm đặt phòng lab
         const booking = labBookings.find((b) =>
             format(new Date(b.registrationScheduleDate), "yyyy-MM-dd") === date &&
-            b.slotStartTime === expectedSlotTime // Sửa lỗi so sánh bằng thời gian
+            b.slotStartTime === expectedSlotTime
         );
 
         if (lesson) {
@@ -182,7 +171,7 @@ export default function LecturerSchedule() {
                 </TabsList>
                 <TabsContent value="schedule">
                     <div className="space-y-4 mt-4">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-between gap-4">
                             <Select onValueChange={handleWeekChange}>
                                 <SelectTrigger className="w-[200px]">
                                     <SelectValue placeholder={format(selectedWeekStart, "dd/MM/yyyy")} />
@@ -195,6 +184,16 @@ export default function LecturerSchedule() {
                                     ))}
                                 </SelectContent>
                             </Select>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 bg-blue-100 border"></div>
+                                    <span>Class Session</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 bg-orange-100 border"></div>
+                                    <span>Lab Session</span>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-8 gap-px border rounded overflow-hidden text-center text-sm">

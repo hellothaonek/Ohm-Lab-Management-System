@@ -10,6 +10,7 @@ import { useState, useEffect } from "react"
 import { createKit } from "@/services/kitServices"
 import { searchKitTemplate } from "@/services/kitTemplateServices"
 import { useToast } from "@/components/ui/use-toast"
+import { useUploadImage } from "@/hooks/useUploadImage" // Import hook upload
 
 interface CreateKitProps {
     open: boolean
@@ -26,11 +27,20 @@ export default function CreateKit({ open, onOpenChange, onSuccess }: CreateKitPr
     const [kitTemplateId, setKitTemplateId] = useState("")
     const [kitName, setKitName] = useState("")
     const [kitDescription, setKitDescription] = useState("")
-    const [kitUrlImg, setKitUrlImg] = useState("")
+
+    // States cho chức năng upload ảnh
+    const [imageFile, setImageFile] = useState<File | null>(null)
+    const [previewImage, setPreviewImage] = useState<string | null>(null)
+
     const [loading, setLoading] = useState(false)
     const [kitTemplates, setKitTemplates] = useState<KitTemplate[]>([])
     const [templateLoading, setTemplateLoading] = useState(false)
     const { toast } = useToast()
+
+    // Sử dụng Hook Upload
+    const { uploadImage, loading: isImageUploading, error: uploadError } = useUploadImage()
+
+    const isProcessing = loading || templateLoading || isImageUploading
 
     useEffect(() => {
         if (open) {
@@ -59,32 +69,67 @@ export default function CreateKit({ open, onOpenChange, onSuccess }: CreateKitPr
         }
     }, [open, toast])
 
+    // Xử lý chọn file ảnh
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            setImageFile(file)
+            setPreviewImage(URL.createObjectURL(file))
+        } else {
+            setImageFile(null)
+            setPreviewImage(null)
+        }
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        if (isImageUploading) {
+            toast({ title: "Wait", description: "Image is still uploading. Please wait.", variant: "default" });
+            return;
+        }
+
         setLoading(true)
+        let finalImageUrl = ""
+
         try {
+            // BƯỚC 1: XỬ LÝ UPLOAD ẢNH NẾU CÓ
+            if (imageFile) {
+
+                finalImageUrl = await new Promise<string>((resolve, reject) => {
+                    uploadImage({
+                        file: imageFile,
+                        onSuccess: resolve,
+                        onError: (errorMsg) => reject(new Error(errorMsg)),
+                    })
+                })
+            }
+
+            // BƯỚC 2: GỌI API TẠO KIT
             await createKit({
                 kitTemplateId,
                 kitName,
                 kitDescription,
-                kitUrlImg,
+                kitUrlImg: finalImageUrl,
             })
-            toast({
-                title: "Success",
-                description: "Kit created successfully!",
-            })
+
+            // Reset states
             setKitTemplateId("")
             setKitName("")
             setKitDescription("")
-            setKitUrlImg("")
+            setImageFile(null)
+            setPreviewImage(null)
+
             onOpenChange(false)
             onSuccess()
-        } catch (error) {
+
+        } catch (error: any) {
             console.error("Failed to create kit:", error)
+            const errorMessage = uploadError || error.message || "Failed to create kit. Please try again.";
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: "Failed to create kit. Please try again.",
+                description: errorMessage,
             })
         } finally {
             setLoading(false)
@@ -107,7 +152,7 @@ export default function CreateKit({ open, onOpenChange, onSuccess }: CreateKitPr
                             <Select
                                 value={kitTemplateId}
                                 onValueChange={setKitTemplateId}
-                                disabled={templateLoading || loading}
+                                disabled={isProcessing}
                                 required
                             >
                                 <SelectTrigger id="kitTemplateId">
@@ -130,6 +175,7 @@ export default function CreateKit({ open, onOpenChange, onSuccess }: CreateKitPr
                                 onChange={(e) => setKitName(e.target.value)}
                                 placeholder="Enter kit name"
                                 required
+                                disabled={isProcessing}
                             />
                         </div>
                         <div className="grid gap-2">
@@ -140,24 +186,39 @@ export default function CreateKit({ open, onOpenChange, onSuccess }: CreateKitPr
                                 onChange={(e) => setKitDescription(e.target.value)}
                                 placeholder="Enter kit description"
                                 required
+                                disabled={isProcessing}
                             />
                         </div>
+
+                        {/* INPUT FILE MỚI VÀ PREVIEW */}
                         <div className="grid gap-2">
-                            <Label htmlFor="kitUrlImg">Image URL</Label>
+                            <Label htmlFor="kitImage">Kit Image</Label>
                             <Input
-                                id="kitUrlImg"
-                                value={kitUrlImg}
-                                onChange={(e) => setKitUrlImg(e.target.value)}
-                                placeholder="Enter image URL (optional)"
+                                id="kitImage"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                                disabled={isProcessing}
+                                className="cursor-pointer"
                             />
+                            {previewImage && (
+                                <div className="mt-2">
+                                    <img
+                                        src={previewImage}
+                                        alt="Kit preview"
+                                        className="h-32 w-auto object-cover rounded border"
+                                    />
+                                </div>
+                            )}
                         </div>
+
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isProcessing}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={loading || templateLoading}>
-                            {loading ? "Creating..." : "Create"}
+                        <Button type="submit" disabled={isProcessing}>
+                            {isProcessing ? "Creating..." : "Create"}
                         </Button>
                     </DialogFooter>
                 </form>

@@ -1,23 +1,29 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
-import { Loader2, Target, ClipboardList, Cpu, Package, Clock, Pencil, Trash2, MoreVertical, Plus } from "lucide-react"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { Loader2, Pencil, Trash2, Plus, Eye, Search } from "lucide-react"
+import { CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
 import { Pagination } from "antd"
 import { getLabBySubjectId } from "@/services/labServices"
 import { Button } from "@/components/ui/button"
-import {
-    DropdownMenu,
-    DropdownMenuTrigger,
-    DropdownMenuContent,
-    DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import LabDetail from "@/components/head/lab/LabDetail"
 import EditLab from "@/components/head/lab/EditLab"
 import DeleteLab from "@/components/head/lab/DeleteLab"
 import CreateLab from "@/components/head/lab/CreateLab"
 
+// Type interfaces remain the same
 interface Equipment {
     equipmentTypeId: string
     equipmentTypeName: string
@@ -37,11 +43,11 @@ interface Lab {
     labStatus: string
     requiredEquipments: {
         equipmentTypeId: string
-        equipmentTypeName?: string // Optional, as it may come from API
+        equipmentTypeName?: string
     }[]
     requiredKits: {
         kitTemplateId: string
-        kitTemplateName?: string // Optional, as it may come from API
+        kitTemplateName?: string
     }[]
 }
 
@@ -49,12 +55,18 @@ export default function CourseDetailPage() {
     const searchParams = useSearchParams()
     const subjectIdParam = searchParams.get("subjectId")
     const subjectId = subjectIdParam ? parseInt(subjectIdParam) : null
-    const [labs, setLabs] = useState<Lab[]>([])
+
+    // State variables
+    const [allLabs, setAllLabs] = useState<Lab[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [pageNum, setPageNum] = useState(1)
     const [pageSize, setPageSize] = useState(6)
     const [totalItems, setTotalItems] = useState(0)
+    const [searchQuery, setSearchQuery] = useState("")
+    const [statusFilter, setStatusFilter] = useState("all")
+
+    // Modal states
     const [selectedLabId, setSelectedLabId] = useState<number | null>(null)
     const [openDetail, setOpenDetail] = useState(false)
     const [selectedLab, setSelectedLab] = useState<Lab | null>(null)
@@ -62,6 +74,7 @@ export default function CourseDetailPage() {
     const [openDelete, setOpenDelete] = useState(false)
     const [openCreate, setOpenCreate] = useState(false)
 
+    // Function to fetch labs from the API
     const fetchLabs = useCallback(async () => {
         if (!subjectId) {
             setError("No subject ID provided")
@@ -74,31 +87,82 @@ export default function CourseDetailPage() {
             setError(null)
             const response = await getLabBySubjectId(subjectId.toString())
             if (response) {
-                const activeLabs = response.pageData.filter((lab: Lab) => lab.labStatus === "Active")
-                setLabs(activeLabs)
-                setTotalItems(activeLabs.length)
+                setAllLabs(response.pageData)
+                setTotalItems(response.pageData.length)
+                if (pageNum > Math.ceil(response.pageData.length / pageSize) && response.pageData.length > 0) {
+                    setPageNum(1)
+                }
             } else {
-                throw new Error(response.message)
+                throw new Error(response?.message || "Failed to fetch labs")
             }
         } catch (err: any) {
             const errorMessage = err.message || "Failed to fetch labs"
             setError(errorMessage)
             console.error("Error fetching labs:", err)
-            setLabs([])
+            setAllLabs([])
         } finally {
             setIsLoading(false)
         }
-    }, [subjectId, pageNum, pageSize])
+    }, [subjectId, pageSize])
 
     useEffect(() => {
         fetchLabs()
     }, [fetchLabs])
 
-    const handlePaginationChange = (page: number, pageSize: number | undefined) => {
+    // Client-side filtering and pagination logic
+    const filteredLabs = useMemo(() => {
+        let filtered = allLabs
+        // Apply search filter
+        if (searchQuery) {
+            filtered = filtered.filter(lab =>
+                lab.labName.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+        }
+        // Apply status filter
+        if (statusFilter !== "all") {
+            filtered = filtered.filter(lab =>
+                lab.labStatus.toLowerCase() === statusFilter.toLowerCase()
+            )
+        }
+        return filtered
+    }, [allLabs, searchQuery, statusFilter])
+
+    const displayedLabs = useMemo(() => {
+        const startIndex = (pageNum - 1) * pageSize
+        const endIndex = startIndex + pageSize
+        return filteredLabs.slice(startIndex, endIndex)
+    }, [filteredLabs, pageNum, pageSize])
+
+    // Update total items for pagination
+    useEffect(() => {
+        setTotalItems(filteredLabs.length)
+        // Reset to first page when filters change
+        setPageNum(1)
+    }, [filteredLabs])
+
+    // Handler for pagination change
+    const handlePaginationChange = (page: number, newPageSize: number | undefined) => {
         setPageNum(page)
-        setPageSize(pageSize || 6)
+        setPageSize(newPageSize || 6)
     }
 
+    // Handler for search input
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value)
+    }
+
+    // Handler for status filter
+    const handleStatusFilterChange = (value: string) => {
+        setStatusFilter(value)
+    }
+
+    // New handler for View action
+    const handleViewLab = (labId: number) => {
+        setSelectedLabId(labId)
+        setOpenDetail(true)
+    }
+
+    // Handlers for Modals
     const handleEditLab = (lab: Lab) => {
         setSelectedLab(lab)
         setOpenEdit(true)
@@ -134,28 +198,53 @@ export default function CourseDetailPage() {
         setOpenCreate(false)
     }
 
+    // Function to determine badge variant based on lab status
+    const getBadgeVariant = (status: string) => {
+        switch (status.toLowerCase()) {
+            case "active":
+                return <Badge className="bg-green-500">Active</Badge>
+            case "inactive":
+                return <Badge className="bg-red-500">Inactive</Badge>
+            default:
+                return <Badge>{status}</Badge>
+        }
+    }
+
     return (
         <div className="space-y-6">
-            <CardHeader>
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle className="text-2xl font-bold">Course Labs</CardTitle>
-                        <CardDescription>Explore all labs available for this course</CardDescription>
+           <h1 className="text-3xl font-bold">Lab Sessions</h1>
+            <div className="flex items-center justify-between mt-4">
+                <div className="flex items-center space-x-4">
+                    <div className="relative w-64">
+                        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                        <Input
+                            placeholder="Search labs..."
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                            className="pl-8 w-full"
+                        />
                     </div>
-                    <div className="flex justify-end items-end">
-                        <Button
-                            size="sm"
-                            className="bg-orange-500 hover:bg-orange-600"
-                            onClick={() => setOpenCreate(true)}
-                            disabled={!subjectId}
-                        >
-                            Create Lab
-                        </Button>
-                    </div>
+                    <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+                        <SelectTrigger className="w-32">
+                            <SelectValue placeholder="Filter status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
-            </CardHeader>
-
-            <CardContent>
+                <Button
+                    size="sm"
+                    className="bg-orange-500 hover:bg-orange-600"
+                    onClick={() => setOpenCreate(true)}
+                    disabled={!subjectId}
+                >
+                    Create Lab
+                </Button>
+            </div>
+            <div>
                 {isLoading ? (
                     <div className="p-12 text-center text-muted-foreground">
                         <Loader2 className="h-10 w-10 animate-spin text-green-500 mx-auto mb-4" />
@@ -165,124 +254,61 @@ export default function CourseDetailPage() {
                     <div className="p-8 text-center text-red-500 font-medium">
                         <p>{error}</p>
                     </div>
-                ) : labs.length === 0 ? (
+                ) : filteredLabs.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
-                        <p>No active labs found for this course.</p>
+                        <p>No labs found for this course.</p>
                     </div>
                 ) : (
                     <>
-                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                            {labs.map((lab) => (
-                                <Card
-                                    key={lab.labId}
-                                    className="flex flex-col border shadow-md hover:shadow-xl transition rounded-2xl"
-                                    onClick={() => {
-                                        setSelectedLabId(lab.labId)
-                                        setOpenDetail(true)
-                                    }}
-                                >
-                                    <CardHeader>
-                                        <div className="flex justify-between items-center">
-                                            <CardTitle className="text-lg font-semibold">{lab.labName}</CardTitle>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <MoreVertical className="w-5 h-5 text-orange-500" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            handleEditLab(lab)
-                                                        }}
-                                                    >
-                                                        <Pencil className="w-4 h-4 mr-2 text-green-600" />
-                                                        Edit
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            handleDeleteLab(lab)
-                                                        }}
-                                                    >
-                                                        <Trash2 className="w-4 h-4 mr-2 text-red-600" />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </CardHeader>
-
-                                    <CardContent className="flex-grow space-y-3 text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <ClipboardList className="w-4 h-4 text-blue-500" />
-                                            <span className="flex-1 truncate max-w-[220px]">
-                                                <span className="font-semibold">Request:</span> {lab.labRequest}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <Target className="w-4 h-4 text-green-500" />
-                                            <span className="flex-1 truncate max-w-[220px]">
-                                                <span className="font-semibold">Target:</span> {lab.labTarget}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <Cpu className="w-4 h-4 text-orange-500" />
-                                            <span className="flex-1 truncate max-w-[220px]">
-                                                <span className="font-semibold">Equipments:</span>{" "}
-                                                {lab.requiredEquipments.length > 0
-                                                    ? lab.requiredEquipments.map((eq) => eq.equipmentTypeName || eq.equipmentTypeId).join(", ")
-                                                    : "None"}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <Package className="w-4 h-4 text-pink-500" />
-                                            <span className="flex-1 truncate max-w-[220px]">
-                                                <span className="font-semibold">Kits:</span>{" "}
-                                                {lab.requiredKits.length > 0
-                                                    ? lab.requiredKits.map((kit) => kit.kitTemplateName || kit.kitTemplateId).join(", ")
-                                                    : "None"}
-                                            </span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[40%]">Lab Name</TableHead>
+                                        <TableHead className="w-[30%]">Status</TableHead>
+                                        <TableHead className="w-[30%] text-center">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {displayedLabs.map((lab) => (
+                                        <TableRow
+                                            key={lab.labId}
+                                            className="hover:bg-gray-50/50 transition-colors"
+                                        >
+                                            <TableCell className="font-medium text-blue-500">{lab.labName}</TableCell>
+                                            <TableCell>
+                                                {getBadgeVariant(lab.labStatus)}
+                                            </TableCell>
+                                            <TableCell className="flex justify-center space-x-4">
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={() => handleViewLab(lab.labId)}
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={() => handleEditLab(lab)}
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={() => handleDeleteLab(lab)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
                         </div>
 
-                        <LabDetail
-                            labId={selectedLabId}
-                            open={openDetail}
-                            onClose={() => setOpenDetail(false)}
-                        />
-
-                        <EditLab
-                            lab={selectedLab}
-                            open={openEdit}
-                            onClose={handleEditClose}
-                            onUpdate={handleEditUpdate}
-                        />
-
-                        <DeleteLab
-                            lab={selectedLab}
-                            open={openDelete}
-                            onClose={handleDeleteClose}
-                            onDelete={handleDeleteSuccess}
-                        />
-
-                        {subjectId !== null && (
-                            <CreateLab
-                                subjectId={subjectId}
-                                isOpen={openCreate}
-                                onClose={() => setOpenCreate(false)}
-                                onLabCreated={handleLabCreated}
-                            />
-                        )}
-
-                        <div className="flex justify-center mt-8">
+                        <div className="flex justify-end mt-8">
                             <Pagination
                                 current={pageNum}
                                 pageSize={pageSize}
@@ -298,7 +324,36 @@ export default function CourseDetailPage() {
                         </div>
                     </>
                 )}
-            </CardContent>
+            </div>
+
+            <LabDetail
+                labId={selectedLabId}
+                open={openDetail}
+                onClose={() => setOpenDetail(false)}
+            />
+
+            <EditLab
+                lab={selectedLab}
+                open={openEdit}
+                onClose={handleEditClose}
+                onUpdate={handleEditUpdate}
+            />
+
+            <DeleteLab
+                lab={selectedLab}
+                open={openDelete}
+                onClose={handleDeleteClose}
+                onDelete={handleDeleteSuccess}
+            />
+
+            {subjectId !== null && (
+                <CreateLab
+                    subjectId={subjectId}
+                    isOpen={openCreate}
+                    onClose={() => setOpenCreate(false)}
+                    onLabCreated={handleLabCreated}
+                />
+            )}
         </div>
     )
 }

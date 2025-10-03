@@ -2,215 +2,188 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { useToast } from "@/hooks/use-toast"
-import { createTeamGrade, getPendingTeams } from "@/services/gradeServices"
-import { PenLine } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
-interface Team {
-    teamId: string
-    teamName: string
-}
+import { createTeamGrade, getPendingTeams } from "@/services/gradeServices"
+import { toast } from "react-toastify"
+import { Team, Lab } from "./GradeTab"
 
 interface CreateTeamGradeProps {
-    labId: string
     classId: string
-    teams?: Team[]
-    onGradeSubmitted: () => void
+    teams: Team[]
+    labs: Lab[]
+    onGradeCreated: (newGrade: { labId: number; teamId: number; grade: number; gradeDescription: string; gradeStatus: string }) => void
 }
 
-export default function CreateTeamGrade({ labId, classId, teams = [], onGradeSubmitted }: CreateTeamGradeProps) {
-    const [open, setOpen] = useState(false)
-    const [grade, setGrade] = useState("")
-    const [comment, setComment] = useState("")
-    const [selectedTeamId, setSelectedTeamId] = useState("")
-    const [pendingTeams, setPendingTeams] = useState<Team[]>(teams)
-    const { toast } = useToast()
+export function CreateTeamGrade({ classId, teams, labs, onGradeCreated }: CreateTeamGradeProps) {
+    const [isOpen, setIsOpen] = useState(false)
+    const [selectedTeamId, setSelectedTeamId] = useState<string>("")
+    const [selectedLabId, setSelectedLabId] = useState<string>("")
+    const [grade, setGrade] = useState<string>("")
+    const [gradeDescription, setGradeDescription] = useState<string>("")
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [pendingTeams, setPendingTeams] = useState<Team[]>([])
     const [isLoadingTeams, setIsLoadingTeams] = useState(false)
 
     useEffect(() => {
-        if (open) {
-            const fetchPendingTeams = async () => {
-                setIsLoadingTeams(true)
+        const fetchPendingTeams = async () => {
+            if (selectedLabId) {
                 try {
-                    const response = await getPendingTeams(labId)
-                    setPendingTeams(response)
+                    setIsLoadingTeams(true)
+                    const response = await getPendingTeams(selectedLabId)
+                    setPendingTeams(response || [])
+                    setSelectedTeamId("") 
                 } catch (error) {
                     console.error("Error fetching pending teams:", error)
-                    toast({
-                        title: "Error",
-                        description: "Failed to load pending teams",
-                        variant: "destructive",
-                    })
+                    toast.error("Failed to fetch pending teams")
+                    setPendingTeams([])
                 } finally {
                     setIsLoadingTeams(false)
                 }
+            } else {
+                setPendingTeams([])
+                setSelectedTeamId("")
             }
-            fetchPendingTeams()
         }
-    }, [open, labId, toast])
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setIsSubmitting(true)
+        fetchPendingTeams()
+    }, [selectedLabId])
 
-        const gradeValue = parseFloat(grade)
-
-        // Centralized validation checks
-        if (!selectedTeamId) {
-            toast({
-                title: "Team Not Selected",
-                description: "Please select a team before submitting.",
-                variant: "destructive",
-            })
-            setIsSubmitting(false)
+    const handleSubmit = async () => {
+        if (!selectedTeamId || !selectedLabId || !grade) {
+            toast.error("Please fill in all required fields")
             return
         }
 
-        if (isNaN(gradeValue) || gradeValue < 0 || gradeValue > 100) {
-            toast({
-                title: "Invalid Grade",
-                description: "Please enter a valid grade between 0 and 100.",
-                variant: "destructive",
-            })
-            setIsSubmitting(false)
+        const gradeValue = Number.parseFloat(grade)
+        if (isNaN(gradeValue) || gradeValue < 0 || gradeValue > 10) {
+            toast.error("Grade must be a number between 0 and 10")
             return
         }
-
 
         try {
-            await createTeamGrade(labId, selectedTeamId, {
+            setIsSubmitting(true)
+            await createTeamGrade(selectedLabId, selectedTeamId, {
                 grade: gradeValue,
-                classId: parseInt(classId),
-                gradeDescription: comment,
-                gradeStatus: "Graded",
+                classId: Number(classId),
+                gradeDescription,
+                gradeStatus: "graded",
             })
 
-            setOpen(false)
-            setGrade("")
-            setComment("")
-            setSelectedTeamId("")
-            onGradeSubmitted()
-        } catch (error) {
-            console.error("Error submitting grade:", error)
-            toast({
-                title: "Error",
-                description: "Failed to submit grade.",
-                variant: "destructive",
+            onGradeCreated({
+                labId: Number(selectedLabId),
+                teamId: Number(selectedTeamId),
+                grade: gradeValue,
+                gradeDescription,
+                gradeStatus: "graded",
             })
+
+            setIsOpen(false)
+            setSelectedTeamId("")
+            setSelectedLabId("")
+            setGrade("")
+            setGradeDescription("")
+        } catch (error) {
+            console.error("Error creating team grade:", error)
+            toast.error("Failed to create team grade")
         } finally {
             setIsSubmitting(false)
         }
     }
 
-    const isFormValid = selectedTeamId && !isNaN(parseFloat(grade)) && parseFloat(grade) >= 0 && parseFloat(grade) <= 100 && comment.trim() !== "";
-
     return (
-        <Dialog open={open} onOpenChange={(open) => {
-            setOpen(open)
-            if (!open) {
-                setGrade("")
-                setComment("")
-                setSelectedTeamId("")
-            }
-        }}>
-            <DialogTrigger asChild>
-                <Button variant="outline" className="text-sm hover:bg-orange-500">
-                    <PenLine className="h-4 w-4 mr-2" />
-                    Grade
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Grade Team Lab</DialogTitle>
-                    <DialogDescription>
-                        Select a team and enter the grade and comments for their lab submission. All fields are required.
-                    </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="team-select" className="text-right">
-                                Team
-                            </Label>
+        <div>
+            <Button onClick={() => setIsOpen(true)} variant="default">
+                Create Team Grade
+            </Button>
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Create Team Grade</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div>
+                            <label className="text-sm font-medium">Lab</label>
+                            <Select value={selectedLabId} onValueChange={setSelectedLabId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select Lab" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {labs.map((lab) => (
+                                        <SelectItem key={lab.labId} value={lab.labId.toString()}>
+                                            {lab.labName}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium">Team</label>
                             <Select
                                 value={selectedTeamId}
                                 onValueChange={setSelectedTeamId}
-                                required
-                                disabled={isLoadingTeams}
+                                disabled={!selectedLabId || isLoadingTeams}
                             >
-                                <SelectTrigger id="team-select" className="col-span-3">
-                                    <SelectValue placeholder="Select a team" />
+                                <SelectTrigger>
+                                    <SelectValue placeholder={isLoadingTeams ? "Loading teams..." : "Select Team"} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {pendingTeams.length > 0 ? (
                                         pendingTeams.map((team) => (
-                                            <SelectItem key={team.teamId} value={team.teamId}>
+                                            <SelectItem key={team.teamId} value={team.teamId?.toString() || ""}>
                                                 {team.teamName}
                                             </SelectItem>
                                         ))
                                     ) : (
                                         <SelectItem value="no-teams" disabled>
-                                            No pending teams
+                                            No pending teams available
                                         </SelectItem>
                                     )}
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="grade" className="text-right">
-                                Grade
-                            </Label>
+                        <div>
+                            <label className="text-sm font-medium">Grade (0-10)</label>
                             <Input
-                                id="grade"
                                 type="number"
                                 value={grade}
                                 onChange={(e) => setGrade(e.target.value)}
-                                className="col-span-3"
-                                placeholder="Enter grade (0-100)"
                                 min="0"
-                                max="100"
+                                max="10"
                                 step="0.1"
-                                required
+                                placeholder="Enter grade"
+                                disabled={!selectedTeamId}
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="comment" className="text-right">
-                                Comment
-                            </Label>
+                        <div>
+                            <label className="text-sm font-medium">Comment</label>
                             <Textarea
-                                id="comment"
-                                value={comment}
-                                onChange={(e) => setComment(e.target.value)}
-                                className="col-span-3"
-                                placeholder="Enter comments"
-                                required
+                                value={gradeDescription}
+                                onChange={(e) => setGradeDescription(e.target.value)}
+                                placeholder="Enter grade comment"
+                                rows={4}
+                                disabled={!selectedTeamId}
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setIsOpen(false)}
+                        >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={!isFormValid || isSubmitting || isLoadingTeams}>
-                            {isSubmitting ? "Submitting..." : "Submit"}
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={isSubmitting || !selectedTeamId}
+                        >
+                            {isSubmitting ? "Saving..." : "Save"}
                         </Button>
                     </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+                </DialogContent>
+            </Dialog>
+        </div>
     )
 }

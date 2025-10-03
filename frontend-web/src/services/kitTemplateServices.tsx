@@ -1,7 +1,7 @@
 import { defaultAxiosInstance, axiosWithoutLoading } from "./axios.config";
 import { toast } from "react-toastify";
 
-export const createKitTemplate = async (data: { kitTemplateName: string; kitTemplateDescription: string; kitTemplateUrlImg: string; }) => {
+export const createKitTemplate = async (data: { kitTemplateName: string; kitTemplateDescription: string; kitTemplateUrlImg: string; listAccessory: { accessoryId: number; accessoryQuantity: number }[] }) => {
     const response = await defaultAxiosInstance.post("/api/kittemplate/kittempalte", data);
     return response.data;
 };

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createReport, getTodaySlots } from "@/services/reportServices"
+import { createReport, getTodaySlots, getTodayClasses } from "@/services/reportServices"
 
 interface CreateReportProps {
     isOpen: boolean
@@ -31,17 +31,21 @@ export default function CreateReport({ isOpen, onClose, onReportCreated }: Creat
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState<boolean>(false)
     const [slots, setSlots] = useState<{ slotName: string }[]>([])
+    const [classes, setClasses] = useState<{ className: string }[]>([])
 
+    // Fetch slots when dialog opens
     useEffect(() => {
         const fetchSlots = async () => {
             try {
+                setError(null)
                 const data = await getTodaySlots()
                 if (data?.slots?.length > 0) {
-                    setFormData((prev) => ({ ...prev, selectedSlot: data.slots[0].slotName }))
                     setSlots(data.slots)
+                    setFormData((prev) => ({ ...prev, selectedSlot: data.slots[0].slotName }))
                 } else {
                     setSlots([])
-                    setFormData((prev) => ({ ...prev, selectedSlot: "" }))
+                    setFormData((prev) => ({ ...prev, selectedSlot: "", selectedClass: "" }))
+                    setClasses([])
                 }
             } catch (err) {
                 setError("Failed to fetch slots. Please try again.")
@@ -50,6 +54,35 @@ export default function CreateReport({ isOpen, onClose, onReportCreated }: Creat
         }
         if (isOpen) fetchSlots()
     }, [isOpen])
+
+    // Fetch classes when selectedSlot changes
+    useEffect(() => {
+        const fetchClasses = async () => {
+            if (!formData.selectedSlot) {
+                setClasses([])
+                setFormData((prev) => ({ ...prev, selectedClass: "" }))
+                return
+            }
+            try {
+                setError(null)
+                const data = await getTodayClasses(formData.selectedSlot)
+                if (data?.classes?.length > 0) {
+                    setClasses(data.classes)
+                    setFormData((prev) => ({ ...prev, selectedClass: data.classes[0].className }))
+                } else {
+                    setClasses([])
+                    setFormData((prev) => ({ ...prev, selectedClass: "" }))
+                    setError("No classes available for the selected slot.")
+                }
+            } catch (err) {
+                setError("Failed to fetch classes. Please try again.")
+                setClasses([])
+                setFormData((prev) => ({ ...prev, selectedClass: "" }))
+                console.error(err)
+            }
+        }
+        fetchClasses()
+    }, [formData.selectedSlot])
 
     const handleChange = (name: string, value: string) => {
         setFormData((prev) => ({ ...prev, [name]: value }))
@@ -62,6 +95,7 @@ export default function CreateReport({ isOpen, onClose, onReportCreated }: Creat
             await createReport(formData)
             onReportCreated()
             setFormData({ reportTitle: "", reportDescription: "", selectedSlot: "", selectedClass: "" })
+            setClasses([])
             onClose()
         } catch (err) {
             setError("Failed to create report. Please try again.")
@@ -113,7 +147,11 @@ export default function CreateReport({ isOpen, onClose, onReportCreated }: Creat
                                 <SelectValue placeholder={slots.length === 0 ? "No slots available" : "Select a slot"} />
                             </SelectTrigger>
                             <SelectContent>
-                                {slots.length === 0 ? null : (
+                                {slots.length === 0 ? (
+                                    <SelectItem value="no-slots" disabled>
+                                        No slots available
+                                    </SelectItem>
+                                ) : (
                                     slots.map((slot) => (
                                         <SelectItem key={slot.slotName} value={slot.slotName}>
                                             {slot.slotName}
@@ -130,15 +168,31 @@ export default function CreateReport({ isOpen, onClose, onReportCreated }: Creat
                             value={formData.selectedClass}
                             onValueChange={(value) => handleChange("selectedClass", value)}
                             required
+                            disabled={!formData.selectedSlot || classes.length === 0}
                         >
                             <SelectTrigger id="selectedClass">
-                                <SelectValue placeholder="Select a class" />
+                                <SelectValue
+                                    placeholder={
+                                        !formData.selectedSlot
+                                            ? "Select a slot first"
+                                            : classes.length === 0
+                                                ? "No classes available"
+                                                : "Select a class"
+                                    }
+                                />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="CS101">CS101</SelectItem>
-                                <SelectItem value="CS102">CS102</SelectItem>
-                                <SelectItem value="CS201">CS201</SelectItem>
-                                <SelectItem value="CS202">CS202</SelectItem>
+                                {classes.length === 0 ? (
+                                    <SelectItem value="no-classes" disabled>
+                                        No classes available
+                                    </SelectItem>
+                                ) : (
+                                    classes.map((classItem) => (
+                                        <SelectItem key={classItem.className} value={classItem.className}>
+                                            {classItem.className}
+                                        </SelectItem>
+                                    ))
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
@@ -148,7 +202,10 @@ export default function CreateReport({ isOpen, onClose, onReportCreated }: Creat
                     <Button variant="outline" onClick={onClose} disabled={loading}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSubmit} disabled={loading}>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={loading || !formData.selectedSlot || !formData.selectedClass}
+                    >
                         {loading ? "Submitting..." : "Create Report"}
                     </Button>
                 </DialogFooter>

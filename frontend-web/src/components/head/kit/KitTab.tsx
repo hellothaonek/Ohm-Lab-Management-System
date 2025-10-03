@@ -6,10 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Search, Filter, EllipsisVertical, Eye } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { Pagination } from "antd"
-import { QRCodeCanvas } from "qrcode.react"
 import {
     Dialog,
     DialogContent,
@@ -20,6 +20,8 @@ import {
 import { searchKit } from "@/services/kitServices"
 import CreateKit from "./CreateKit"
 import DeleteKit from "./DeleteKit"
+import EditKit from "./EditKit"
+import Link from "next/link"
 
 interface KitTemplateTabProps {
     setShowReportDialog: (value: boolean) => void
@@ -44,7 +46,9 @@ export default function KitTab({ setShowReportDialog }: KitTemplateTabProps) {
     const [loading, setLoading] = useState(false)
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-    const [selectedKit, setSelectedKit] = useState<{ id: string; name: string } | null>(null)
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+    const [selectedKit, setSelectedKit] = useState<Kit | null>(null)
+    const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
     const [pageNum, setPageNum] = useState(1)
     const [pageSize, setPageSize] = useState(10)
     const [totalItems, setTotalItems] = useState(0)
@@ -82,8 +86,13 @@ export default function KitTab({ setShowReportDialog }: KitTemplateTabProps) {
         }
     }
 
-    const handleDeleteClick = (id: string, name: string) => {
-        setSelectedKit({ id, name })
+    const handleEditClick = (kit: Kit) => {
+        setSelectedKit(kit)
+        setIsEditDialogOpen(true)
+    }
+
+    const handleDeleteClick = (kit: Kit) => {
+        setSelectedKit(kit)
         setIsDeleteDialogOpen(true)
     }
 
@@ -92,6 +101,13 @@ export default function KitTab({ setShowReportDialog }: KitTemplateTabProps) {
         fetchKits()
         setIsCreateDialogOpen(false)
         setShowReportDialog(false)
+    }
+
+    const handleEditSuccess = () => {
+        setPageNum(1)
+        fetchKits()
+        setIsEditDialogOpen(false)
+        setSelectedKit(null)
     }
 
     const handleDeleteSuccess = () => {
@@ -110,21 +126,9 @@ export default function KitTab({ setShowReportDialog }: KitTemplateTabProps) {
     }
 
     return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                    <CardTitle>Kits</CardTitle>
-                    <CardDescription>Manage all lab kits</CardDescription>
-                </div>
-                <Button onClick={() => {
-                    setIsCreateDialogOpen(true)
-                    setShowReportDialog(true)
-                }} className="bg-orange-500 hover:bg-orange-600">
-                    New Kit
-                </Button>
-            </CardHeader>
-            <CardContent>
-                <div className="flex gap-4 mb-4 justify-start">
+        <div>
+            <div className="flex items-center justify-between gap-4 mb-5">
+                <div className="flex items-center gap-4">
                     <div className="relative w-[350px]">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -149,90 +153,119 @@ export default function KitTab({ setShowReportDialog }: KitTemplateTabProps) {
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="rounded-md border">
-                    <div className="grid grid-cols-[1fr_1fr_1fr_150px_120px_100px] gap-2 p-4 font-medium border-b">
-                        <div className="flex items-center gap-1 cursor-pointer">
-                            Name
-                        </div>
-                        <div>Kit Template</div>
-                        <div>Description</div>
-                        <div>Created Date</div>
-                        <div className="flex items-center gap-1 cursor-pointer">
-                            Status
-                        </div>
-                        <div>Actions</div>
-                    </div>
-
-                    {loading ? (
-                        <div className="p-4 text-center text-muted-foreground">
-                            Loading kits...
-                        </div>
-                    ) : kits.length === 0 ? (
-                        <div className="p-4 text-center text-muted-foreground">
-                            No kits found matching your filters.
-                        </div>
-                    ) : (
-                        kits.map((item) => (
-                            <div
-                                key={item.kitId}
-                                className="grid grid-cols-[1fr_1fr_1fr_150px_120px_100px] gap-2 p-4 border-b last:border-0 items-center"
-                            >
-                                <div className="font-medium">{item.kitName}</div>
-                                <div className="text-sm">{item.kitTemplateName}</div>
-                                <div className="text-sm">{item.kitDescription}</div>
-                                <div className="text-sm">{new Date(item.kitCreateDate).toLocaleDateString()}</div>
-                                <div>{getStatusBadge(item.kitStatus)}</div>
-                                <div className="flex items-center gap-2">
-                                    <Dialog>
-                                        <DialogTrigger asChild>
-                                            <Button variant="ghost" size="icon">
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                            <DialogHeader>
-                                                <DialogTitle>QR Code for {item.kitName}</DialogTitle>
-                                            </DialogHeader>
-                                            <div className="flex justify-center">
-                                                <QRCodeCanvas value={item.kitUrlQr} size={256} />
-                                            </div>
-                                        </DialogContent>
-                                    </Dialog>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon">
-                                                <EllipsisVertical className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            <DropdownMenuItem onClick={() => alert(`Edit ${item.kitName}`)}>
-                                                Edit
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleDeleteClick(item.kitId, item.kitName)}>
-                                                Delete
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-                <div className="mt-4 flex justify-end">
-                    <Pagination
-                        current={pageNum}
-                        pageSize={pageSize}
-                        total={totalItems}
-                        showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
-                        onChange={handlePaginationChange}
-                        showSizeChanger
-                        onShowSizeChange={(current, size) => {
-                            setPageNum(1)
-                            setPageSize(size)
-                        }}
-                    />
-                </div>
-            </CardContent>
+                <Button
+                    onClick={() => {
+                        setIsCreateDialogOpen(true)
+                        setShowReportDialog(true)
+                    }}
+                    className="bg-orange-500 hover:bg-orange-600 ml-auto"
+                >
+                    New Kit
+                </Button>
+            </div>
+            <Card>
+                <Table>
+                    <TableHeader className="bg-blue-50">
+                        <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Kit Template</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Created Date</TableHead>
+                            <TableHead>Image</TableHead>
+                            <TableHead className="text-center">Status</TableHead>
+                            <TableHead className="text-center">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {loading ? (
+                            <TableRow>
+                                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                                    Loading kits...
+                                </TableCell>
+                            </TableRow>
+                        ) : kits.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                                    No kits found matching your filters.
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            kits.map((item) => (
+                                <TableRow key={item.kitId}>
+                                    <TableCell className="font-medium">
+                                        <Link
+                                            href={`/head/dashboard/kit/${item.kitId}`}
+                                            className="text-blue-600 hover:underline"
+                                        >
+                                            {item.kitName}
+                                        </Link>
+                                    </TableCell>
+                                    <TableCell>{item.kitTemplateName}</TableCell>
+                                    <TableCell>{item.kitDescription}</TableCell>
+                                    <TableCell>{new Date(item.kitCreateDate).toLocaleDateString()}</TableCell>
+                                    <TableCell>
+                                        {item.kitUrlImg ? (
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="link" onClick={() => setSelectedImageUrl(item.kitUrlImg)}>
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <DialogHeader>
+                                                        <DialogTitle>Image for {item.kitName}</DialogTitle>
+                                                    </DialogHeader>
+                                                    <div className="flex justify-center p-4">
+                                                        <img
+                                                            src={selectedImageUrl || ''}
+                                                            alt={`Image for ${item.kitName}`}
+                                                            className="max-w-full max-h-[256px] object-contain"
+                                                        />
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
+                                        ) : (
+                                            <span className="text-muted-foreground">No Image</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-center">{getStatusBadge(item.kitStatus)}</TableCell>
+                                    <TableCell className="text-center">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <EllipsisVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem onClick={() => handleEditClick(item)}>
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleDeleteClick(item)}>
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </Card>
+            <div className="mt-4 flex justify-end">
+                <Pagination
+                    current={pageNum}
+                    pageSize={pageSize}
+                    total={totalItems}
+                    showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
+                    onChange={handlePaginationChange}
+                    showSizeChanger
+                    onShowSizeChange={(current, size) => {
+                        setPageNum(1)
+                        setPageSize(size)
+                    }}
+                />
+            </div>
             <CreateKit
                 open={isCreateDialogOpen}
                 onOpenChange={(open) => {
@@ -248,11 +281,22 @@ export default function KitTab({ setShowReportDialog }: KitTemplateTabProps) {
                         setIsDeleteDialogOpen(open)
                         if (!open) setSelectedKit(null)
                     }}
-                    kitId={selectedKit.id}
-                    kitName={selectedKit.name}
+                    kitId={selectedKit.kitId}
+                    kitName={selectedKit.kitName}
                     onDeleteSuccess={handleDeleteSuccess}
                 />
             )}
-        </Card>
+            {selectedKit && (
+                <EditKit
+                    open={isEditDialogOpen}
+                    onOpenChange={(open) => {
+                        setIsEditDialogOpen(open)
+                        if (!open) setSelectedKit(null)
+                    }}
+                    kit={selectedKit}
+                    onSuccess={handleEditSuccess}
+                />
+            )}
+        </div>
     )
 }

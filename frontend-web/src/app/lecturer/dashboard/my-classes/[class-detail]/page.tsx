@@ -13,7 +13,6 @@ import { Pagination } from "antd"
 import LabDetail from "@/components/head/lab/LabDetail"
 import GroupTab from "@/components/lecturer/group/GroupTab"
 import { GradeTab } from "@/components/lecturer/grade/GradeTab"
-// Import the CreateLabBooking component
 import CreateLabBooking from "@/components/lecturer/lab/CreateLabBooking"
 
 interface ClassDetail {
@@ -333,7 +332,7 @@ export default function ClassDetailPage() {
                 <TabsContent value="groups" className="shadow-lg">
                     <GroupTab classId={classId || ""} />
                 </TabsContent>
-                <TabsContent value="grades" className="shadow-lg">
+                <TabsContent value="grades">
                     <GradeTab classId={classId || ""} />
                 </TabsContent>
             </Tabs>

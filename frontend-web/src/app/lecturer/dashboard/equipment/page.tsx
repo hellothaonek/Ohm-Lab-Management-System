@@ -7,13 +7,13 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Search, Eye, Filter } from "lucide-react"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { searchEquipment } from "@/services/equipmentServices"
-import { QRCodeCanvas } from "qrcode.react"
 import { Button } from "@/components/ui/button"
 import { Pagination } from 'antd'
 import CheckoutEquipment from "@/components/lecturer/equipment/CheckoutEquipment"
+import Image from "next/image" // Import Next.js Image component for optimized image rendering
 
 interface Equipment {
   equipmentId: number
@@ -22,27 +22,28 @@ interface Equipment {
   equipmentNumberSerial: string
   equipmentStatus: string
   equipmentQr: string
+  equipmentTypeUrlImg: string // Added field for image URL
 }
 
 export default function EquipmentPage() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [equipmentItems, setEquipmentItems] = useState<Equipment[]>([])
+  const [initialEquipmentItems, setInitialEquipmentItems] = useState<Equipment[]>([])
   const [pageNum, setPageNum] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [totalItems, setTotalItems] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedQrCode, setSelectedQrCode] = useState<string | null>(null)
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null) // Updated to store image URL
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
   const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false)
   const [selectedEquipment, setSelectedEquipment] = useState<{ equipmentId: number; equipmentName: string; equipmentNumberSerial: string } | null>(null)
 
   const statusOptions = [
     { value: "all", label: "All Statuses" },
-    { value: "in-use", label: "In Use" },
+    { value: "inuse", label: "In Use" },
     { value: "available", label: "Available" },
     { value: "maintenance", label: "Maintenance" },
-    { value: "out-of-order", label: "Damaged" },
+    { value: "damaged", label: "Damaged" },
   ]
 
   const fetchEquipment = useCallback(async () => {
@@ -50,26 +51,50 @@ export default function EquipmentPage() {
     setError(null)
     try {
       const response = await searchEquipment({
-        pageNum,
-        pageSize,
-        keyWord: searchQuery,
-        status: selectedStatus === "all" ? "" : selectedStatus,
+        pageNum: 1,
+        pageSize: 9999,
+        keyWord: "",
+        status: "",
       })
-      setEquipmentItems(response.pageData)
-      setTotalItems(response.pageInfo?.totalItem || 0)
+      setInitialEquipmentItems(response.pageData || [])
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || "Failed to fetch equipment"
       setError(errorMessage)
       console.error("Error fetching equipment:", err)
-      setEquipmentItems([])
+      setInitialEquipmentItems([])
     } finally {
       setIsLoading(false)
     }
-  }, [searchQuery, pageNum, pageSize, selectedStatus])
+  }, [])
 
   useEffect(() => {
     fetchEquipment()
   }, [fetchEquipment])
+
+  const equipmentItems = useMemo(() => {
+    let filteredItems = initialEquipmentItems
+
+    if (selectedStatus !== "all") {
+      filteredItems = filteredItems.filter(item =>
+        item.equipmentStatus.toLowerCase() === selectedStatus
+      )
+    }
+
+    if (searchQuery) {
+      const lowerCaseQuery = searchQuery.toLowerCase().trim()
+      filteredItems = filteredItems.filter(item =>
+        item.equipmentName.toLowerCase().includes(lowerCaseQuery) ||
+        item.equipmentCode.toLowerCase().includes(lowerCaseQuery) ||
+        item.equipmentNumberSerial.toLowerCase().includes(lowerCaseQuery)
+      )
+    }
+
+    setTotalItems(filteredItems.length)
+
+    const startIndex = (pageNum - 1) * pageSize
+    const endIndex = startIndex + pageSize
+    return filteredItems.slice(startIndex, endIndex)
+  }, [initialEquipmentItems, searchQuery, selectedStatus, pageNum, pageSize])
 
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -79,8 +104,8 @@ export default function EquipmentPage() {
         return <Badge className="bg-blue-500 hover:bg-blue-600">In Use</Badge>
       case "maintenance":
         return <Badge className="bg-amber-500 hover:bg-amber-600">Maintenance</Badge>
-      case "out-of-order":
-        return <Badge className="bg-red-500 hover:bg-red-600">Out of Order</Badge>
+      case "damaged":
+        return <Badge className="bg-red-500 hover:bg-red-600">Damaged</Badge>
       default:
         return <Badge>{status}</Badge>
     }
@@ -93,6 +118,16 @@ export default function EquipmentPage() {
       equipmentNumberSerial: equipment.equipmentNumberSerial,
     })
     setIsCheckoutDialogOpen(true)
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+    setPageNum(1)
+  }
+
+  const handleStatusChange = (value: string) => {
+    setSelectedStatus(value)
+    setPageNum(1)
   }
 
   const handlePaginationChange = (page: number, pageSize?: number) => {
@@ -112,21 +147,15 @@ export default function EquipmentPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search equipment by name..."
+                placeholder="Search by name, code, or serial number..."
                 className="pl-8 w-full sm:w-[200px] md:w-[300px]"
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value)
-                  setPageNum(1)
-                }}
+                onChange={handleSearchChange}
               />
             </div>
             <Select
               value={selectedStatus}
-              onValueChange={(value) => {
-                setSelectedStatus(value)
-                setPageNum(1)
-              }}
+              onValueChange={handleStatusChange}
             >
               <SelectTrigger className="w-48">
                 <Filter className="h-4 w-4 mr-2" />
@@ -152,26 +181,26 @@ export default function EquipmentPage() {
                 <TableHead>EquipmentType</TableHead>
                 <TableHead>Number Serial</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>QR Code</TableHead>
+                <TableHead>Image</TableHead> {/* Updated header from "QR Code" to "Image" */}
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="p-4 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="p-4 text-center text-muted-foreground">
                     Loading equipment...
                   </TableCell>
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="p-4 text-center text-red-500">
+                  <TableCell colSpan={7} className="p-4 text-center text-red-500">
                     {error}
                   </TableCell>
                 </TableRow>
               ) : equipmentItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="p-4 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="p-4 text-center text-muted-foreground">
                     No equipment found matching your filters.
                   </TableCell>
                 </TableRow>
@@ -184,24 +213,30 @@ export default function EquipmentPage() {
                     <TableCell>{item.equipmentNumberSerial}</TableCell>
                     <TableCell>{getStatusBadge(item.equipmentStatus)}</TableCell>
                     <TableCell>
-                      {item.equipmentQr ? (
+                      {item.equipmentTypeUrlImg ? (
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="link" onClick={() => setSelectedQrCode(item.equipmentQr!)}>
+                            <Button variant="link" onClick={() => setSelectedImageUrl(item.equipmentTypeUrlImg)}>
                               <Eye className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Mã QR Của {item.equipmentName}</DialogTitle>
+                              <DialogTitle>Image of {item.equipmentName}</DialogTitle>
                             </DialogHeader>
                             <div className="flex justify-center p-4">
-                              <QRCodeCanvas value={selectedQrCode || ''} size={256} />
+                              <Image
+                                src={selectedImageUrl || item.equipmentTypeUrlImg}
+                                alt={item.equipmentName}
+                                width={256}
+                                height={256}
+                                className="object-contain"
+                              />
                             </div>
                           </DialogContent>
                         </Dialog>
                       ) : (
-                        <span className="text-muted-foreground">No QR</span>
+                        <span className="text-muted-foreground">No Image</span>
                       )}
                     </TableCell>
                     <TableCell>

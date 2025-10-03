@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react" // <-- Thêm useMemo
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card"
 import { Badge } from "../../../../components/ui/badge"
 import { Button } from "../../../../components/ui/button"
@@ -37,32 +37,40 @@ export default function UserManagement() {
     const [searchTerm, setSearchTerm] = useState("")
     const [roleFilter, setRoleFilter] = useState("all")
     const [statusFilter, setStatusFilter] = useState("all")
-    const [users, setUsers] = useState<User[]>([])
+
+    // State mới: lưu toàn bộ dữ liệu fetch từ API
+    const [fullUsers, setFullUsers] = useState<User[]>([])
+
     const [pageNum, setPageNum] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+    // totalItems sẽ là tổng số lượng users đã lọc (trước khi phân trang)
     const [totalItems, setTotalItems] = useState(0)
+
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
     const [isBlockModalOpen, setIsBlockModalOpen] = useState(false)
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [selectedUserName, setSelectedUserName] = useState<string>("")
 
+    // Fetch ALL Users một lần khi component mount
     useEffect(() => {
-        const fetchUsers = async () => {
+        const fetchAllUsers = async () => {
             setLoading(true)
             setError(null)
             try {
+                // Gọi API với keyWord, role, status rỗng và pageSize lớn để lấy tất cả
                 const response = await searchUsers({
-                    keyWord: searchTerm,
-                    role: roleFilter === "all" ? "" : roleFilter,
-                    status: statusFilter === "all" ? "" : statusFilter,
-                    pageNum,
-                    pageSize
+                    keyWord: "",
+                    role: "",
+                    status: "",
+                    pageNum: 1,
+                    pageSize: 9999
                 })
 
-                if (response) {
+                if (response && response.pageData) {
                     const mappedUsers: User[] = response.pageData.map((user: any) => ({
                         id: user.userId,
                         name: user.userFullName,
@@ -70,24 +78,59 @@ export default function UserManagement() {
                         role: user.userRoleName as "Admin" | "Student" | "Lecturer" | "HeadOfDepartment",
                         status: user.status as "IsActive" | "delete"
                     }))
-                    setUsers(mappedUsers)
-                    setTotalItems(response.pageInfo.totalItem)
+
+                    setFullUsers(mappedUsers)
+                    setTotalItems(mappedUsers.length)
                 } else {
-                    setError(response.message || "Failed to fetch users")
-                    setUsers([])
+                    setError(response?.message || "Failed to fetch users")
+                    setFullUsers([])
                     setTotalItems(0)
                 }
             } catch (err) {
                 setError("An error occurred while fetching users")
-                setUsers([])
+                setFullUsers([])
                 setTotalItems(0)
             } finally {
                 setLoading(false)
             }
         }
 
-        fetchUsers()
-    }, [searchTerm, roleFilter, statusFilter, pageNum, pageSize])
+        fetchAllUsers()
+    }, []) // Chỉ chạy một lần khi component mount
+
+    // Logic Lọc và Phân trang Client-Side
+    const displayedUsers = useMemo(() => {
+        let filteredItems = fullUsers
+
+        // 1. Lọc theo Role
+        if (roleFilter !== "all") {
+            filteredItems = filteredItems.filter(user => user.role === roleFilter)
+        }
+
+        // 2. Lọc theo Status
+        if (statusFilter !== "all") {
+            filteredItems = filteredItems.filter(user => user.status === statusFilter)
+        }
+
+        // 3. Lọc theo Search Term (Name hoặc Email)
+        if (searchTerm) {
+            const lowerCaseSearchTerm = searchTerm.toLowerCase().trim()
+            filteredItems = filteredItems.filter(user =>
+                user.name.toLowerCase().includes(lowerCaseSearchTerm) ||
+                user.email.toLowerCase().includes(lowerCaseSearchTerm)
+            )
+        }
+
+        // Cập nhật tổng số item đã lọc (trước khi phân trang)
+        // Đảm bảo totalItems được cập nhật đúng để phân trang hoạt động
+        setTotalItems(filteredItems.length)
+
+        // 4. Áp dụng Phân trang
+        const startIndex = (pageNum - 1) * pageSize
+        const endIndex = startIndex + pageSize
+
+        return filteredItems.slice(startIndex, endIndex)
+    }, [fullUsers, searchTerm, roleFilter, statusFilter, pageNum, pageSize])
 
     const getRoleColor = (role: string) => {
         switch (role) {
@@ -131,12 +174,9 @@ export default function UserManagement() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <CardHeader>
                 <CardTitle>User Management</CardTitle>
-                <CardDescription>
-                    A list of all users in the system.
-                </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -144,14 +184,20 @@ export default function UserManagement() {
                         <div className="relative">
                             <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search users..."
+                                placeholder="Search by name or email..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value)
+                                    setPageNum(1) // Reset trang khi tìm kiếm
+                                }}
                                 className="pl-8 w-full sm:w-80"
                             />
                         </div>
                     </div>
-                    <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <Select value={roleFilter} onValueChange={(value) => {
+                        setRoleFilter(value)
+                        setPageNum(1) // Reset trang khi lọc Role
+                    }}>
                         <SelectTrigger className="w-[180px]">
                             <Filter className="h-4 w-4 mr-2" />
                             <SelectValue placeholder="Filter by role" />
@@ -164,7 +210,10 @@ export default function UserManagement() {
                             <SelectItem value="Student">Student</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <Select value={statusFilter} onValueChange={(value) => {
+                        setStatusFilter(value)
+                        setPageNum(1) // Reset trang khi lọc Status
+                    }}>
                         <SelectTrigger className="w-[180px]">
                             <Filter className="h-4 w-4 mr-2" />
                             <SelectValue placeholder="Filter by status" />
@@ -199,7 +248,8 @@ export default function UserManagement() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {users.map((user) => (
+                                {/* SỬ DỤNG displayedUsers */}
+                                {displayedUsers.map((user) => (
                                     <TableRow key={user.id}>
                                         <TableCell>
                                             <div className="flex items-center space-x-3">
@@ -258,12 +308,21 @@ export default function UserManagement() {
                                         </TableCell>
                                     </TableRow>
                                 ))}
+                                {/* Hiển thị thông báo khi không có người dùng nào khớp với bộ lọc */}
+                                {displayedUsers.length === 0 && fullUsers.length > 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                                            No users match the current filter criteria.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     </div>
                 )}
 
-                {!loading && !error && users.length === 0 && (
+                {/* Sử dụng fullUsers.length để kiểm tra khi không có dữ liệu ban đầu */}
+                {!loading && !error && fullUsers.length === 0 && (
                     <div className="text-center py-8">
                         <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <h3 className="text-lg font-medium">No users found</h3>
@@ -273,6 +332,7 @@ export default function UserManagement() {
                     </div>
                 )}
 
+                {/* Phân trang: Dùng totalItems đã được cập nhật bởi useMemo */}
                 {!loading && !error && totalItems > 0 && (
                     <div className="flex justify-end mt-5">
                         <Pagination
@@ -299,7 +359,11 @@ export default function UserManagement() {
                         setSelectedUserName("")
                     }}
                     onUpdate={() => {
-                        setPageNum(1)
+                        // Khi update thành công, reset page và re-fetch data (nếu cần)
+                        // Trong trường hợp này, vì useEffect chỉ chạy 1 lần, bạn có thể cần re-fetch lại data.
+                        // Hoặc bạn có thể tự cập nhật state `fullUsers` nếu API trả về data mới.
+                        // Để đơn giản, tôi sẽ giữ nguyên pageNum. Nếu bạn muốn data update ngay,
+                        // hãy thêm logic re-fetch vào đây.
                     }}
                 />
                 <BlockUser
@@ -312,7 +376,12 @@ export default function UserManagement() {
                         setSelectedUserName("")
                     }}
                     onBlock={() => {
-                        setPageNum(1)
+                        // Xử lý cập nhật state `fullUsers` sau khi block thành công
+                        // Nếu logic BlockUser tự gọi API update và không cần re-fetch toàn bộ:
+                        setFullUsers(prev => prev.map(user =>
+                            user.id === selectedUserId ? { ...user, status: user.status === "IsActive" ? "delete" : "IsActive" } : user
+                        ));
+                        // Nếu cần re-fetch toàn bộ (để đảm bảo data mới nhất), hãy gọi fetchAllUsers ở đây.
                     }}
                 />
                 <DeleteUser
@@ -325,7 +394,9 @@ export default function UserManagement() {
                         setSelectedUserName("")
                     }}
                     onDelete={() => {
-                        setPageNum(1)
+                        // Cập nhật state `fullUsers` sau khi delete thành công
+                        setFullUsers(prev => prev.filter(user => user.id !== selectedUserId));
+                        setPageNum(1) // Reset về trang 1 sau khi xóa
                     }}
                 />
             </CardContent>

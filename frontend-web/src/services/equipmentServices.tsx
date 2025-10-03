@@ -22,7 +22,7 @@ export const searchEquipment = async (data: { pageNum: number; pageSize: number;
     return response.data;
 };
 
-export const updateEquipment = async (id: string, data: { equipmentName: string; equipmentCode: string; equipmentNumberSerial: string; equipmentDescription: string; equipmentTypeUrlImg: string }) => {
+export const updateEquipment = async (id: string, data: { equipmentName: string; equipmentCode: string; equipmentNumberSerial: string; equipmentDescription: string; equipmentTypeUrlImg: string; equipmentStatus: string }) => {
     const response = await defaultAxiosInstance.put(`/api/equipment/${id}`, data);
     toast.success("Equipment updated successfully");
     return response.data;

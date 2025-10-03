@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react" 
-import { Search, EllipsisVertical } from "lucide-react"
+import { useState, useEffect, useMemo } from "react" // Đã thêm lại useMemo
+import { Search, Eye, EllipsisVertical } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -34,7 +34,7 @@ interface EquipmentType {
     equipmentTypeQuantity: number;
     equipmentTypeStatus: string;
     equipmentTypeDescription?: string;
-    equipmentTypeUrlImg?: string;
+    equipmentTypeUrlImg: string;
     equipmentTypeCreateDate?: string;
 }
 
@@ -49,8 +49,9 @@ const statusOptions = [
 export default function EquipmentTypeTab() {
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedStatus, setSelectedStatus] = useState("all")
-    const [rawEquipmentTypeItems, setRawEquipmentTypeItems] = useState<EquipmentType[]>([])
-
+    // equipmentTypeItems giờ sẽ lưu dữ liệu được lọc status và phân trang từ server, 
+    // sau đó sẽ được lọc tìm kiếm cục bộ (client-side)
+    const [equipmentTypeItems, setEquipmentTypeItems] = useState<EquipmentType[]>([])
     const [pageNum, setPageNum] = useState(1)
     const [pageSize, setPageSize] = useState(10)
     const [totalTypeItems, setTotalTypeItems] = useState(0)
@@ -58,49 +59,62 @@ export default function EquipmentTypeTab() {
     const [isEditTypeModalOpen, setIsEditTypeModalOpen] = useState(false)
     const [isDeleteTypeModalOpen, setIsDeleteTypeModalOpen] = useState(false)
     const [selectedEquipmentType, setSelectedEquipmentType] = useState<EquipmentType | null>(null)
+    const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
+    const allowedStatuses = ["Available", "InUse", "Maintenance", "Damaged"]
+
 
     const fetchEquipmentTypes = async () => {
         setLoading(true)
         try {
+            // KHÔNG TRUYỀN searchQuery/keyWord NỮA, chỉ gửi status và thông tin phân trang
+            const status = selectedStatus === "all" ? "" : selectedStatus
+
             const response = await searchEquipmentType({
                 pageNum,
                 pageSize,
-                keyWord: "", 
-                status: ""   
+                keyWord: "",
+                status: status
             })
-            setRawEquipmentTypeItems(response.pageData || [])
+
+            // Cập nhật state với dữ liệu ĐÃ lọc status và phân trang từ server
+            setEquipmentTypeItems(response.pageData || [])
             setTotalTypeItems(response.pageInfo.totalItem)
             setPageNum(response.pageInfo.page)
             setPageSize(response.pageInfo.size)
         } catch (error) {
             console.error("Error fetching equipment types:", error)
-            setRawEquipmentTypeItems([])
+            setEquipmentTypeItems([])
             setTotalTypeItems(0)
         } finally {
             setLoading(false)
         }
     }
 
+    // GỌI LẠI fetchEquipmentTypes KHI pageNum, pageSize, hoặc selectedStatus thay đổi
+    // Bỏ searchQuery khỏi dependency array vì nó được xử lý client-side
     useEffect(() => {
         fetchEquipmentTypes()
-    }, [pageNum, pageSize])
+    }, [pageNum, pageSize, selectedStatus])
 
-    const filteredEquipmentTypeItems = useMemo(() => {
-        const lowerCaseSearch = searchQuery.toLowerCase().trim();
+    // Lọc dữ liệu cục bộ (Client-side Search)
+    const filteredEquipmentTypes = useMemo(() => {
+        if (!searchQuery.trim()) {
+            // Nếu không có tìm kiếm, trả về mảng gốc
+            return equipmentTypeItems.filter((item) => allowedStatuses.includes(item.equipmentTypeStatus))
+        }
 
-        return rawEquipmentTypeItems.filter(item => {
-            const matchesSearch =
-                lowerCaseSearch === "" ||
-                item.equipmentTypeName.toLowerCase().includes(lowerCaseSearch) ||
-                item.equipmentTypeCode.toLowerCase().includes(lowerCaseSearch)
+        const lowerCaseQuery = searchQuery.trim().toLowerCase()
 
-            const matchesStatus =
-                selectedStatus === "all" || item.equipmentTypeStatus === selectedStatus
+        return equipmentTypeItems
+            .filter((item) => allowedStatuses.includes(item.equipmentTypeStatus)) // Giữ nguyên lọc status cuối cùng
+            .filter((item) =>
+                item.equipmentTypeName.toLowerCase().includes(lowerCaseQuery) ||
+                item.equipmentTypeCode.toLowerCase().includes(lowerCaseQuery)
+            )
+    }, [equipmentTypeItems, searchQuery, allowedStatuses]) // Phụ thuộc vào dữ liệu server và query tìm kiếm
 
-            return matchesSearch && matchesStatus
-        })
-    }, [rawEquipmentTypeItems, searchQuery, selectedStatus]) 
+    // --- Các hàm khác giữ nguyên ---
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -118,18 +132,20 @@ export default function EquipmentTypeTab() {
     }
 
     const handlePaginationChange = (page: number, pageSize: number | undefined) => {
-        setSearchQuery("");
-        setSelectedStatus("all");
+        // Giữ nguyên bộ lọc hiện tại (searchQuery, selectedStatus) khi đổi trang hoặc pageSize
         setPageNum(page)
         setPageSize(pageSize || 10)
     }
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // CHỈ cập nhật searchQuery, KHÔNG cần reset pageNum vì việc lọc là cục bộ
         setSearchQuery(e.target.value)
     }
 
     const handleStatusChange = (value: string) => {
         setSelectedStatus(value)
+        // QUAN TRỌNG: Reset trang về 1 khi thay đổi trạng thái lọc (Server-side Filter)
+        setPageNum(1)
     }
 
     return (
@@ -141,10 +157,10 @@ export default function EquipmentTypeTab() {
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 type="search"
-                                placeholder="Search equipment types..."
+                                placeholder="Search equipment types by name or code..."
                                 className="pl-8 w-full"
                                 value={searchQuery}
-                                onChange={handleSearchChange} 
+                                onChange={handleSearchChange}
                             />
                         </div>
                         <Select value={selectedStatus} onValueChange={handleStatusChange}>
@@ -185,24 +201,25 @@ export default function EquipmentTypeTab() {
                                 <TableHead>Code</TableHead>
                                 <TableHead>Quantity</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead>Image</TableHead>
                                 <TableHead>Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                                         Loading...
                                     </TableCell>
                                 </TableRow>
-                            ) : filteredEquipmentTypeItems.length === 0 ? ( 
+                            ) : filteredEquipmentTypes.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                                         No equipment types found matching your filters.
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                filteredEquipmentTypeItems.map((item: EquipmentType, index: number) => ( 
+                                filteredEquipmentTypes.map((item: EquipmentType, index: number) => (
                                     <TableRow key={item.equipmentTypeId ?? `fallback-type-${index}`}>
                                         <TableCell>
                                             <div className="font-medium">{item.equipmentTypeName}</div>
@@ -210,6 +227,34 @@ export default function EquipmentTypeTab() {
                                         <TableCell>{item.equipmentTypeCode}</TableCell>
                                         <TableCell>{item.equipmentTypeQuantity}</TableCell>
                                         <TableCell>{getStatusBadge(item.equipmentTypeStatus)}</TableCell>
+                                        <TableCell>
+                                            {item.equipmentTypeUrlImg ? (
+                                                <Dialog>
+                                                    <DialogTrigger asChild>
+                                                        <Button
+                                                            variant="link"
+                                                            onClick={() => setSelectedImageUrl(item.equipmentTypeUrlImg)}
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Image for {item.equipmentTypeName}</DialogTitle>
+                                                        </DialogHeader>
+                                                        <div className="flex justify-center p-4">
+                                                            <img
+                                                                src={selectedImageUrl || ""}
+                                                                alt={`Image for ${item.equipmentTypeName}`}
+                                                                className="max-w-full max-h-[256px] object-contain"
+                                                            />
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            ) : (
+                                                <span className="text-muted-foreground">No Image</span>
+                                            )}
+                                        </TableCell>
                                         <TableCell>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -261,7 +306,7 @@ export default function EquipmentTypeTab() {
             {selectedEquipmentType && (
                 <>
                     <Dialog open={isEditTypeModalOpen} onOpenChange={setIsEditTypeModalOpen}>
-                        <DialogContent>
+                        <DialogContent className="max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle>Edit Equipment Type</DialogTitle>
                             </DialogHeader>

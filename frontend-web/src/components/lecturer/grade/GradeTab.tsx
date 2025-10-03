@@ -4,37 +4,51 @@ import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { getClassGrades, updateClassGrades } from "@/services/gradeServices"
+import { GraduationCap, Filter, Edit3, Eye, Save, X } from "lucide-react"
+import { toast } from "react-toastify"
+import { UpdateTeamGrade } from "./UpdateTeamGrade"
 import { Input } from "@/components/ui/input"
-import { getClassGrades } from "@/services/gradeServices"
-import { GraduationCap, Plus, Filter, Save, Edit, Edit2 } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { UpdateIndividualGrade } from "./UpdateIndividualGrade"
+import { CreateTeamGrade } from "./CreateTeamGrade"
 
-// Type definitions based on the API response
-interface Grade {
+// Type definitions
+export interface Grade {
     labId: number
     grade: number | null
     gradeStatus: string
+    gradeDescription: string | null
     isTeamGrade: boolean
     hasIndividualGrade: boolean
 }
 
-interface Student {
+export interface Student {
     studentId: string
     studentName: string
     studentEmail: string
-    teamId: string | null
+    teamId: number | null
     teamName: string
     grades: Grade[]
 }
 
-interface Lab {
+export interface Team {
+    teamId: number | null
+    teamName: string
+    grades: Grade[]
+}
+
+export interface Lab {
     labId: number
     labName: string
 }
 
-interface GradeData {
+export interface GradeData {
     classId: number
     className: string
     labs: Lab[]
+    teams: Team[]
     students: Student[]
 }
 
@@ -46,9 +60,25 @@ export function GradeTab({ classId }: GradeTabProps) {
     const [gradeData, setGradeData] = useState<GradeData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [selectedStudent, setSelectedStudent] = useState<string>("all")
-    const [isEditing, setIsEditing] = useState(false)
+    const [selectedLab, setSelectedLab] = useState<string>("")
+    const [isEditing, setIsEditing] = useState<{ [key: string]: boolean }>({})
     const [editedGrades, setEditedGrades] = useState<{ [key: string]: number }>({})
+    const [editedGradeDescriptions, setEditedGradeDescriptions] = useState<{ [key: string]: string }>({})
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
+    const [isEditingIndividual, setIsEditingIndividual] = useState<{ [key: string]: boolean }>({})
+    const [editedIndividualGrades, setEditedIndividualGrades] = useState<{ [key: string]: number }>({})
+    const [editedIndividualComments, setEditedIndividualComments] = useState<{ [key: string]: string }>({})
+
+    // Initialize edit states for individual grades and comments
+    const initializeIndividualEditStates = (student: Student, labId: number) => {
+        const grade = student.grades.find((g) => g.labId === labId)
+        const gradeKey = `${student.studentId}-${labId}-individual`
+        const commentKey = `${student.studentId}-${labId}-individual-comment`
+
+        setEditedIndividualGrades(prev => ({ ...prev, [gradeKey]: grade?.grade ?? 0 }))
+        setEditedIndividualComments(prev => ({ ...prev, [commentKey]: grade?.gradeDescription ?? "" }))
+    }
 
     useEffect(() => {
         const fetchGrades = async () => {
@@ -56,10 +86,33 @@ export function GradeTab({ classId }: GradeTabProps) {
                 setLoading(true)
                 setError(null)
                 const data = await getClassGrades(classId)
-                setGradeData(data)
+
+                const teams = data.students.reduce((acc: Team[], student: Student) => {
+                    if (student.teamId) {
+                        let existingTeam = acc.find((team) => team.teamId === student.teamId)
+                        if (!existingTeam) {
+                            existingTeam = {
+                                teamId: student.teamId,
+                                teamName: student.teamName,
+                                grades: [],
+                            }
+                            acc.push(existingTeam)
+                        }
+                        existingTeam.grades = student.grades.filter(g => g.isTeamGrade)
+                    }
+                    return acc
+                }, [])
+
+                const labs = data.labs || []
+                setGradeData({ ...data, teams, labs })
+
+                if (labs.length > 0) {
+                    setSelectedLab(labs[0].labId.toString())
+                }
             } catch (err) {
                 setError("Failed to fetch grades")
                 console.error("Error fetching grades:", err)
+                toast.error("Failed to fetch grades")
             } finally {
                 setLoading(false)
             }
@@ -70,91 +123,166 @@ export function GradeTab({ classId }: GradeTabProps) {
         }
     }, [classId])
 
-    const getGradeForStudentLab = (student: Student, labId: number): Grade | undefined => {
-        return student.grades.find((grade) => grade.labId === labId)
+    const getGradeForTeamLab = (team: Team, labId: number): Grade | undefined => {
+        return team.grades.find((grade) => grade.labId === labId)
     }
 
-    const renderGradeCell = (grade: Grade | undefined, student: Student, labId: number) => {
-        const gradeKey = `${student.studentId}-${labId}`
-        const currentGrade = editedGrades[gradeKey] !== undefined ? editedGrades[gradeKey] : grade?.grade || 0
-
-        if (!grade || grade.grade === null) {
-            if (isEditing) {
-                return (
-                    <Input
-                        type="number"
-                        min="0"
-                        max="10"
-                        step="0.1"
-                        value={editedGrades[gradeKey] || ""}
-                        onChange={(e) => handleGradeChange(gradeKey, e.target.value)}
-                        className="w-16 h-8 text-center"
-                        placeholder="0"
-                    />
-                )
-            }
-            return <span className="text-muted-foreground">-</span>
-        }
-
-        if (isEditing) {
-            return (
-                <Input
-                    type="number"
-                    min="0"
-                    max="10"
-                    step="0.1"
-                    value={currentGrade}
-                    onChange={(e) => handleGradeChange(gradeKey, e.target.value)}
-                    className="w-16 h-8 text-center"
-                />
-            )
-        }
-
-        return (
-            <div className="flex flex-col items-center gap-1">
-                <span className="font-mono">{grade.grade}</span>
-            </div>
-        )
-    }
-
-    const filteredStudents =
-        gradeData?.students.filter((student) => {
-            if (selectedStudent === "all") return true
-            return student.studentId === selectedStudent
-        }) || []
-
-    const handleGradeInput = () => {
-        if (isEditing) {
-            console.log("[v0] Saving all grades:", editedGrades)
-            setIsEditing(false)
-            setEditedGrades({})
-        } else {
-            setIsEditing(true)
-            const initialGrades: { [key: string]: number } = {}
-            gradeData?.students.forEach((student) => {
-                student.grades.forEach((grade) => {
-                    if (grade.grade !== null) {
-                        initialGrades[`${student.studentId}-${grade.labId}`] = grade.grade
-                    }
-                })
-            })
-            setEditedGrades(initialGrades)
-        }
-    }
-
-    const handleGradeChange = (gradeKey: string, value: string) => {
+    const handleIndividualGradeChange = (gradeKey: string, value: string) => {
         const numValue = Number.parseFloat(value)
         if (!isNaN(numValue) && numValue >= 0 && numValue <= 10) {
-            setEditedGrades((prev) => ({
+            setEditedIndividualGrades((prev) => ({
                 ...prev,
                 [gradeKey]: numValue,
             }))
         } else if (value === "") {
-            setEditedGrades((prev) => ({
+            setEditedIndividualGrades((prev) => ({
                 ...prev,
                 [gradeKey]: 0,
             }))
         }
+    }
+
+    const handleIndividualCommentChange = (commentKey: string, value: string) => {
+        setEditedIndividualComments((prev) => ({
+            ...prev,
+            [commentKey]: value,
+        }))
+    }
+
+    const handleEditToggle = (team: Team, labId: number) => {
+        const gradeKey = `${team.teamId}-${labId}`
+        const isCurrentlyEditing = isEditing[gradeKey]
+
+        if (!isCurrentlyEditing) {
+            const grade = getGradeForTeamLab(team, labId)
+            setEditedGrades(prev => ({ ...prev, [gradeKey]: grade?.grade ?? 0 }))
+            setEditedGradeDescriptions(prev => ({ ...prev, [`${gradeKey}-gradeDescription`]: grade?.gradeDescription ?? "" }))
+        }
+
+        setIsEditing((prev) => ({
+            ...prev,
+            [gradeKey]: !isCurrentlyEditing,
+        }))
+    }
+
+    const handleCancelEdit = (gradeKey: string) => {
+        setIsEditing((prev) => ({ ...prev, [gradeKey]: false }))
+        setEditedGrades((prev) => {
+            const newGrades = { ...prev }
+            delete newGrades[gradeKey]
+            return newGrades
+        })
+        setEditedGradeDescriptions((prev) => {
+            const newDescriptions = { ...prev }
+            delete newDescriptions[`${gradeKey}-gradeDescription`]
+            return newDescriptions
+        })
+    }
+
+    const handleIndividualEditToggle = (student: Student, labId: number) => {
+        const gradeKey = `${student.studentId}-${labId}-individual`
+        const isCurrentlyEditing = isEditingIndividual[gradeKey]
+
+        if (!isCurrentlyEditing) {
+            initializeIndividualEditStates(student, labId)
+        }
+
+        setIsEditingIndividual((prev) => ({
+            ...prev,
+            [gradeKey]: !isCurrentlyEditing,
+        }))
+    }
+
+    const handleCancelIndividualEdit = (gradeKey: string, commentKey: string) => {
+        setIsEditingIndividual((prev) => ({ ...prev, [gradeKey]: false }))
+        setEditedIndividualGrades((prev) => {
+            const newGrades = { ...prev }
+            delete newGrades[gradeKey]
+            return newGrades
+        })
+        setEditedIndividualComments((prev) => {
+            const newComments = { ...prev }
+            delete newComments[commentKey]
+            return newComments
+        })
+    }
+
+    const handleSaveIndividualGrade = async (student: Student, labId: number) => {
+        const gradeKey = `${student.studentId}-${labId}-individual`
+        const commentKey = `${student.studentId}-${labId}-individual-comment`
+        try {
+            const gradeToSave = editedIndividualGrades[gradeKey] !== undefined ? editedIndividualGrades[gradeKey] : 0
+            const commentToSave = editedIndividualComments[commentKey] ?? ""
+
+            await updateClassGrades(Number(classId), {
+                grades: [{
+                    studentId: student.studentId,
+                    labId: labId.toString(),
+                    grade: gradeToSave,
+                    gradeDescription: commentToSave,
+                    gradeStatus: "graded"
+                }]
+            })
+
+            setGradeData((prev: GradeData | null) => {
+                if (!prev) return prev
+                return {
+                    ...prev,
+                    students: prev.students.map((s) => {
+                        if (s.studentId === student.studentId) {
+                            return {
+                                ...s,
+                                grades: s.grades.map((g) =>
+                                    g.labId === labId
+                                        ? { ...g, grade: gradeToSave, gradeDescription: commentToSave, gradeStatus: "graded", hasIndividualGrade: true }
+                                        : g
+                                ),
+                            }
+                        }
+                        return s
+                    }),
+                }
+            })
+
+            setIsEditingIndividual((prev) => ({ ...prev, [gradeKey]: false }))
+            handleCancelIndividualEdit(gradeKey, commentKey)
+        } catch (err) {
+            console.error("Error saving individual grade:", err)
+            toast.error("Failed to save individual grade")
+        }
+    }
+
+    const handleViewIndividualGrades = (team: Team) => {
+        setSelectedTeam(team)
+        setIsModalOpen(true)
+    }
+
+    const handleGradeCreated = (newGrade: { labId: number; teamId: number; grade: number; gradeDescription: string; gradeStatus: string }) => {
+        setGradeData((prev: GradeData | null) => {
+            if (!prev) return prev
+            return {
+                ...prev,
+                teams: prev.teams.map((team) => {
+                    if (team.teamId === newGrade.teamId) {
+                        return {
+                            ...team,
+                            grades: [
+                                ...team.grades.filter((g) => g.labId !== newGrade.labId),
+                                {
+                                    labId: newGrade.labId,
+                                    grade: newGrade.grade,
+                                    gradeDescription: newGrade.gradeDescription,
+                                    gradeStatus: newGrade.gradeStatus,
+                                    isTeamGrade: true,
+                                    hasIndividualGrade: false,
+                                },
+                            ],
+                        }
+                    }
+                    return team
+                }),
+            }
+        })
     }
 
     if (loading) {
@@ -170,86 +298,175 @@ export function GradeTab({ classId }: GradeTabProps) {
         )
     }
 
-    const { className, labs, students } = gradeData
+    const { labs, teams, students } = gradeData
+
+    const filteredTeams = teams.filter((team) => {
+        return team.teamId !== null
+    })
 
     return (
         <div className="w-full space-y-4">
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div className="flex items-center gap-2 flex-1 max-w-sm">
-                    <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                        <SelectTrigger className="flex-1">
+                <div className="flex items-center gap-2 max-w-sm">
+                    <Select value={selectedLab} onValueChange={setSelectedLab}>
+                        <SelectTrigger className="flex-1 w-80">
                             <Filter className="h-4 w-4 text-muted-foreground" />
-                            <SelectValue />
+                            <SelectValue placeholder="Select Lab" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Students</SelectItem>
-                            {gradeData?.students.map((student) => (
-                                <SelectItem key={student.studentId} value={student.studentId}>
-                                    {student.studentName}
+                            {labs.map((lab: Lab) => (
+                                <SelectItem key={lab.labId} value={lab.labId.toString()}>
+                                    {lab.labName}
                                 </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                 </div>
-                <Button onClick={handleGradeInput} className="flex items-center gap-2">
-                    {isEditing ? (
-                        <>
-                            Save All
-                        </>
-                    ) : (
-                        <>
-                            <Edit2 className="h-4 w-4" />
-                            Update Grade
-                        </>
-                    )}
-                </Button>
+                <div className="ml-auto">
+                    <CreateTeamGrade
+                        classId={classId}
+                        teams={teams}
+                        labs={labs}
+                        onGradeCreated={handleGradeCreated}
+                    />
+                </div>
+
             </div>
 
-            <div className="w-full overflow-x-auto">
+            <div className="w-full overflow-x-auto border rounded-lg">
                 <Table className="min-w-full">
-                    <TableHeader className="bg-blue-100 sticky top-0">
+                    <TableHeader className="bg-blue-50 dark:bg-gray-800 sticky top-0">
                         <TableRow>
-                            <TableHead className="text-center sticky left-0 z-10 min-w-[60px] bg-blue-100 border-r">STT</TableHead>
-                            <TableHead className="text-left sticky left-[60px] z-10 min-w-[200px] bg-blue-100 border-r">
-                                Student Name
+                            <TableHead className="text-center sticky left-0 z-10 min-w-[60px] bg-blue-50 dark:bg-gray-800 border-r">STT</TableHead>
+                            <TableHead className="text-left sticky left-[60px] z-10 min-w-[200px] bg-blue-50 dark:bg-gray-800 border-r">
+                                Team Name
                             </TableHead>
-                            {labs.map((lab) => (
-                                <TableHead key={lab.labId} className="text-center min-w-[120px]">
-                                    <div className="flex flex-col gap-1">
-                                        <span className="text-xs text-muted-foreground font-normal text-pretty">{lab.labName}</span>
-                                    </div>
-                                </TableHead>
-                            ))}
+                            <TableHead className="text-center min-w-[120px]">Status</TableHead>
+                            <TableHead className="text-center min-w-[100px]">Grade</TableHead>
+                            <TableHead className="text-left min-w-[250px]">Comment</TableHead>
+                            <TableHead className="text-center min-w-[150px]">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredStudents.map((student, index) => (
-                            <TableRow key={student.studentId}>
-                                <TableCell className="text-center sticky left-0 bg-background border-r font-medium">
-                                    {index + 1}
-                                </TableCell>
-                                <TableCell className="sticky left-[60px] bg-background border-r">
-                                    <div className="flex flex-col gap-1">
-                                        <span className="font-medium">{student.studentName}</span>
-                                    </div>
-                                </TableCell>
-                                {labs.map((lab) => (
-                                    <TableCell key={lab.labId} className="text-center">
-                                        {renderGradeCell(getGradeForStudentLab(student, lab.labId), student, lab.labId)}
+                        {filteredTeams.map((team: Team, index: number) => {
+                            const labId = Number(selectedLab)
+                            const grade = getGradeForTeamLab(team, labId)
+                            const gradeKey = `${team.teamId}-${labId}`
+                            const isRowEditing = isEditing[gradeKey]
+
+                            const displayGrade = editedGrades[gradeKey] !== undefined ? editedGrades[gradeKey] : grade?.grade
+                            const displayGradeDescription = editedGradeDescriptions[`${gradeKey}-gradeDescription`] ?? grade?.gradeDescription
+
+                            return (
+                                <TableRow key={team.teamId}>
+                                    <TableCell className="text-center sticky left-0 bg-background border-r font-medium z-10">
+                                        {index + 1}
                                     </TableCell>
-                                ))}
-                            </TableRow>
-                        ))}
-                        {filteredStudents.length === 0 && selectedStudent !== "all" && (
+                                    <TableCell className="sticky left-[60px] bg-background border-r z-10">
+                                        <span className="font-medium">{team.teamName || "No Team"}</span>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        {grade?.grade !== null && grade?.grade !== undefined ? (
+                                            <span className="text-green-600 font-medium flex items-center justify-center">
+                                                Graded
+                                            </span>
+                                        ) : (
+                                            <span className="text-yellow-600 font-medium flex items-center justify-center">
+                                                Pending
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        {isRowEditing ? (
+                                            <UpdateTeamGrade
+                                                labId={labId}
+                                                teamId={team.teamId!}
+                                                initialGrade={displayGrade ?? 0}
+                                                initialDescription={displayGradeDescription ?? ""}
+                                                onSave={() => {
+                                                    setGradeData((prev: GradeData | null) => {
+                                                        if (!prev) return prev
+                                                        return {
+                                                            ...prev,
+                                                            teams: prev.teams.map((t) => {
+                                                                if (t.teamId === team.teamId) {
+                                                                    return {
+                                                                        ...t,
+                                                                        grades: t.grades.map((g) =>
+                                                                            g.labId === labId
+                                                                                ? { ...g, grade: editedGrades[gradeKey] ?? g.grade, gradeDescription: editedGradeDescriptions[`${gradeKey}-gradeDescription`] ?? g.gradeDescription, gradeStatus: "graded" }
+                                                                                : g
+                                                                        ),
+                                                                    }
+                                                                }
+                                                                return t
+                                                            }),
+                                                        }
+                                                    })
+                                                    setIsEditing((prev) => ({ ...prev, [gradeKey]: false }))
+                                                    handleCancelEdit(gradeKey)
+                                                }}
+                                                onCancel={() => handleCancelEdit(gradeKey)}
+                                            />
+                                        ) : (
+                                            <span className="font-bold">
+                                                {displayGrade !== undefined && displayGrade !== null ? displayGrade.toFixed(1) : "-"}
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        {isRowEditing ? null : (
+                                            <span>{displayGradeDescription || "-"}</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        {!isRowEditing && (
+                                            <div className="flex gap-2 justify-center">
+                                                <Button
+                                                    onClick={() => handleEditToggle(team, labId)}
+                                                    size="sm"
+                                                    variant="secondary"
+                                                >
+                                                    <Edit3 className="h-4 w-4 mr-1" />
+                                                </Button>
+                                                <Button
+                                                    onClick={() => handleViewIndividualGrades(team)}
+                                                    size="sm"
+                                                    variant="secondary"
+                                                >
+                                                    <Eye className="h-4 w-4 mr-1" />
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })}
+                        {filteredTeams.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={labs.length + 2} className="text-center py-8 text-muted-foreground">
-                                    Không tìm thấy sinh viên được chọn
+                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                    No teams found.
                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
                 </Table>
             </div>
+
+            <UpdateIndividualGrade
+                isOpen={isModalOpen}
+                onOpenChange={setIsModalOpen}
+                selectedTeam={selectedTeam}
+                selectedLab={selectedLab}
+                editedIndividualGrades={editedIndividualGrades}
+                editedIndividualComments={editedIndividualComments}
+                isEditingIndividual={isEditingIndividual}
+                handleIndividualGradeChange={handleIndividualGradeChange}
+                handleIndividualCommentChange={handleIndividualCommentChange}
+                handleIndividualEditToggle={handleIndividualEditToggle}
+                handleCancelIndividualEdit={handleCancelIndividualEdit}
+                handleSaveIndividualGrade={handleSaveIndividualGrade}
+            />
         </div>
     )
 }

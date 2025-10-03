@@ -9,11 +9,10 @@ import { Search, Filter } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { Pagination } from "antd"
 import { searchKitByKitTemplateId } from "@/services/kitServices"
-import DashboardLayout from "@/components/dashboard-layout"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import CheckoutKit from "@/components/lecturer/kit/CheckoutKit"
-import { useSearchParams } from "next/navigation"
 import { Card } from "@/components/ui/card"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
+import CheckoutKit from "@/components/lecturer/kit/CheckoutKit"
 
 interface Kit {
     kitId: string
@@ -44,14 +43,31 @@ export default function KitDetail() {
         setLoading(true)
         try {
             const response = await searchKitByKitTemplateId(kitTemplateId)
-            console.log("Check KitID:", kitTemplateId)
-            setKits(response) 
+            let filteredKits = response.filter((kit: Kit) => kit.kitStatus.toLowerCase() !== "invalid")
+
+            // Apply status filter
+            if (kitStatusFilter !== "all") {
+                filteredKits = filteredKits.filter((kit: Kit) =>
+                    kit.kitStatus.toLowerCase() === kitStatusFilter.toLowerCase()
+                )
+            }
+
+            // Apply search filter
+            if (kitSearch) {
+                filteredKits = filteredKits.filter((kit: Kit) =>
+                    kit.kitName.toLowerCase().includes(kitSearch.toLowerCase()) ||
+                    kit.kitDescription.toLowerCase().includes(kitSearch.toLowerCase())
+                )
+            }
+
+            setKits(filteredKits)
+            setTotalItems(filteredKits.length)
         } catch (error) {
             console.error("Failed to fetch kits:", error)
         } finally {
             setLoading(false)
         }
-    }, [kitTemplateId])
+    }, [kitTemplateId, kitStatusFilter, kitSearch])
 
     useEffect(() => {
         if (kitTemplateId) {
@@ -74,7 +90,6 @@ export default function KitDetail() {
         setSelectedKit(kit)
         setIsCheckoutOpen(true)
     }
-
 
     return (
         <div className="space-y-6">
@@ -130,9 +145,16 @@ export default function KitDetail() {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            kits.map((item) => (
+                            kits.slice((pageNum - 1) * pageSize, pageNum * pageSize).map((item) => (
                                 <TableRow key={item.kitId}>
-                                    <TableCell className="font-medium">{item.kitName}</TableCell>
+                                    <TableCell className="font-medium">
+                                        <Link
+                                            href={`/lecturer/dashboard/kit/${item.kitId}/accessories`}
+                                            className="text-blue-600 hover:underline"
+                                        >
+                                            {item.kitName}
+                                        </Link>
+                                    </TableCell>
                                     <TableCell>{item.kitTemplateName}</TableCell>
                                     <TableCell>{item.kitDescription}</TableCell>
                                     <TableCell>{new Date(item.kitCreateDate).toLocaleDateString()}</TableCell>
@@ -153,6 +175,21 @@ export default function KitDetail() {
                     </TableBody>
                 </Table>
             </Card>
+            <div className="mt-4 flex justify-end">
+                <Pagination
+                    current={pageNum}
+                    pageSize={pageSize}
+                    total={totalItems}
+                    showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
+                    onChange={(page, size) => {
+                        setPageNum(page)
+                        setPageSize(size)
+                    }}
+                    showSizeChanger
+                    pageSizeOptions={["10", "20", "50"]}
+                />
+            </div>
+
 
             <CheckoutKit
                 isOpen={isCheckoutOpen}
@@ -160,7 +197,6 @@ export default function KitDetail() {
                 kit={selectedKit}
                 onSuccess={fetchKits}
             />
-
         </div>
     )
 }

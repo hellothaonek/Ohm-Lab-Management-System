@@ -4,13 +4,14 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Filter } from "lucide-react"
-import { useState, useEffect, useCallback } from "react"
+import { Search, Filter, Eye } from "lucide-react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Pagination } from "antd"
 import { searchKitTemplate } from "@/services/kitTemplateServices"
-import DashboardLayout from "@/components/dashboard-layout"
 import Link from "next/link"
 import { Card } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 
 interface KitTemplate {
     kitTemplateId: string
@@ -24,33 +25,59 @@ interface KitTemplate {
 export default function KitPage() {
     const [kitTemplateSearch, setKitTemplateSearch] = useState("")
     const [kitTemplateStatusFilter, setKitTemplateStatusFilter] = useState("all")
-    const [kitTemplates, setKitTemplates] = useState<KitTemplate[]>([])
+    const [initialKitTemplates, setInitialKitTemplates] = useState<KitTemplate[]>([])
     const [loading, setLoading] = useState(false)
     const [pageNum, setPageNum] = useState(1)
     const [pageSize, setPageSize] = useState(10)
     const [totalItems, setTotalItems] = useState(0)
+    const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
     const fetchKitTemplates = useCallback(async () => {
         setLoading(true)
         try {
             const response = await searchKitTemplate({
-                pageNum,
-                pageSize,
-                keyWord: kitTemplateSearch,
-                status: kitTemplateStatusFilter === "all" ? "" : kitTemplateStatusFilter
+                pageNum: 1,
+                pageSize: 9999,
+                keyWord: "",
+                status: ""
             })
-            setKitTemplates(response.pageData)
-            setTotalItems(response.pageInfo.totalItem)
+            setInitialKitTemplates(response.pageData || [])
         } catch (error) {
             console.error("Failed to fetch kit templates:", error)
+            setInitialKitTemplates([])
         } finally {
             setLoading(false)
         }
-    }, [kitTemplateSearch, kitTemplateStatusFilter, pageNum, pageSize])
+    }, [])
 
     useEffect(() => {
         fetchKitTemplates()
     }, [fetchKitTemplates])
+
+    const kitTemplates = useMemo(() => {
+        let filteredItems = initialKitTemplates
+
+        if (kitTemplateStatusFilter !== "all") {
+            const filterValue = kitTemplateStatusFilter.toLowerCase()
+            filteredItems = filteredItems.filter(item =>
+                item.kitTemplateStatus.toLowerCase() === filterValue
+            )
+        }
+
+        if (kitTemplateSearch) {
+            const lowerCaseQuery = kitTemplateSearch.toLowerCase().trim()
+            filteredItems = filteredItems.filter(item =>
+                item.kitTemplateName.toLowerCase().includes(lowerCaseQuery)
+            )
+        }
+
+        setTotalItems(filteredItems.length)
+
+        const startIndex = (pageNum - 1) * pageSize
+        const endIndex = startIndex + pageSize
+
+        return filteredItems.slice(startIndex, endIndex)
+    }, [initialKitTemplates, kitTemplateSearch, kitTemplateStatusFilter, pageNum, pageSize])
 
     const getStatusBadge = (status: string) => {
         switch (status.toLowerCase()) {
@@ -71,6 +98,16 @@ export default function KitPage() {
         }
     }
 
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setKitTemplateSearch(e.target.value)
+        setPageNum(1)
+    }
+
+    const handleStatusFilterChange = (value: string) => {
+        setKitTemplateStatusFilter(value)
+        setPageNum(1)
+    }
+
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold tracking-tight">Kit Management</h1>
@@ -79,13 +116,16 @@ export default function KitPage() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         type="search"
-                        placeholder="Search kit templates..."
+                        placeholder="Search kit templates by name..."
                         className="pl-8 w-full"
                         value={kitTemplateSearch}
-                        onChange={(e) => setKitTemplateSearch(e.target.value)}
+                        onChange={handleSearchChange}
                     />
                 </div>
-                <Select value={kitTemplateStatusFilter} onValueChange={setKitTemplateStatusFilter}>
+                <Select
+                    value={kitTemplateStatusFilter}
+                    onValueChange={handleStatusFilterChange}
+                >
                     <SelectTrigger className="w-[130px]">
                         <div className="flex items-center gap-2">
                             <Filter className="h-4 w-4" />
@@ -96,6 +136,8 @@ export default function KitPage() {
                         <SelectItem value="all">All Statuses</SelectItem>
                         <SelectItem value="Valid">Valid</SelectItem>
                         <SelectItem value="Invalid">Invalid</SelectItem>
+                        <SelectItem value="Available">Available</SelectItem>
+                        <SelectItem value="Unavailable">Unavailable</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -105,7 +147,7 @@ export default function KitPage() {
                         <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead className="text-center">Quantity</TableHead>
-                            <TableHead className="text-center">Description</TableHead>
+                            <TableHead className="text-center">Image</TableHead>
                             <TableHead className="text-center">Status</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -138,7 +180,31 @@ export default function KitPage() {
                                         </Link>
                                     </TableCell>
                                     <TableCell className="text-center">{item.kitTemplateQuantity}</TableCell>
-                                    <TableCell className="text-center">{item.kitTemplateDescription}</TableCell>
+                                    <TableCell className="text-center">
+                                        {item.kitTemplateUrlImg ? (
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="link" onClick={() => setSelectedImage(item.kitTemplateUrlImg)}>
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <DialogHeader>
+                                                        <DialogTitle>{item.kitTemplateName}</DialogTitle>
+                                                    </DialogHeader>
+                                                    <div className="flex justify-center p-4">
+                                                        <img
+                                                            src={selectedImage || item.kitTemplateUrlImg}
+                                                            alt={item.kitTemplateName}
+                                                            className="max-w-full max-h-[256px] object-contain"
+                                                        />
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
+                                        ) : (
+                                            <span className="text-muted-foreground">No image</span>
+                                        )}
+                                    </TableCell>
                                     <TableCell className="text-center">{getStatusBadge(item.kitTemplateStatus)}</TableCell>
                                 </TableRow>
                             ))

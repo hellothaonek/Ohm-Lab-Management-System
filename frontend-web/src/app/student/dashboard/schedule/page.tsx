@@ -171,7 +171,7 @@ export default function StudentSchedule() {
 
     return (
         <div className="p-4 space-y-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between gap-4">
                 <Select onValueChange={handleWeekChange}>
                     <SelectTrigger className="w-[200px]">
                         <SelectValue placeholder={format(selectedWeekStart, "dd/MM/yyyy")} />
@@ -184,6 +184,16 @@ export default function StudentSchedule() {
                         ))}
                     </SelectContent>
                 </Select>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-blue-100 border"></div>
+                        <span>Class Session</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-orange-100 border"></div>
+                        <span>Lab Session</span>
+                    </div>
+                </div>
             </div>
 
             <div className="grid grid-cols-8 gap-px border rounded overflow-hidden text-center text-sm">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react" // 👈 Import useMemo
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Search, Eye, EllipsisVertical } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/select"
 import { searchEquipment } from "@/services/equipmentServices"
 import CreateEquipment from "@/components/head/equipment/CreateEquipment"
-import { QRCodeCanvas } from "qrcode.react"
 import DeleteEquipment from "@/components/head/equipment/DeleteEquipment"
 import EditEquipment from "@/components/head/equipment/EditEquipment"
 import { Pagination } from 'antd'
@@ -34,7 +33,8 @@ interface Equipment {
     equipmentCode: string;
     equipmentNumberSerial: string;
     equipmentStatus: string;
-    equipmentQr: string
+    equipmentQr: string;
+    equipmentTypeUrlImg: string; 
 }
 
 // Định nghĩa các tùy chọn trạng thái
@@ -49,33 +49,29 @@ const statusOptions = [
 export default function EquipmentTab() {
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedStatus, setSelectedStatus] = useState("all")
-    // Dữ liệu thô từ API (không lọc)
-    const [rawEquipmentItems, setRawEquipmentItems] = useState<Equipment[]>([]) 
+    const [rawEquipmentItems, setRawEquipmentItems] = useState<Equipment[]>([])
     const [pageNum, setPageNum] = useState(1)
     const [pageSize, setPageSize] = useState(10)
-    // Giữ nguyên tổng số item của trang hiện tại (trước khi lọc cục bộ)
-    const [totalItems, setTotalItems] = useState(0) 
+    const [totalItems, setTotalItems] = useState(0)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null)
-    const [selectedQrCode, setSelectedQrCode] = useState<string | null>(null)
+    const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null) // Changed to store image URL
 
     const fetchEquipment = useCallback(async () => {
         setIsLoading(true)
         setError(null)
         try {
-            // KHÔNG TRUYỀN keyWord VÀ status VÀO API
             const response = await searchEquipment({
                 pageNum,
                 pageSize,
-                keyWord: "", // Hoặc không truyền
-                status: "", // Hoặc không truyền
+                keyWord: "",
+                status: "",
             })
-            // Lưu dữ liệu thô
-            setRawEquipmentItems(response.pageData || []) 
+            setRawEquipmentItems(response.pageData || [])
             setTotalItems(response.pageInfo?.totalItem || 0)
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || err.message || "Failed to fetch equipment"
@@ -85,31 +81,28 @@ export default function EquipmentTab() {
         } finally {
             setIsLoading(false)
         }
-    }, [pageNum, pageSize]) // Chỉ phụ thuộc vào pageNum và pageSize
+    }, [pageNum, pageSize])
 
     useEffect(() => {
         fetchEquipment()
     }, [fetchEquipment])
 
-    // LỌC DỮ LIỆU CỤC BỘ DÙNG useMemo
     const filteredEquipmentItems = useMemo(() => {
         const lowerCaseSearch = searchQuery.toLowerCase().trim();
-        
+
         return rawEquipmentItems.filter(item => {
-            // Lọc theo từ khóa tìm kiếm (Tương tự ví dụ của bạn)
             const matchesSearch =
                 lowerCaseSearch === "" ||
                 item.equipmentName.toLowerCase().includes(lowerCaseSearch) ||
                 item.equipmentCode.toLowerCase().includes(lowerCaseSearch) ||
-                item.equipmentNumberSerial.toLowerCase().includes(lowerCaseSearch); // Thêm serial number
+                item.equipmentNumberSerial.toLowerCase().includes(lowerCaseSearch);
 
-            // Lọc theo trạng thái
-            const matchesStatus = 
+            const matchesStatus =
                 selectedStatus === "all" || item.equipmentStatus === selectedStatus;
 
             return matchesSearch && matchesStatus;
         })
-    }, [rawEquipmentItems, searchQuery, selectedStatus]); // Phụ thuộc vào dữ liệu thô, từ khóa và trạng thái
+    }, [rawEquipmentItems, searchQuery, selectedStatus]);
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -127,24 +120,18 @@ export default function EquipmentTab() {
     }
 
     const handlePaginationChange = (page: number, pageSize: number | undefined) => {
-        // Với lọc cục bộ, khi chuyển trang phải reset filter/search (nếu API vẫn trả về từng trang)
-        // Nếu API trả về toàn bộ data, logic này sẽ khác
-        setSearchQuery(""); // Reset search khi chuyển trang (nếu muốn)
-        setSelectedStatus("all"); // Reset status khi chuyển trang (nếu muốn)
+        setSearchQuery("");
+        setSelectedStatus("all");
         setPageNum(page)
         setPageSize(pageSize || 10)
     }
 
-    // Xử lý thay đổi search và đặt lại pageNum về 1 (nếu muốn)
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value);
-        // Không cần setPageNum(1) vì ta đang lọc cục bộ trên dữ liệu của trang hiện tại
     };
 
-    // Xử lý thay đổi trạng thái và đặt lại pageNum về 1 (nếu muốn)
     const handleStatusChange = (value: string) => {
         setSelectedStatus(value)
-        // Không cần setPageNum(1) vì ta đang lọc cục bộ trên dữ liệu của trang hiện tại
     }
 
     return (
@@ -158,10 +145,9 @@ export default function EquipmentTab() {
                             placeholder="Search equipment by Name, Code, Serial..."
                             className="pl-8 w-full"
                             value={searchQuery}
-                            onChange={handleSearchChange} // Sử dụng hàm handleSearchChange mới
+                            onChange={handleSearchChange}
                         />
                     </div>
-                    {/* THÊM COMPONENT SELECT CHO BỘ LỌC TRẠNG THÁI */}
                     <Select value={selectedStatus} onValueChange={handleStatusChange}>
                         <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder="Select Status" />
@@ -199,7 +185,7 @@ export default function EquipmentTab() {
                             <TableHead>Code</TableHead>
                             <TableHead>Serial Number</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead>QR Code</TableHead>
+                            <TableHead>Image</TableHead>
                             <TableHead>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -216,14 +202,14 @@ export default function EquipmentTab() {
                                     {error}
                                 </TableCell>
                             </TableRow>
-                        ) : filteredEquipmentItems.length === 0 ? ( // 👈 SỬ DỤNG filteredEquipmentItems
+                        ) : filteredEquipmentItems.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center text-muted-foreground">
                                     No equipment found matching your filters.
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredEquipmentItems.map((item: Equipment, index: number) => ( // 👈 SỬ DỤNG filteredEquipmentItems
+                            filteredEquipmentItems.map((item: Equipment, index: number) => (
                                 <TableRow key={item.equipmentId ?? `fallback-${index}`}>
                                     <TableCell>
                                         <div className="font-medium">{item.equipmentName}</div>
@@ -232,24 +218,28 @@ export default function EquipmentTab() {
                                     <TableCell>{item.equipmentNumberSerial}</TableCell>
                                     <TableCell>{getStatusBadge(item.equipmentStatus)}</TableCell>
                                     <TableCell>
-                                        {item.equipmentQr ? (
+                                        {item.equipmentTypeUrlImg ? (
                                             <Dialog>
                                                 <DialogTrigger asChild>
-                                                    <Button variant="link" onClick={() => setSelectedQrCode(item.equipmentQr!)}>
+                                                    <Button variant="link" onClick={() => setSelectedImageUrl(item.equipmentTypeUrlImg)}>
                                                         <Eye className="h-4 w-4" />
                                                     </Button>
                                                 </DialogTrigger>
                                                 <DialogContent>
                                                     <DialogHeader>
-                                                        <DialogTitle>QR Code for {item.equipmentName}</DialogTitle>
+                                                        <DialogTitle>Image for {item.equipmentName}</DialogTitle>
                                                     </DialogHeader>
                                                     <div className="flex justify-center p-4">
-                                                        <QRCodeCanvas value={selectedQrCode || ''} size={256} />
+                                                        <img
+                                                            src={selectedImageUrl || ''}
+                                                            alt={`Image for ${item.equipmentName}`}
+                                                            className="max-w-full max-h-[256px] object-contain"
+                                                        />
                                                     </div>
                                                 </DialogContent>
                                             </Dialog>
                                         ) : (
-                                            <span className="text-muted-foreground">No QR</span>
+                                            <span className="text-muted-foreground">No Image</span>
                                         )}
                                     </TableCell>
                                     <TableCell>

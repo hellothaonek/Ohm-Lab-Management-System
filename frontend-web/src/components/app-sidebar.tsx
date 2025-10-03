@@ -102,6 +102,18 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
       roles: ["student", "lecturer"],
     },
     {
+      title: "My Grades",
+      href: `/${role}/dashboard/my-grades`,
+      icon: Users,
+      roles: ["student"],
+    },
+    {
+      title: "Accessory",
+      href: `/${role}/dashboard/accessory`,
+      icon: Plug,
+      roles: ["head"],
+    },
+    {
       title: "Equipment",
       href: `/${role}/dashboard/equipment`,
       icon: Database,
@@ -112,6 +124,12 @@ export function AppSidebar({ role, userFullName, ...props }: AppSidebarProps) {
       href: `/${role}/dashboard/kit`,
       icon: Package,
       roles: ["head", "lecturer"],
+    },
+    {
+      title: "Kit Template",
+      href: `/${role}/dashboard/kit-template`,
+      icon: Package,
+      roles: ["head"],
     },
     {
       title: "Checkout/Return History",

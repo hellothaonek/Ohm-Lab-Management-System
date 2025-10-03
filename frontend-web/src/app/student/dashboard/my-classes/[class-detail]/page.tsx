@@ -9,7 +9,6 @@ import { getClassById } from "@/services/classServices"
 import { Button } from "@/components/ui/button"
 import GroupTab from "@/components/student/group/GroupTab"
 import LabTab from "@/components/student/lab/LabTab"
-import { StudentGradeTab } from "@/components/student/grade/StudentGradeTab"
 
 interface ClassDetail {
     classId: number
@@ -114,16 +113,12 @@ export default function StudentClassDetailPage() {
                 <TabsList>
                     <TabsTrigger value="groups">Group List</TabsTrigger>
                     <TabsTrigger value="lab">Lab</TabsTrigger>
-                    <TabsTrigger value="grades">Grades</TabsTrigger>
                 </TabsList>
                 <TabsContent value="lab">
                     <LabTab classId={classId || ""} />
                 </TabsContent>
                 <TabsContent value="groups" className="shadow-lg">
                     <GroupTab classId={classId || ""} />
-                </TabsContent>
-                <TabsContent value="grades" className="shadow-lg">
-                    <StudentGradeTab classId={classId || ""} studentId={classDetail.classUsers[0]?.userNumberCode || ""} />
                 </TabsContent>
             </Tabs>
         </div>

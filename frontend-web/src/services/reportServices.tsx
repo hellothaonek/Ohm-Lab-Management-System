@@ -17,8 +17,8 @@ export const getTodaySlots = async () => {
     return response.data;
 };
 
-export const getTodayClasses = async () => {
-    const response = await axiosWithoutLoading.get("/api/report/today-classes");
+export const getTodayClasses = async (slotName: string) => {
+    const response = await axiosWithoutLoading.get(`/api/report/today-classes?slotName=${slotName}`);
     return response.data;
 };
 
