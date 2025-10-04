@@ -53,7 +53,7 @@ interface LabScheduleItem {
 }
 
 export default function StudentSchedule() {
-    const { user } = useAuth()
+    const { user } = useAuth();
     const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
     const [weeks, setWeeks] = useState<{ value: string; label: string }[]>([]);
     const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
@@ -89,9 +89,12 @@ export default function StudentSchedule() {
 
     const { weekDates, weekOptions } = useMemo(() => {
         const currentYear = new Date().getFullYear();
-        const startOfYear = new Date(currentYear, 0, 1);
-        const endOfYear = new Date(currentYear, 11, 31);
-        const weekStarts = eachWeekOfInterval({ start: startOfYear, end: endOfYear }, { weekStartsOn: 1 });
+        const startOfCurrentYear = new Date(currentYear, 0, 1);
+        const endOfNextYear = new Date(currentYear + 1, 11, 31);
+        const weekStarts = eachWeekOfInterval(
+            { start: startOfCurrentYear, end: endOfNextYear },
+            { weekStartsOn: 1 }
+        );
 
         const weekOptions = weekStarts.map((weekStart) => ({
             value: format(weekStart, "yyyy-MM-dd"),

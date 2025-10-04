@@ -99,13 +99,19 @@ export default function LecturerSchedule() {
 
     const { weekDates, weekOptions } = useMemo(() => {
         const currentYear = new Date().getFullYear();
-        const startOfYear = new Date(currentYear, 0, 1);
-        const endOfYear = new Date(currentYear, 11, 31);
-        const weekStarts = eachWeekOfInterval({ start: startOfYear, end: endOfYear }, { weekStartsOn: 1 });
+        const startOfCurrentYear = new Date(currentYear, 0, 1);
+        const endOfNextYear = new Date(currentYear + 1, 11, 31);
+        const weekStarts = eachWeekOfInterval(
+            { start: startOfCurrentYear, end: endOfNextYear },
+            { weekStartsOn: 1 }
+        );
 
         const weekOptions = weekStarts.map((weekStart) => ({
             value: format(weekStart, "yyyy-MM-dd"),
-            label: `${format(weekStart, "dd/MM")} - ${format(addDays(weekStart, 6), "dd/MM/yyyy")}`,
+            label: `${format(weekStart, "dd/MM")} - ${format(
+                addDays(weekStart, 6),
+                "dd/MM/yyyy"
+            )}`,
         })).sort((a, b) => new Date(a.value).getTime() - new Date(b.value).getTime());
 
         const dates = Array.from({ length: 7 }).map((_, i) =>
