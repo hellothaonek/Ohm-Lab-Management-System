@@ -181,7 +181,7 @@ export default function EquipmentPage() {
                 <TableHead>EquipmentType</TableHead>
                 <TableHead>Number Serial</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Image</TableHead> {/* Updated header from "QR Code" to "Image" */}
+                <TableHead>Image</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>

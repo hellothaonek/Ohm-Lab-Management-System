@@ -52,7 +52,7 @@ export default function KitTemplatePage({ setShowReportDialog }: KitTemplateTabP
                 keyWord: "",
                 status: ""
             })
-            setKitTemplates(response.pageData || [])
+            setKitTemplates(response.pageData)
             setTotalItems(response.pageInfo.totalItem)
         } catch (error) {
             console.error("Failed to fetch kit templates:", error)

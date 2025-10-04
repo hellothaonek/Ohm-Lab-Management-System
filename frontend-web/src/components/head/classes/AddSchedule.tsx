@@ -75,9 +75,7 @@ export default function AddSchedule({ open, onClose, onAddSchedule, classId, cla
                 }
 
                 await addScheduleForClass(scheduleData)
-                toast.success("Schedule added successfully!")
                 onAddSchedule(scheduleData)
-
                 setSelectedScheduleTypeId("")
                 onClose()
             } catch (err: any) {

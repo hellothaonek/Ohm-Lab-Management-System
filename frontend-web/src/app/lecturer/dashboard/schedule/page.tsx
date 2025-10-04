@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { addDays, startOfWeek, format, eachWeekOfInterval } from "date-fns";
 import { getCurrentUser } from "@/services/userServices";
 import { ScheduleSkeleton } from "@/components/loading-skeleton";
@@ -36,14 +36,14 @@ interface LabBookingItem {
     registrationScheduleDate: string;
     registrationScheduleName: string;
     className: string;
-    labName: string;
+    labName: string; // Add this property if it's in the data
     slotId: number;
     slotStartTime: string;
     slotEndTime: string;
 }
 
 export default function LecturerSchedule() {
-    const { user } = useAuth();
+    const { user } = useAuth()
     const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
     const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
     const [labBookings, setLabBookings] = useState<LabBookingItem[]>([]);
@@ -52,15 +52,16 @@ export default function LecturerSchedule() {
 
     useEffect(() => {
         const fetchAllSchedules = async () => {
-            const userId = user?.userId;
+            const userId = user?.userId
             if (!userId) {
-                setLoading(false);
-                toast.error("User ID not found. Please log in again.");
-                return;
+                setLoading(false)
+                toast.error("User ID not found. Please log in again.")
+                return
             }
             try {
                 setLoading(true);
-                const lecturerId = userId;
+                const user = await getCurrentUser();
+                const lecturerId = user.userId;
                 if (lecturerId) {
                     const [scheduleData, labBookingResponse] = await Promise.all([
                         getScheduleByLectureId(lecturerId),
@@ -69,12 +70,14 @@ export default function LecturerSchedule() {
 
                     setSchedule(scheduleData);
 
+                    // Nâng cao khả năng xử lý lỗi: kiểm tra dữ liệu trước khi set state
                     if (labBookingResponse) {
                         const acceptedBookings = labBookingResponse.filter(
                             (booking: any) => booking.registrationScheduleStatus === "Accept"
                         );
                         setLabBookings(acceptedBookings);
                     } else {
+                        // Nếu không có dữ liệu hoặc dữ liệu không đúng định dạng, set state về mảng rỗng
                         setLabBookings([]);
                     }
                 } else {
@@ -83,6 +86,7 @@ export default function LecturerSchedule() {
             } catch (err) {
                 setError("Failed to fetch schedule. Please try again later.");
                 console.error(err);
+                // Đảm bảo state không bị undefined khi có lỗi
                 setSchedule([]);
                 setLabBookings([]);
             } finally {
@@ -90,17 +94,14 @@ export default function LecturerSchedule() {
             }
         };
 
-        if (user?.userId) {
-            fetchAllSchedules();
-        }
-    }, [user]);
+        fetchAllSchedules();
+    }, []);
 
     const { weekDates, weekOptions } = useMemo(() => {
         const currentYear = new Date().getFullYear();
         const startOfYear = new Date(currentYear, 0, 1);
-        const endOfNextYear = new Date(currentYear + 1, 11, 31);
-
-        const weekStarts = eachWeekOfInterval({ start: startOfYear, end: endOfNextYear }, { weekStartsOn: 1 });
+        const endOfYear = new Date(currentYear, 11, 31);
+        const weekStarts = eachWeekOfInterval({ start: startOfYear, end: endOfYear }, { weekStartsOn: 1 });
 
         const weekOptions = weekStarts.map((weekStart) => ({
             value: format(weekStart, "yyyy-MM-dd"),
@@ -120,16 +121,14 @@ export default function LecturerSchedule() {
 
     const renderCell = (day: string, slotIndex: number) => {
         const date = weekDates[days.indexOf(day)];
-        const expectedSlotTime = slots[slotIndex].split(" - ")[0];
 
+        // Find a teaching lesson for this slot
         const lesson = schedule.find((l) =>
-            format(new Date(l.scheduleDate), "yyyy-MM-dd") === date &&
-            l.slotStartTime === expectedSlotTime
+            format(new Date(l.scheduleDate), "yyyy-MM-dd") === date && l.slotId === slotIndex + 1
         );
 
         const booking = labBookings.find((b) =>
-            format(new Date(b.registrationScheduleDate), "yyyy-MM-dd") === date &&
-            b.slotStartTime === expectedSlotTime
+            format(new Date(b.registrationScheduleDate), "yyyy-MM-dd") === date && b.slotId === slotIndex + 1
         );
 
         if (lesson) {
@@ -171,7 +170,7 @@ export default function LecturerSchedule() {
                 </TabsList>
                 <TabsContent value="schedule">
                     <div className="space-y-4 mt-4">
-                        <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
                             <Select onValueChange={handleWeekChange}>
                                 <SelectTrigger className="w-[200px]">
                                     <SelectValue placeholder={format(selectedWeekStart, "dd/MM/yyyy")} />
@@ -184,16 +183,6 @@ export default function LecturerSchedule() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 bg-blue-100 border"></div>
-                                    <span>Class Session</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 bg-orange-100 border"></div>
-                                    <span>Lab Session</span>
-                                </div>
-                            </div>
                         </div>
 
                         <div className="grid grid-cols-8 gap-px border rounded overflow-hidden text-center text-sm">

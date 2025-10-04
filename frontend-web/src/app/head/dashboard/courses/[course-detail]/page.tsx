@@ -262,7 +262,7 @@ export default function CourseDetailPage() {
                     <>
                         <div className="rounded-md border">
                             <Table>
-                                <TableHeader>
+                                <TableHeader className="bg-blue-50">
                                     <TableRow>
                                         <TableHead className="w-[40%]">Lab Name</TableHead>
                                         <TableHead className="w-[30%]">Status</TableHead>
@@ -299,7 +299,7 @@ export default function CourseDetailPage() {
                                                     size="icon"
                                                     onClick={() => handleDeleteLab(lab)}
                                                 >
-                                                    <Trash2 className="h-4 w-4" />
+                                                    <Trash2 className="h-4 w-4 text-red-500" />
                                                 </Button>
                                             </TableCell>
                                         </TableRow>

@@ -85,14 +85,6 @@ export default function AdminDashboard() {
                     <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
                     <p className="text-muted-foreground">System overview and management tools</p>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" asChild>
-                        <Link href="/admin/dashboard/settings">
-                            <Settings className="h-4 w-4 mr-2" />
-                            Settings
-                        </Link>
-                    </Button>
-                </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -160,34 +152,6 @@ export default function AdminDashboard() {
                 <LabUsageReport />
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
-                    <CardDescription>Common administrative tasks</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <Button asChild className="h-20 flex-col">
-                            <Link href="/admin/dashboard/users">
-                                <Users className="h-6 w-6 mb-2" />
-                                Manage Users
-                            </Link>
-                        </Button>
-                        <Button asChild variant="outline" className="h-20 flex-col bg-transparent">
-                            <Link href="/admin/dashboard/reports">
-                                <Database className="h-6 w-6 mb-2" />
-                                System Reports
-                            </Link>
-                        </Button>
-                        <Button asChild variant="outline" className="h-20 flex-col bg-transparent">
-                            <Link href="/admin/dashboard/settings">
-                                <Settings className="h-6 w-6 mb-2" />
-                                System Settings
-                            </Link>
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
         </div>
     )
 }

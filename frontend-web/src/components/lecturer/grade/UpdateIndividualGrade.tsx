@@ -77,10 +77,9 @@ export function UpdateIndividualGrade({
                 setError(null)
                 const response = await getTeamGrade(selectedLab, selectedTeam.teamId.toString())
                 setTeamGradeData(response)
-            } catch (err) {
-                setError("Failed to fetch team grades")
-                console.error("Error fetching team grades:", err)
-                toast.error("Failed to fetch team grades")
+            } catch (err: any) {
+                const errorMessage = err.response?.data?.message;
+                toast.error(errorMessage); 
             } finally {
                 setLoading(false)
             }

@@ -19,6 +19,7 @@ import { searchAccessory } from "@/services/accessoryServices"
 interface Accessory {
     accessoryId: number
     accessoryName: string
+    accessoryValueCode: string
 }
 
 interface RequiredAccessory {
@@ -58,7 +59,7 @@ const AccessoryDetailItem: React.FC<AccessoryDetailItemProps> = ({ name, quantit
     return (
         <div className="flex items-center gap-2 border-b last:border-b-0 py-2">
             <div className="flex-1 truncate">
-                <span className="font-medium">{name}</span>
+                <span>{name}</span>
             </div>
             <div className="flex items-center gap-2">
                 <Label htmlFor={`qty-${name}`} className="text-right sr-only">Quantity:</Label>
@@ -69,7 +70,6 @@ const AccessoryDetailItem: React.FC<AccessoryDetailItemProps> = ({ name, quantit
                     value={quantity}
                     onChange={handleChange}
                     onBlur={() => {
-                        // Đảm bảo có giá trị khi thoát khỏi input
                         if (quantity < 1) onQuantityChange(1)
                     }}
                     className="w-16 h-8 text-center"
@@ -104,27 +104,21 @@ export default function CreateKitTemplate({ open, onOpenChange, onSuccess }: Cre
     const [isLoadingAccessories, setIsLoadingAccessories] = useState(false)
     const [accessorySelectorOpen, setAccessorySelectorOpen] = useState(false)
 
-    // Bỏ các state cũ không cần thiết
-    // const [listAccessory, setListAccessory] = useState<{ accessoryId: number; accessoryQuantity: number }[]>([])
-    // const [newAccessoryId, setNewAccessoryId] = useState<number>(0)
-    // const [newAccessoryQuantity, setNewAccessoryQuantity] = useState<number>(0)
-
     const [loading, setLoading] = useState(false)
     const { toast } = useToast()
     const { uploadImage, loading: isImageUploading, error: uploadError } = useUploadImage()
 
     const isProcessing = loading || isImageUploading || isLoadingAccessories
 
-    // --- LOGIC FETCHING ACCESSORIES ---
     useEffect(() => {
         const fetchAccessories = async () => {
             setIsLoadingAccessories(true)
             try {
                 const response = await searchAccessory({ pageNum: 1, pageSize: 100, keyWord: "", status: "" })
-                // Giả định response.pageData chứa array các Accessory
                 setAllAccessories(response.pageData.map((item: any) => ({
                     accessoryId: item.accessoryId,
                     accessoryName: item.accessoryName,
+                    accessoryValueCode: item.accessoryValueCode,
                 })))
             } catch (err) {
                 console.error("Failed to load accessories:", err)
@@ -309,7 +303,6 @@ export default function CreateKitTemplate({ open, onOpenChange, onSuccess }: Cre
                             )}
                         </div>
 
-                        {/* Accessories - ĐÃ CẬP NHẬT THEO PHƯƠNG ÁN CHỌN NHIỀU */}
                         <div className="grid gap-2">
                             <Label>Required Accessories</Label>
                             <Popover open={accessorySelectorOpen} onOpenChange={setAccessorySelectorOpen}>
@@ -340,13 +333,13 @@ export default function CreateKitTemplate({ open, onOpenChange, onSuccess }: Cre
                                                     return (
                                                         <CommandItem
                                                             key={accessory.accessoryId}
-                                                            value={accessory.accessoryName} // Đảm bảo giá trị có thể tìm kiếm
+                                                            value={accessory.accessoryName} 
                                                             onSelect={() => handleAccessoryChange(accessory.accessoryId, !isSelected)}
                                                         >
                                                             <Check
                                                                 className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")}
                                                             />
-                                                            {accessory.accessoryName}
+                                                            {accessory.accessoryName} - {accessory.accessoryValueCode}
                                                         </CommandItem>
                                                     )
                                                 })}

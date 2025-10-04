@@ -227,7 +227,13 @@ export default function KitPage() {
                                         Loading kits...
                                     </TableCell>
                                 </TableRow>
-                            ) : totalItems === 0 && fullKits.length > 0 ? (
+                            ) : fullKits.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                                        No kit available.
+                                    </TableCell>
+                                </TableRow>
+                            ) : totalItems === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={7} className="text-center text-muted-foreground">
                                         No kits match the current filters or search term.

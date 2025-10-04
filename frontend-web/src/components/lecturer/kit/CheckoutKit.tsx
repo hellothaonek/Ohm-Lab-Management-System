@@ -244,6 +244,7 @@ export default function CheckoutKit({ isOpen, onOpenChange, kit, onSuccess }: Ch
                             value={formData.teamKitName}
                             onChange={(e) => handleInputChange("teamKitName", e.target.value)}
                             placeholder="Enter kit name"
+                            disabled
                         />
                     </div>
                     <div>

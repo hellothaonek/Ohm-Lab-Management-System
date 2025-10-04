@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { UserPlus, Loader2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { addTeamUser } from "@/services/teamUserServices"
 import { getClassUserByClassId } from "@/services/classUserServices"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface ClassUser {
     classUserId: number
@@ -34,19 +35,23 @@ interface AddMemberProps {
 }
 
 export default function AddMember({ teamId, classId, onMemberAdded }: AddMemberProps) {
-    const [userId, setUserId] = useState("")
+    const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
     const [isOpen, setIsOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [users, setUsers] = useState<ClassUser[]>([])
     const [usersLoading, setUsersLoading] = useState(false)
     const { toast } = useToast()
 
+    // Log selected userIds to console whenever they change
+    useEffect(() => {
+        console.log("Selected userIds:", selectedUserIds)
+    }, [selectedUserIds])
+
     useEffect(() => {
         const fetchUsers = async () => {
             try {
                 setUsersLoading(true)
                 const response = await getClassUserByClassId(classId)
-                console.log(">>", response)
                 setUsers(response)
             } catch (error) {
                 toast({
@@ -62,14 +67,28 @@ export default function AddMember({ teamId, classId, onMemberAdded }: AddMemberP
         if (isOpen && classId) {
             fetchUsers()
         }
+
+        if (!isOpen) {
+            setSelectedUserIds([])
+        }
     }, [isOpen, classId, toast])
+
+    const handleUserToggle = (userId: string) => {
+        setSelectedUserIds(prevIds => {
+            if (prevIds.includes(userId)) {
+                return prevIds.filter(id => id !== userId)
+            } else {
+                return [...prevIds, userId]
+            }
+        })
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!userId) {
+        if (selectedUserIds.length === 0) {
             toast({
                 title: "Error",
-                description: "Please select a user",
+                description: "Please select at least one user",
                 variant: "destructive",
             })
             return
@@ -77,24 +96,41 @@ export default function AddMember({ teamId, classId, onMemberAdded }: AddMemberP
 
         setIsLoading(true)
         try {
-            await addTeamUser(teamId.toString(), userId)
-            toast({
-                title: "Success",
-                description: "User added to team successfully",
-            })
-            setUserId("")
+            // Prepare the request body
+            const teamUserList = selectedUserIds.map(userId => ({
+                teamId,
+                userId,
+            }))
+
+            // Call addTeamUser with the updated format
+            const result = await addTeamUser(teamUserList)
+
+            console.log("add list user:", result)
+
+            const successCount = selectedUserIds.length
+
+            // Reset state and close dialog
+            setSelectedUserIds([])
             setIsOpen(false)
             onMemberAdded()
+
+            toast({
+                title: "Success",
+                description: `Successfully added ${successCount} member${successCount > 1 ? 's' : ''} to the team`,
+            })
         } catch (error) {
+            console.error(error)
             toast({
                 title: "Error",
-                description: "Failed to add user to team",
+                description: "Failed to add one or more users to the team. Please check the console for details.",
                 variant: "destructive",
             })
         } finally {
             setIsLoading(false)
         }
     }
+
+    const isAddDisabled = isLoading || usersLoading || selectedUserIds.length === 0 || users.length === 0
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -103,29 +139,55 @@ export default function AddMember({ teamId, classId, onMemberAdded }: AddMemberP
                     <UserPlus className="h-4 w-4" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
                 <DialogHeader>
-                    <DialogTitle>Add New Member</DialogTitle>
+                    <DialogTitle>Add New Members</DialogTitle>
                 </DialogHeader>
+
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                        <Select
-                            value={userId}
-                            onValueChange={setUserId}
-                            disabled={usersLoading || isLoading}
-                        >
-                            <SelectTrigger id="userId">
-                                <SelectValue placeholder={usersLoading ? "Loading users..." : "Select a student"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {users.map((user) => (
-                                    <SelectItem key={user.userId} value={user.userId}>
-                                        {user.userName}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <Label htmlFor="users-list">Select Students</Label>
+
+                        {usersLoading && (
+                            <div className="flex items-center justify-center h-24 text-gray-500">
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading students...
+                            </div>
+                        )}
+
+                        {!usersLoading && users.length === 0 && (
+                            <div className="flex items-center justify-center h-24 text-gray-500">
+                                No students available to add.
+                            </div>
+                        )}
+
+                        {!usersLoading && users.length > 0 && (
+                            <ScrollArea className="h-60 w-full rounded-md border p-4">
+                                {users.map((user) => {
+                                    const isSelected = selectedUserIds.includes(user.userId)
+                                    return (
+                                        <div
+                                            key={user.userId}
+                                            className="flex items-center space-x-2 p-2 rounded-md cursor-pointer hover:bg-gray-100"
+                                        >
+                                            <Checkbox
+                                                id={`user-${user.userId}`}
+                                                checked={isSelected}
+                                                onCheckedChange={() => handleUserToggle(user.userId)}
+                                            />
+                                            <label
+                                                htmlFor={`user-${user.userId}`}
+                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-grow"
+                                                onClick={() => handleUserToggle(user.userId)}
+                                            >
+                                                {user.userName} ({user.userNumberCode})
+                                            </label>
+                                        </div>
+                                    )
+                                })}
+                            </ScrollArea>
+                        )}
                     </div>
+
                     <div className="flex justify-end gap-2">
                         <Button
                             type="button"
@@ -135,14 +197,14 @@ export default function AddMember({ teamId, classId, onMemberAdded }: AddMemberP
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isLoading || usersLoading}>
+                        <Button type="submit" disabled={isAddDisabled}>
                             {isLoading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Adding...
+                                    Adding ({selectedUserIds.length})...
                                 </>
                             ) : (
-                                "Add"
+                                `Add (${selectedUserIds.length})`
                             )}
                         </Button>
                     </div>

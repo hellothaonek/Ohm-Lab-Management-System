@@ -37,7 +37,6 @@ export function UpdateTeamGrade({ labId, teamId, initialGrade, initialDescriptio
     const handleSave = async () => {
         try {
             await updateTeamGrade(labId, teamId, { grade, description })
-            toast.success("Update team grade successful")
             onSave()
         } catch (err) {
             console.error("Error updating grade:", err)

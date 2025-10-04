@@ -9,6 +9,7 @@ import { useState, useEffect } from "react"
 import { updateKit } from "@/services/kitServices"
 import { useUploadImage } from "@/hooks/useUploadImage"
 import { useToast } from "@/components/ui/use-toast"
+import { Textarea } from "@/components/ui/textarea"
 
 interface EditKitProps {
     open: boolean
@@ -145,7 +146,7 @@ export default function EditKit({ open, onOpenChange, kit, onSuccess }: EditKitP
 
                     <div>
                         <Label htmlFor="kitDescription">Description</Label>
-                        <Input
+                        <Textarea
                             id="kitDescription"
                             value={formData.kitDescription}
                             onChange={(e) => setFormData({ ...formData, kitDescription: e.target.value })}

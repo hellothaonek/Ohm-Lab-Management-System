@@ -39,3 +39,9 @@ export const deleteUser = async (id: string) => {
     const response = await defaultAxiosInstance.post(`/api/user/delete/${id}`);
     return response.data;
 };
+
+export const createUser = async (data: { userFullName: string; userRollNumber: string; userEmail: string; userNumberCode: string; userRoleName: string; }) => {
+    const response = await defaultAxiosInstance.post("/api/user/user", data);
+     toast.success("Create account successful");
+    return response.data;
+};

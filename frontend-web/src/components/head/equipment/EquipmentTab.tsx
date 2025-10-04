@@ -34,7 +34,8 @@ interface Equipment {
     equipmentNumberSerial: string;
     equipmentStatus: string;
     equipmentQr: string;
-    equipmentTypeUrlImg: string; 
+    equipmentTypeUrlImg: string;
+    equipmentTypeName: string;
 }
 
 // Định nghĩa các tùy chọn trạng thái
@@ -59,8 +60,12 @@ export default function EquipmentTab() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null)
-    const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null) // Changed to store image URL
+    const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
 
+    /**
+     * @description Fetches equipment data from the server based ONLY on pagination parameters.
+     * All searching and filtering logic is now handled client-side.
+     */
     const fetchEquipment = useCallback(async () => {
         setIsLoading(true)
         setError(null)
@@ -83,20 +88,27 @@ export default function EquipmentTab() {
         }
     }, [pageNum, pageSize])
 
+    // 💡 useEffect now only runs when pagination parameters change or on mount
     useEffect(() => {
         fetchEquipment()
     }, [fetchEquipment])
 
+    /**
+     * @description Handles ALL searching and filtering logic client-side.
+     */
     const filteredEquipmentItems = useMemo(() => {
         const lowerCaseSearch = searchQuery.toLowerCase().trim();
 
         return rawEquipmentItems.filter(item => {
+            // 1. Search Filter (by Name, Code, Serial)
             const matchesSearch =
                 lowerCaseSearch === "" ||
                 item.equipmentName.toLowerCase().includes(lowerCaseSearch) ||
                 item.equipmentCode.toLowerCase().includes(lowerCaseSearch) ||
                 item.equipmentNumberSerial.toLowerCase().includes(lowerCaseSearch);
+                item.equipmentTypeName.toLowerCase().includes(lowerCaseSearch);
 
+            // 2. Status Filter
             const matchesStatus =
                 selectedStatus === "all" || item.equipmentStatus === selectedStatus;
 
@@ -119,13 +131,13 @@ export default function EquipmentTab() {
         }
     }
 
+    // Pagination change now triggers API fetch
     const handlePaginationChange = (page: number, pageSize: number | undefined) => {
-        setSearchQuery("");
-        setSelectedStatus("all");
         setPageNum(page)
         setPageSize(pageSize || 10)
     }
 
+    // Search/Status changes DON'T trigger an API fetch, only re-render via state update
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchQuery(e.target.value);
     };
@@ -138,16 +150,17 @@ export default function EquipmentTab() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div className="flex gap-4 items-center w-full">
-                    <div className="relative flex-1 max-w-xs">
+                    <div className="relative flex-1 max-w-md">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                             type="search"
                             placeholder="Search equipment by Name, Code, Serial..."
                             className="pl-8 w-full"
                             value={searchQuery}
-                            onChange={handleSearchChange}
+                            onChange={handleSearchChange} // Triggers client-side filtering
                         />
                     </div>
+                    {/* Select for Status Filter */}
                     <Select value={selectedStatus} onValueChange={handleStatusChange}>
                         <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder="Select Status" />
@@ -182,6 +195,7 @@ export default function EquipmentTab() {
                     <TableHeader className="bg-blue-50">
                         <TableRow>
                             <TableHead>Name</TableHead>
+                            <TableHead>Type</TableHead>
                             <TableHead>Code</TableHead>
                             <TableHead>Serial Number</TableHead>
                             <TableHead>Status</TableHead>
@@ -192,19 +206,19 @@ export default function EquipmentTab() {
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                                <TableCell colSpan={7} className="text-center text-muted-foreground">
                                     Loading equipment...
                                 </TableCell>
                             </TableRow>
                         ) : error ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center text-red-500">
+                                <TableCell colSpan={7} className="text-center text-red-500">
                                     {error}
                                 </TableCell>
                             </TableRow>
                         ) : filteredEquipmentItems.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                                <TableCell colSpan={7} className="text-center text-muted-foreground">
                                     No equipment found matching your filters.
                                 </TableCell>
                             </TableRow>
@@ -214,6 +228,7 @@ export default function EquipmentTab() {
                                     <TableCell>
                                         <div className="font-medium">{item.equipmentName}</div>
                                     </TableCell>
+                                    <TableCell>{item.equipmentTypeName}</TableCell>
                                     <TableCell>{item.equipmentCode}</TableCell>
                                     <TableCell>{item.equipmentNumberSerial}</TableCell>
                                     <TableCell>{getStatusBadge(item.equipmentStatus)}</TableCell>

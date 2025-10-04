@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react" // <-- Thêm useMemo
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card"
-import { Badge } from "../../../../components/ui/badge"
-import { Button } from "../../../../components/ui/button"
-import { Input } from "../../../../components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../../components/ui/dropdown-menu"
+import { useState, useEffect, useMemo } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
     Users,
     Search as SearchIcon,
@@ -15,7 +15,8 @@ import {
     Trash2,
     UserX,
     Mail,
-    Filter
+    Filter,
+    Plus
 } from "lucide-react"
 import { Pagination } from 'antd';
 import EditUser from "@/components/admin/users/EditUser"
@@ -24,6 +25,7 @@ import DeleteUser from "@/components/admin/users/DeleteUser"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { searchUsers } from "@/services/userServices"
+import CreateUser from "@/components/admin/users/CreateUser"
 
 interface User {
     id: string
@@ -38,30 +40,27 @@ export default function UserManagement() {
     const [roleFilter, setRoleFilter] = useState("all")
     const [statusFilter, setStatusFilter] = useState("all")
 
-    // State mới: lưu toàn bộ dữ liệu fetch từ API
     const [fullUsers, setFullUsers] = useState<User[]>([])
 
     const [pageNum, setPageNum] = useState(1)
     const [pageSize, setPageSize] = useState(10)
-    // totalItems sẽ là tổng số lượng users đã lọc (trước khi phân trang)
     const [totalItems, setTotalItems] = useState(0)
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false) // State for create modal
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
     const [isBlockModalOpen, setIsBlockModalOpen] = useState(false)
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [selectedUserName, setSelectedUserName] = useState<string>("")
 
-    // Fetch ALL Users một lần khi component mount
     useEffect(() => {
         const fetchAllUsers = async () => {
             setLoading(true)
             setError(null)
             try {
-                // Gọi API với keyWord, role, status rỗng và pageSize lớn để lấy tất cả
                 const response = await searchUsers({
                     keyWord: "",
                     role: "",
@@ -70,7 +69,7 @@ export default function UserManagement() {
                     pageSize: 9999
                 })
 
-                if (response && response.pageData) {
+                if (response) {
                     const mappedUsers: User[] = response.pageData.map((user: any) => ({
                         id: user.userId,
                         name: user.userFullName,
@@ -96,23 +95,19 @@ export default function UserManagement() {
         }
 
         fetchAllUsers()
-    }, []) // Chỉ chạy một lần khi component mount
+    }, [])
 
-    // Logic Lọc và Phân trang Client-Side
     const displayedUsers = useMemo(() => {
         let filteredItems = fullUsers
 
-        // 1. Lọc theo Role
         if (roleFilter !== "all") {
             filteredItems = filteredItems.filter(user => user.role === roleFilter)
         }
 
-        // 2. Lọc theo Status
         if (statusFilter !== "all") {
             filteredItems = filteredItems.filter(user => user.status === statusFilter)
         }
 
-        // 3. Lọc theo Search Term (Name hoặc Email)
         if (searchTerm) {
             const lowerCaseSearchTerm = searchTerm.toLowerCase().trim()
             filteredItems = filteredItems.filter(user =>
@@ -121,11 +116,8 @@ export default function UserManagement() {
             )
         }
 
-        // Cập nhật tổng số item đã lọc (trước khi phân trang)
-        // Đảm bảo totalItems được cập nhật đúng để phân trang hoạt động
         setTotalItems(filteredItems.length)
 
-        // 4. Áp dụng Phân trang
         const startIndex = (pageNum - 1) * pageSize
         const endIndex = startIndex + pageSize
 
@@ -173,6 +165,15 @@ export default function UserManagement() {
         setIsDeleteModalOpen(true)
     }
 
+    const handleCreateUser = () => {
+        setIsCreateModalOpen(true)
+    }
+
+    const handleCreateUserSuccess = (newUser: User) => {
+        setFullUsers(prev => [...prev, newUser])
+        setPageNum(1)
+    }
+
     return (
         <div className="space-y-4">
             <CardHeader>
@@ -188,7 +189,7 @@ export default function UserManagement() {
                                 value={searchTerm}
                                 onChange={(e) => {
                                     setSearchTerm(e.target.value)
-                                    setPageNum(1) // Reset trang khi tìm kiếm
+                                    setPageNum(1)
                                 }}
                                 className="pl-8 w-full sm:w-80"
                             />
@@ -196,7 +197,7 @@ export default function UserManagement() {
                     </div>
                     <Select value={roleFilter} onValueChange={(value) => {
                         setRoleFilter(value)
-                        setPageNum(1) // Reset trang khi lọc Role
+                        setPageNum(1)
                     }}>
                         <SelectTrigger className="w-[180px]">
                             <Filter className="h-4 w-4 mr-2" />
@@ -212,7 +213,7 @@ export default function UserManagement() {
                     </Select>
                     <Select value={statusFilter} onValueChange={(value) => {
                         setStatusFilter(value)
-                        setPageNum(1) // Reset trang khi lọc Status
+                        setPageNum(1)
                     }}>
                         <SelectTrigger className="w-[180px]">
                             <Filter className="h-4 w-4 mr-2" />
@@ -224,6 +225,9 @@ export default function UserManagement() {
                             <SelectItem value="delete">Delete</SelectItem>
                         </SelectContent>
                     </Select>
+                    <Button onClick={handleCreateUser} className="w-48">
+                        Create Account
+                    </Button>
                 </div>
 
                 {loading && (
@@ -248,7 +252,6 @@ export default function UserManagement() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {/* SỬ DỤNG displayedUsers */}
                                 {displayedUsers.map((user) => (
                                     <TableRow key={user.id}>
                                         <TableCell>
@@ -308,7 +311,6 @@ export default function UserManagement() {
                                         </TableCell>
                                     </TableRow>
                                 ))}
-                                {/* Hiển thị thông báo khi không có người dùng nào khớp với bộ lọc */}
                                 {displayedUsers.length === 0 && fullUsers.length > 0 && (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
@@ -321,7 +323,6 @@ export default function UserManagement() {
                     </div>
                 )}
 
-                {/* Sử dụng fullUsers.length để kiểm tra khi không có dữ liệu ban đầu */}
                 {!loading && !error && fullUsers.length === 0 && (
                     <div className="text-center py-8">
                         <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -332,7 +333,6 @@ export default function UserManagement() {
                     </div>
                 )}
 
-                {/* Phân trang: Dùng totalItems đã được cập nhật bởi useMemo */}
                 {!loading && !error && totalItems > 0 && (
                     <div className="flex justify-end mt-5">
                         <Pagination
@@ -359,11 +359,6 @@ export default function UserManagement() {
                         setSelectedUserName("")
                     }}
                     onUpdate={() => {
-                        // Khi update thành công, reset page và re-fetch data (nếu cần)
-                        // Trong trường hợp này, vì useEffect chỉ chạy 1 lần, bạn có thể cần re-fetch lại data.
-                        // Hoặc bạn có thể tự cập nhật state `fullUsers` nếu API trả về data mới.
-                        // Để đơn giản, tôi sẽ giữ nguyên pageNum. Nếu bạn muốn data update ngay,
-                        // hãy thêm logic re-fetch vào đây.
                     }}
                 />
                 <BlockUser
@@ -376,12 +371,9 @@ export default function UserManagement() {
                         setSelectedUserName("")
                     }}
                     onBlock={() => {
-                        // Xử lý cập nhật state `fullUsers` sau khi block thành công
-                        // Nếu logic BlockUser tự gọi API update và không cần re-fetch toàn bộ:
                         setFullUsers(prev => prev.map(user =>
                             user.id === selectedUserId ? { ...user, status: user.status === "IsActive" ? "delete" : "IsActive" } : user
                         ));
-                        // Nếu cần re-fetch toàn bộ (để đảm bảo data mới nhất), hãy gọi fetchAllUsers ở đây.
                     }}
                 />
                 <DeleteUser
@@ -394,10 +386,16 @@ export default function UserManagement() {
                         setSelectedUserName("")
                     }}
                     onDelete={() => {
-                        // Cập nhật state `fullUsers` sau khi delete thành công
                         setFullUsers(prev => prev.filter(user => user.id !== selectedUserId));
-                        setPageNum(1) // Reset về trang 1 sau khi xóa
+                        setPageNum(1)
                     }}
+                />
+                <CreateUser
+                    isOpen={isCreateModalOpen}
+                    onClose={() => {
+                        setIsCreateModalOpen(false)
+                    }}
+                    onCreate={handleCreateUserSuccess}
                 />
             </CardContent>
         </div>

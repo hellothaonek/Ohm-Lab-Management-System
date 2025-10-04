@@ -410,7 +410,6 @@ const CreateLab: React.FC<CreateLabProps> = ({ subjectId, isOpen, onClose, onLab
                         </div>
                     </div>
                 </div>
-                {error && <div className="text-red-500 text-sm mt-4">{error}</div>}
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>
                         Cancel

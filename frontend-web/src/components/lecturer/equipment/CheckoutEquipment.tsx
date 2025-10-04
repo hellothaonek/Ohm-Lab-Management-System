@@ -244,6 +244,7 @@ export default function CheckoutEquipment({ isOpen, onOpenChange, equipment, onS
                             value={formData.teamEquipmentName}
                             onChange={(e) => handleInputChange("teamEquipmentName", e.target.value)}
                             placeholder="Enter equipment name"
+                            disabled
                         />
                     </div>
                     <div>

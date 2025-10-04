@@ -37,7 +37,11 @@ export default function CreateLabBooking({ labId, classId, className, labName, o
         registrationScheduleDescription: "",
     })
     const [availableSlots, setAvailableSlots] = useState<Slot[]>([])
-    const today = new Date().toISOString().split("T")[0]
+    // Calculate the day after tomorrow
+    const today = new Date();
+    const dayAfterTomorrow = new Date(today);
+    dayAfterTomorrow.setDate(today.getDate() + 2); // Add 2 days to today
+    const minDate = dayAfterTomorrow.toISOString().split("T")[0];
 
     useEffect(() => {
         setFormData((prev) => ({
@@ -156,7 +160,7 @@ export default function CreateLabBooking({ labId, classId, className, labName, o
                             type="date"
                             value={formData.registrationScheduleDate}
                             onChange={handleInputChange}
-                            min={today}
+                            min={minDate} 
                             required
                         />
                     </div>

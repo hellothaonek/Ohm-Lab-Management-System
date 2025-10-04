@@ -169,11 +169,6 @@ export default function CreateAccessory({ open, onClose, onCreate }: CreateAcces
                                 disabled={isProcessing}
                             />
                         </div>
-                        {error && (
-                            <div className="text-center text-red-500">
-                                {error}
-                            </div>
-                        )}
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="secondary" onClick={onClose} disabled={isProcessing}>
