@@ -88,19 +88,19 @@ export default function CreateCourse({ onSubjectCreated }: CreateCourseProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="bg-orange-500 hover:bg-orange-600">
-          New Subject
+          New Course
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Subject</DialogTitle>
+          <DialogTitle>Create New Course</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="text-red-500 text-sm text-center">{error}</div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="subjectName">Subject Name</Label>
+            <Label htmlFor="subjectName">Course Name</Label>
             <Input
               id="subjectName"
               name="subjectName"
@@ -111,7 +111,7 @@ export default function CreateCourse({ onSubjectCreated }: CreateCourseProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="subjectCode">Subject Code</Label>
+            <Label htmlFor="subjectCode">Course Code</Label>
             <Input
               id="subjectCode"
               name="subjectCode"
@@ -155,7 +155,7 @@ export default function CreateCourse({ onSubjectCreated }: CreateCourseProps) {
             </Select>
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Creating..." : "Create Subject"}
+            {isLoading ? "Creating..." : "Create"}
           </Button>
         </form>
       </DialogContent>

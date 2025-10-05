@@ -1,6 +1,7 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -12,19 +13,53 @@ import {
     TrendingUp,
     TrendingDown,
     Settings,
+    FileText, // Added for totalReports icon
 } from "lucide-react"
 import Link from "next/link"
 import LabUsageReport from "@/components/admin/dashboard/LabUsageReport"
+import { searchUsers } from "@/services/userServices"
+import { getReportStatistics } from "@/services/reportServices"
 
 export default function AdminDashboard() {
-    const stats = {
-        totalUsers: 156,
+    const [stats, setStats] = useState({
+        totalUsers: 0,
         activeUsers: 142,
         totalEquipment: 89,
         maintenanceAlerts: 7,
         systemUptime: "99.8%",
         storageUsed: "67%",
-    }
+        totalReports: 0, // Initialize totalReports
+    })
+    const [isLoading, setIsLoading] = useState(true) // Added for loading state
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setIsLoading(true)
+                // Fetch totalUsers
+                const userResponse = await searchUsers({
+                    keyWord: "",
+                    role: "",
+                    status: "",
+                    pageNum: 1,
+                    pageSize: 10,
+                })
+                const reportResponse = await getReportStatistics()
+
+                setStats((prev) => ({
+                    ...prev,
+                    totalUsers: userResponse.pageInfo.totalItem,
+                    totalReports: reportResponse.totalReports, 
+                }))
+            } catch (error) {
+                console.error("Failed to fetch data:", error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        fetchData()
+    }, [])
 
     const recentActivities = [
         {
@@ -94,13 +129,19 @@ export default function AdminDashboard() {
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                        <p className="text-xs text-muted-foreground">
-                            <span className="text-green-600 flex items-center">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                +12% from last month
-                            </span>
-                        </p>
+                        {isLoading ? (
+                            <div className="text-2xl font-bold">Loading...</div>
+                        ) : (
+                            <>
+                                <div className="text-2xl font-bold">{stats.totalUsers}</div>
+                                <p className="text-xs text-muted-foreground">
+                                    <span className="text-green-600 flex items-center">
+                                        <TrendingUp className="h-3 w-3 mr-1" />
+                                        +12% from last month
+                                    </span>
+                                </p>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -138,12 +179,23 @@ export default function AdminDashboard() {
 
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">System Uptime</CardTitle>
-                        <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
+                        <FileText className="h-4 w-4 text-muted-foreground" /> {/* Icon for totalReports */}
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.systemUptime}</div>
-                        <p className="text-xs text-muted-foreground">Last 30 days average</p>
+                        {isLoading ? (
+                            <div className="text-2xl font-bold">Loading...</div>
+                        ) : (
+                            <>
+                                <div className="text-2xl font-bold">{stats.totalReports}</div>
+                                <p className="text-xs text-muted-foreground">
+                                    <span className="text-green-600 flex items-center">
+                                        <TrendingUp className="h-3 w-3 mr-1" />
+                                        Updated October 2025
+                                    </span>
+                                </p>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -151,7 +203,6 @@ export default function AdminDashboard() {
             <div className="space-y-6">
                 <LabUsageReport />
             </div>
-
         </div>
     )
 }

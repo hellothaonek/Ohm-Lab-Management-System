@@ -132,14 +132,14 @@ export default function CoursesPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold">Subjects Management</h1>
+                <h1 className="text-3xl font-bold">Courses Management</h1>
             </div>
             <div className="mb-6 flex gap-4 items-center justify-between">
                 <div className="flex gap-4 items-center">
                     <div className="relative w-full sm:w-80">
                         <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search subjects..."
+                            placeholder="Search courses..."
                             value={searchTerm}
                             onChange={handleSearchChange}
                             className="pl-8 w-full"
@@ -181,7 +181,7 @@ export default function CoursesPage() {
                         <Table>
                             <TableHeader className="bg-blue-50">
                                 <TableRow>
-                                    <TableHead>Subject Name</TableHead>
+                                    <TableHead>Course Name</TableHead>
                                     <TableHead>Code</TableHead>
                                     <TableHead>Semester</TableHead>
                                     <TableHead>Description</TableHead>

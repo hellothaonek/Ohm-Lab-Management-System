@@ -64,7 +64,6 @@ export default function StudentClassDetailPage() {
 
         const fetchGroups = async () => {
             try {
-                // Replace with actual group fetching logic, e.g., getGroupsByClassId(classId)
                 setGroups([])
             } catch (err) {
                 console.error("Error fetching groups:", err)
